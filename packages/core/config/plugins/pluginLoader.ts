@@ -12,31 +12,24 @@ import { logger } from '../services/loggerService';
 import type { PluginManifest } from './types';
 
 /**
- * Static manifest loaders - Metro requires static import paths
- * This maps plugin IDs to their manifest loaders
- * 
- * NOTE: Metro bundler requires static imports, so this must be maintained manually.
- * This is simpler than component loaders because we only need to import JSON files.
- * 
+ * Static manifest loaders - Metro requires static paths (use require, not dynamic import).
+ * Dynamic import() of JSON in Metro can yield "Requiring unknown module" at runtime;
+ * require() is resolved at bundle time and works reliably.
+ *
  * To add a new plugin:
  * 1. Create plugin.manifest.json in packages/plugins/{pluginId}/
- * 2. Add entry here:
- *    '{pluginId}': () => import('../../../plugins/{pluginId}/plugin.manifest.json').then(m => m as { default: PluginManifest }),
- * 3. Plugin will be automatically registered via PLUGIN_REGISTRY
- * 4. Enable plugin in app.config.ts (enabledModules)
- * 
- * Example:
- *   'my-plugin': () => import('../../../plugins/my-plugin/plugin.manifest.json').then(m => m as { default: PluginManifest }),
+ * 2. Add entry here: '{pluginId}': () => Promise.resolve({ default: require('../../../plugins/{pluginId}/plugin.manifest.json') }),
+ * 3. Enable plugin in app.config (enabledModules)
  */
 export const MANIFEST_LOADERS: Record<string, () => Promise<{ default: PluginManifest } | PluginManifest>> = {
-  balance: () => import('../../../plugins/balance/plugin.manifest.json').then(m => m as { default: PluginManifest }),
-  payment: () => import('../../../plugins/payment/plugin.manifest.json').then(m => m as { default: PluginManifest }),
-  'card-transaction': () => import('../../../plugins/card-transaction/plugin.manifest.json').then(m => m as { default: PluginManifest }),
-  marketplace: () => import('../../../plugins/marketplace/plugin.manifest.json').then(m => m as unknown as { default: PluginManifest }),
-  'marketplace-fnb': () => import('../../../plugins/marketplace-fnb/plugin.manifest.json').then(m => m as { default: PluginManifest }),
-  'sport-center': () => import('../../../plugins/sport-center/plugin.manifest.json').then(m => m as { default: PluginManifest }),
-  invoice: () => import('../../../plugins/invoice/plugin.manifest.json').then(m => m as { default: PluginManifest }),
-  'donasi-zakat': () => import('../../../plugins/donasi-zakat/plugin.manifest.json').then(m => m as { default: PluginManifest }),
+  balance: () => Promise.resolve({ default: require('../../../plugins/balance/plugin.manifest.json') as PluginManifest }),
+  payment: () => Promise.resolve({ default: require('../../../plugins/payment/plugin.manifest.json') as PluginManifest }),
+  'card-transaction': () => Promise.resolve({ default: require('../../../plugins/card-transaction/plugin.manifest.json') as PluginManifest }),
+  marketplace: () => Promise.resolve({ default: require('../../../plugins/marketplace/plugin.manifest.json') as PluginManifest }),
+  'marketplace-fnb': () => Promise.resolve({ default: require('../../../plugins/marketplace-fnb/plugin.manifest.json') as PluginManifest }),
+  'sport-center': () => Promise.resolve({ default: require('../../../plugins/sport-center/plugin.manifest.json') as PluginManifest }),
+  invoice: () => Promise.resolve({ default: require('../../../plugins/invoice/plugin.manifest.json') as PluginManifest }),
+  'donasi-zakat': () => Promise.resolve({ default: require('../../../plugins/donasi-zakat/plugin.manifest.json') as PluginManifest }),
 };
 
 /**
