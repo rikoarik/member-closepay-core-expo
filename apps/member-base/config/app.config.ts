@@ -45,56 +45,56 @@ export const appConfig: AppConfig = {
   homeVariant: 'member', // Options: 'dashboard' | 'simple' | 'member' | 'custom'
 
   // Home tabs configuration (for member variant)
-  // Tabs akan ditampilkan di home screen dengan urutan sesuai order
-  // 35+ kombinasi tab untuk berbagai kebutuhan
+  // Default 3 tab: Analitik (kiri), Beranda (tengah), Marketplace (kanan)
   homeTabs: [
-    // ========== BERANDA & DASHBOARD ==========
+    // ========== DEFAULT 3 TAB: Analitik | Beranda | Marketplace ==========
     {
-      id: 'beranda',
-      label: 'Beranda',
+      id: 'analytics',
+      label: 'Analitik',
       visible: true,
       order: 1,
     },
     {
-      id: 'dashboard',
-      label: 'Dashboard',
-      visible: false,
+      id: 'beranda',
+      label: 'Beranda',
+      visible: true,
       order: 2,
     },
-    
-    // ========== MARKETPLACE - GENERAL ==========
     {
       id: 'marketplace',
       label: 'Marketplace',
       visible: true,
       order: 3,
     },
+    // ========== BERANDA & DASHBOARD ==========
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      visible: false,
+      order: 4,
+    },
+    
+    // ========== MARKETPLACE - GENERAL ==========
     {
       id: 'marketplace-general',
       label: 'Belanja',
       visible: false,
-      order: 4,
+      order: 5,
     },
     {
       id: 'marketplace-balance',
       label: 'Market Saldo',
       visible: false,
-      order: 5,
+      order: 6,
     },
     {
       id: 'marketplace-transaction',
       label: 'Transaksi Market',
       visible: false,
-      order: 6,
+      order: 7,
     },
     
     // ========== MARKETPLACE - F&B ==========
-    {
-      id: 'analytics',
-      label: 'F&B',
-      visible: true,
-      order: 7,
-    },
     {
       id: 'fnb',
       label: 'Food & Beverage',
@@ -174,7 +174,7 @@ export const appConfig: AppConfig = {
     {
       id: 'virtualcard',
       label: 'Kartu Virtual',
-      visible: true,
+      visible: false,
       order: 19,
     },
     {

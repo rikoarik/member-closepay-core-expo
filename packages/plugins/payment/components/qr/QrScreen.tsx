@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import {
     View,
     Text,
@@ -10,9 +10,11 @@ import {
     Platform,
     UIManager,
     ScrollView,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import { ArrowDown2, ArrowLeft2, Scanner, ScanBarcode, TickCircle } from 'iconsax-react-nativejs';
 import {
     scale,
@@ -22,8 +24,17 @@ import {
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
-import { QrScanScreen } from './QrScanScreen';
 import { QrDisplayScreen } from './QrDisplayScreen';
+
+// Expo Go: pakai expo-camera (QrScanScreenExpo). Lainnya: Vision Camera (QrScanScreen). Web: QrScanScreen.web.
+const isExpoGo = Constants.appOwnership === 'expo';
+const useExpoCamera = isExpoGo && Platform.OS !== 'web';
+const QrScanScreenLazy = lazy(() =>
+  import('./QrScanScreen').then((m) => ({ default: m.QrScanScreen }))
+);
+const QrScanScreenExpoLazy = lazy(() =>
+  import('./QrScanScreenExpo').then((m) => ({ default: m.QrScanScreenExpo }))
+);
 
 const { width } = Dimensions.get('window');
 
@@ -188,11 +199,25 @@ export const QrScreen = () => {
             >
                 {/* Scan Tab */}
                 <View style={{ width }} pointerEvents={activeTab === 'scan' ? 'auto' : 'none'}>
-                    <QrScanScreen
-                        isActive={activeTab === 'scan'}
-                        onScanned={handleScanned}
-                        onHeaderActionsReady={setScanHeaderActions}
-                    />
+                    <Suspense fallback={
+                        <View style={[styles.expoGoPlaceholder, { backgroundColor: colors.surface }]}>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                        </View>
+                    }>
+                        {useExpoCamera ? (
+                            <QrScanScreenExpoLazy
+                                isActive={activeTab === 'scan'}
+                                onScanned={handleScanned}
+                                onHeaderActionsReady={setScanHeaderActions}
+                            />
+                        ) : (
+                            <QrScanScreenLazy
+                                isActive={activeTab === 'scan'}
+                                onScanned={handleScanned}
+                                onHeaderActionsReady={setScanHeaderActions}
+                            />
+                        )}
+                    </Suspense>
                 </View>
 
                 {/* Display Tab */}
@@ -525,6 +550,17 @@ export const QrScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    expoGoPlaceholder: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: scale(24),
+    },
+    expoGoPlaceholderText: {
+        fontFamily: FontFamily.monasans.medium,
+        fontSize: scale(14),
+        textAlign: 'center',
     },
     headerOverlay: {
         position: 'absolute',

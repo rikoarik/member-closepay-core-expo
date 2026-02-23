@@ -1,4 +1,4 @@
 /**
- * Native: use react-native-linear-gradient
+ * Native: use expo-linear-gradient (works in Expo Go; react-native-linear-gradient/BVLinearGradient is not in Expo Go)
  */
-export { default as LinearGradient } from 'react-native-linear-gradient';
+export { LinearGradient } from 'expo-linear-gradient';

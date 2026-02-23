@@ -166,12 +166,13 @@ const HomeScreenComponent = () => {
     }
   }, [shouldShowFab, fabOpacity, fabScale]);
 
-  // Pastikan default tetap tab tengah (Beranda) saat tabs pertama kali ter-load
+  // Default tab = Beranda when 1 or 2 tabs; when 3 tabs, middle = index 1
   useEffect(() => {
     if (tabs.length > 0 && !hasSetOrder2TabRef.current) {
-      const middleTabId = tabs.length >= 2 ? tabs[1].id : tabs[0].id;
-      if (activeTab !== middleTabId) {
-        setActiveTab(middleTabId);
+      const berandaTab = tabs.find((t) => t.id === 'beranda' || t.id === 'home');
+      const defaultTabId = berandaTab?.id ?? (tabs.length >= 2 ? tabs[1].id : tabs[0].id);
+      if (activeTab !== defaultTabId) {
+        setActiveTab(defaultTabId);
       }
       hasSetOrder2TabRef.current = true;
     }
@@ -412,15 +413,16 @@ const HomeScreenComponent = () => {
   useEffect(() => {
     if (
       pagerRef.current &&
-      tabs.length >= 2 &&
+      tabs.length >= 1 &&
       hasSetOrder2TabRef.current &&
       !hasInitializedRef.current
     ) {
-      const middleTabIndex = 1;
+      const defaultIndex = tabs.findIndex((t) => t.id === 'beranda' || t.id === 'home');
+      const scrollIndex = defaultIndex >= 0 ? defaultIndex : 0;
       setTimeout(() => {
         if (pagerRef.current) {
           pagerRef.current.scrollTo({
-            x: middleTabIndex * layoutWidth,
+            x: scrollIndex * layoutWidth,
             animated: false,
           });
         }

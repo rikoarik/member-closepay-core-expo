@@ -7,9 +7,10 @@ import SecureStorage from '../../native/SecureStorage';
 import type { TokenService } from '../types';
 import { getJWTExpiry, isJWTExpired as isJWTExpiredUtil } from '../utils/jwtUtils';
 
-const TOKEN_KEY = '@auth_token';
-const REFRESH_TOKEN_KEY = '@auth_refresh_token';
-const TOKEN_EXPIRY_KEY = '@auth_token_expiry';
+// Expo SecureStore only allows alphanumeric, ".", "-", "_" (no @)
+const TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'auth_refresh_token';
+const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
 
 export const tokenService: TokenService = {
   /**

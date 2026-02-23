@@ -57,12 +57,16 @@ function isStringArray(arr: unknown): arr is string[] {
   return Array.isArray(arr) && arr.every((x) => typeof x === 'string');
 }
 
-function sanitizeEnabledTabIds(ids: unknown): string[] {
+/**
+ * Sanitize stored enabledTabIds for load: preserve [left, center, right] with '' allowed.
+ */
+function sanitizeEnabledTabIdsForLoad(ids: unknown): string[] {
   if (!isStringArray(ids)) return [];
-  return ids
+  const trimmed = ids
     .slice(0, MAX_HOME_TABS)
-    .map((id) => (typeof id === 'string' ? id.trim() : ''))
-    .filter(Boolean);
+    .map((id) => (typeof id === 'string' ? id.trim() : ''));
+  while (trimmed.length < MAX_HOME_TABS) trimmed.push('');
+  return trimmed.slice(0, MAX_HOME_TABS);
 }
 
 function sanitizeBerandaWidgets(widgets: unknown): BerandaWidgetConfig[] | undefined {
@@ -89,7 +93,7 @@ export const loadHomeTabSettings = async (): Promise<HomeTabSettings> => {
     const stored = await SecureStorage.getItem(HOME_TAB_SETTINGS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as HomeTabSettings;
-      const enabledTabIds = sanitizeEnabledTabIds(parsed?.enabledTabIds);
+      const enabledTabIds = sanitizeEnabledTabIdsForLoad(parsed?.enabledTabIds);
       const berandaWidgets = sanitizeBerandaWidgets(parsed?.berandaWidgets);
       return {
         enabledTabIds,
@@ -104,6 +108,7 @@ export const loadHomeTabSettings = async (): Promise<HomeTabSettings> => {
 
 /**
  * Validates settings before save. Returns null if invalid.
+ * Left and right may be empty; center must be Beranda. If both left and right are set, they must differ.
  */
 export function validateHomeTabSettings(settings: HomeTabSettings): HomeTabSettings | null {
   const raw = settings.enabledTabIds;
@@ -111,9 +116,9 @@ export function validateHomeTabSettings(settings: HomeTabSettings): HomeTabSetti
   const left = typeof raw[0] === 'string' ? raw[0].trim() : '';
   const center = typeof raw[1] === 'string' ? raw[1].trim() : '';
   const right = typeof raw[2] === 'string' ? raw[2].trim() : '';
-  if (!left || !center || !right) return null;
+  if (!center) return null;
   if (center !== BERANDA_TAB_ID && center !== 'home') return null;
-  if (left === right) return null;
+  if (left && right && left === right) return null;
   const berandaWidgets = sanitizeBerandaWidgets(settings.berandaWidgets);
   return {
     enabledTabIds: [left, BERANDA_TAB_ID, right],
@@ -129,7 +134,7 @@ export const saveHomeTabSettings = async (
 ): Promise<void> => {
   const toSave = validateHomeTabSettings(settings);
   if (!toSave) {
-    throw new Error('Invalid tab settings: need left, beranda, right (left ≠ right)');
+    throw new Error('Invalid tab settings: center must be Beranda; if both left and right are set they must differ.');
   }
   try {
     await SecureStorage.setItem(HOME_TAB_SETTINGS_KEY, JSON.stringify({
@@ -151,24 +156,29 @@ export const getEnabledHomeTabIds = async (): Promise<string[]> => {
 };
 
 /**
- * Validates and normalizes enabled tab IDs against a list of valid IDs (for left/right only; beranda is fixed center).
- * Returns [left, beranda, right] with no duplicates and only valid IDs.
+ * Validates and normalizes enabled tab IDs for HomeScreen.
+ * Input: enabledTabIds from storage, format [left, 'beranda', right] with left/right possibly ''.
+ * Returns 1, 2, or 3 tab IDs to show (only non-empty, valid IDs). Beranda always included.
  */
 export function validateEnabledTabIds(
   enabledTabIds: string[],
   validTabIds: string[]
 ): string[] {
   const validSet = new Set(validTabIds.filter((id) => id && id !== BERANDA_TAB_ID && id !== 'home'));
-  if (validSet.size === 0) return [];
+  const [left = '', center = '', right = ''] = enabledTabIds.slice(0, MAX_HOME_TABS);
+  const centerNorm = (center && (center === BERANDA_TAB_ID || center === 'home')) ? BERANDA_TAB_ID : '';
+  if (!centerNorm) return [];
 
-  const [left = '', , right = ''] = enabledTabIds.slice(0, MAX_HOME_TABS);
-  const ids = Array.from(validSet);
-
-  const leftId = left && validSet.has(left) ? left : ids[0];
-  let rightId = right && validSet.has(right) ? right : ids[ids.length > 1 ? 1 : 0];
-  if (rightId === leftId) {
-    rightId = ids.find((id) => id !== leftId) ?? ids[0];
+  const leftId = left && validSet.has(left) ? left : '';
+  const rightId = right && validSet.has(right) ? right : '';
+  if (leftId && rightId && leftId === rightId) {
+    // both set but duplicate: treat right as empty to avoid duplicate tab
+    return [leftId, BERANDA_TAB_ID];
   }
 
-  return [leftId, BERANDA_TAB_ID, rightId];
+  const result: string[] = [];
+  if (leftId) result.push(leftId);
+  result.push(BERANDA_TAB_ID);
+  if (rightId) result.push(rightId);
+  return result;
 }

@@ -1,13 +1,31 @@
 /**
  * NFC & Bluetooth Service
- * Service untuk handle NFC card reading dan Bluetooth communication
+ * Service untuk handle NFC card reading dan Bluetooth communication.
+ * NFC/BLE modules are lazy-loaded so Expo Go can start without native modules.
  */
-import NfcManager, { NfcTech, Ndef, NfcEvents } from 'react-native-nfc-manager';
-import { BleManager, Device, State } from 'react-native-ble-plx';
+import type { BleManager, Device, State } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid, Linking } from 'react-native';
 
-// Initialize BLE Manager
-const bleManager = new BleManager();
+// Lazy-load NfcManager so Expo Go doesn't load native module at import time
+type NfcManagerType = typeof import('react-native-nfc-manager').default;
+type NfcTech = typeof import('react-native-nfc-manager').NfcTech;
+type Ndef = typeof import('react-native-nfc-manager').Ndef;
+type NfcEvents = typeof import('react-native-nfc-manager').NfcEvents;
+let _nfc: { default: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents } | null = null;
+function getNfc(): { NfcManager: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents } {
+  if (!_nfc) _nfc = require('react-native-nfc-manager');
+  return { NfcManager: _nfc.default, NfcTech: _nfc.NfcTech, Ndef: _nfc.Ndef, NfcEvents: _nfc.NfcEvents };
+}
+
+// Lazy-init BLE Manager so Expo Go doesn't load native module at import time
+let _bleManager: BleManager | null = null;
+function getBleManager(): BleManager {
+  if (!_bleManager) {
+    const { BleManager: BleManagerCtor } = require('react-native-ble-plx');
+    _bleManager = new BleManagerCtor();
+  }
+  return _bleManager;
+}
 
 export interface NFCCardData {
   cardName: string;
@@ -67,13 +85,13 @@ class NFCBluetoothService {
     }
 
     try {
-      const supported = await NfcManager.isSupported();
+      const supported = await getNfc().NfcManager.isSupported();
       if (!supported) {
         console.warn('NFC is not supported on this device');
         return;
       }
 
-      await NfcManager.start();
+      await getNfc().NfcManager.start();
       this.nfcInitialized = true;
       console.log('NFC Manager initialized successfully');
     } catch (error) {
@@ -92,7 +110,7 @@ class NFCBluetoothService {
       if (!this.nfcInitialized) {
         await this.initializeNFC();
       }
-      return await NfcManager.isSupported();
+      return await getNfc().NfcManager.isSupported();
     } catch (error) {
       console.error('Error checking NFC support:', error);
       return false;
@@ -108,7 +126,7 @@ class NFCBluetoothService {
       if (!this.nfcInitialized) {
         await this.initializeNFC();
       }
-      this.isNfcEnabled = await NfcManager.isEnabled();
+      this.isNfcEnabled = await getNfc().NfcManager.isEnabled();
       return this.isNfcEnabled;
     } catch (error) {
       console.error('Error checking NFC enabled:', error);
@@ -190,19 +208,19 @@ class NFCBluetoothService {
       }
 
       // Try different NFC technologies in order of preference
-      const technologies = [NfcTech.Ndef, NfcTech.NfcA, NfcTech.NfcB, NfcTech.NfcF];
+      const technologies = [getNfc().NfcTech.Ndef, getNfc().NfcTech.NfcA, getNfc().NfcTech.NfcB, getNfc().NfcTech.NfcF];
       let tag: any = null;
       let usedTech: NfcTech | null = null;
 
       for (const tech of technologies) {
         try {
           console.log(`Trying NFC technology: ${tech}`);
-          await NfcManager.requestTechnology(tech, {
+          await getNfc().NfcManager.requestTechnology(tech, {
             alertMessage: 'Tempelkan kartu pada bagian belakang smartphone',
             invalidateAfterFirstRead: false,
           });
           usedTech = tech;
-          tag = await NfcManager.getTag();
+          tag = await getNfc().NfcManager.getTag();
           if (tag) {
             console.log(`Successfully read tag with ${tech}`);
             break;
@@ -210,13 +228,13 @@ class NFCBluetoothService {
         } catch (techError: any) {
           console.log(`Failed to read with ${tech}:`, techError?.message);
           // Try next technology
-          await NfcManager.cancelTechnologyRequest().catch(() => {});
+          await getNfc().NfcManager.cancelTechnologyRequest().catch(() => {});
           continue;
         }
       }
 
       // Cancel technology request
-      await NfcManager.cancelTechnologyRequest().catch(() => {});
+      await getNfc().NfcManager.cancelTechnologyRequest().catch(() => {});
 
       if (!tag) {
         throw new Error('Tidak ada kartu terdeteksi. Pastikan kartu ditempelkan dengan benar.');
@@ -265,7 +283,7 @@ class NFCBluetoothService {
       return cardData || null;
     } catch (error: any) {
       console.error('Error reading NFC card:', error);
-      await NfcManager.cancelTechnologyRequest().catch(() => {});
+      await getNfc().NfcManager.cancelTechnologyRequest().catch(() => {});
       
       // Provide user-friendly error messages
       if (error?.name === 'UserCancel' || error?.message?.includes('UserCancel')) {
@@ -319,7 +337,7 @@ class NFCBluetoothService {
       // Use event-based listening with registerTagEvent
       // This is more reliable than polling with requestTechnology
       // First, set up event listeners
-      NfcManager.setEventListener(NfcEvents.DiscoverTag, async (tag: any) => {
+      getNfc().NfcManager.setEventListener(getNfc().NfcEvents.DiscoverTag, async (tag: any) => {
         console.log('NFC tag discovered:', tag ? 'tag found' : 'null tag');
         // Check if listener is still active
         if (!this.nfcListenerActive) {
@@ -376,9 +394,9 @@ class NFCBluetoothService {
           if (cardData && this.nfcListenerActive) {
             // Stop listener after successful read
             this.nfcListenerActive = false;
-            await NfcManager.unregisterTagEvent().catch(() => {});
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+            await getNfc().NfcManager.unregisterTagEvent().catch(() => {});
+            getNfc().NfcManager.setEventListener(getNfc().NfcEvents.DiscoverTag, null);
+            getNfc().NfcManager.setEventListener(getNfc().NfcEvents.SessionClosed, null);
             onCardDetected(cardData);
           }
         } catch (parseError: any) {
@@ -387,9 +405,9 @@ class NFCBluetoothService {
           // Only stop if it's a critical error
           if (parseError?.message?.includes('critical') || parseError?.code === 'CRITICAL_ERROR') {
             this.nfcListenerActive = false;
-            await NfcManager.unregisterTagEvent().catch(() => {});
-            NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-            NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+            await getNfc().NfcManager.unregisterTagEvent().catch(() => {});
+            getNfc().NfcManager.setEventListener(getNfc().NfcEvents.DiscoverTag, null);
+            getNfc().NfcManager.setEventListener(getNfc().NfcEvents.SessionClosed, null);
             if (onError) {
               onError(new Error('Gagal memproses data kartu NFC'));
             }
@@ -398,7 +416,7 @@ class NFCBluetoothService {
       });
 
       // Handle session closed events (errors)
-      NfcManager.setEventListener(NfcEvents.SessionClosed, (error?: any) => {
+      getNfc().NfcManager.setEventListener(getNfc().NfcEvents.SessionClosed, (error?: any) => {
         if (!this.nfcListenerActive) {
           return;
         }
@@ -418,9 +436,9 @@ class NFCBluetoothService {
             error?.code === 'NFC_HARDWARE_ERROR')
         ) {
           this.nfcListenerActive = false;
-          NfcManager.unregisterTagEvent().catch(() => {});
-          NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-          NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+          getNfc().NfcManager.unregisterTagEvent().catch(() => {});
+          getNfc().NfcManager.setEventListener(getNfc().NfcEvents.DiscoverTag, null);
+          getNfc().NfcManager.setEventListener(getNfc().NfcEvents.SessionClosed, null);
           if (onError) {
             onError(new Error('NFC tidak aktif atau terjadi masalah pada hardware NFC'));
           }
@@ -430,7 +448,7 @@ class NFCBluetoothService {
 
       // Register tag event (starts listening)
       console.log('Registering NFC tag event...');
-      await NfcManager.registerTagEvent({
+      await getNfc().NfcManager.registerTagEvent({
         alertMessage: 'Tempelkan kartu pada bagian belakang smartphone',
         invalidateAfterFirstRead: false,
       });
@@ -439,7 +457,7 @@ class NFCBluetoothService {
       // Clean up on any error
       console.error('Error starting NFC listener:', error);
       this.nfcListenerActive = false;
-      await NfcManager.unregisterTagEvent().catch(() => {});
+      await getNfc().NfcManager.unregisterTagEvent().catch(() => {});
       
       // Check if it's a user cancellation
       if (error?.name === 'UserCancel' || error?.message?.includes('UserCancel')) {
@@ -469,12 +487,12 @@ class NFCBluetoothService {
       this.nfcListenerActive = false;
       this.nfcTagHandler = null;
       // Remove event listeners
-      NfcManager.setEventListener(NfcEvents.DiscoverTag, null);
-      NfcManager.setEventListener(NfcEvents.SessionClosed, null);
+      getNfc().NfcManager.setEventListener(getNfc().NfcEvents.DiscoverTag, null);
+      getNfc().NfcManager.setEventListener(getNfc().NfcEvents.SessionClosed, null);
       // Unregister tag event for event-based listening
-      await NfcManager.unregisterTagEvent().catch(() => {});
+      await getNfc().NfcManager.unregisterTagEvent().catch(() => {});
       // Also cancel any pending technology request (for readNFCCard fallback)
-      await NfcManager.cancelTechnologyRequest().catch(() => {});
+      await getNfc().NfcManager.cancelTechnologyRequest().catch(() => {});
       console.log('NFC listener stopped');
     } catch (error) {
       console.error('Error stopping NFC listener:', error);
@@ -489,7 +507,7 @@ class NFCBluetoothService {
    */
   async checkBluetoothState(): Promise<State> {
     return new Promise((resolve) => {
-      bleManager.state().then((state) => {
+      getBleManager().state().then((state) => {
         resolve(state);
       });
     });
@@ -610,7 +628,7 @@ class NFCBluetoothService {
       const foundDeviceIds = new Set<string>();
 
       // Start scanning
-      bleManager.startDeviceScan(null, null, (error, device) => {
+      getBleManager().startDeviceScan(null, null, (error, device) => {
         if (error) {
           console.error('Bluetooth scan error:', error);
           return;
@@ -658,7 +676,7 @@ class NFCBluetoothService {
       }
 
       // Start scanning
-      bleManager.startDeviceScan(null, null, (error, device) => {
+      getBleManager().startDeviceScan(null, null, (error, device) => {
         if (error) {
           console.error('Bluetooth scan error:', error);
           return;
@@ -688,7 +706,7 @@ class NFCBluetoothService {
    */
   stopBluetoothScan(): void {
     try {
-      bleManager.stopDeviceScan();
+      getBleManager().stopDeviceScan();
       if (this.scanningTimeout) {
         clearTimeout(this.scanningTimeout);
         this.scanningTimeout = null;
@@ -721,7 +739,7 @@ class NFCBluetoothService {
       });
 
       const device = await Promise.race([
-        bleManager.connectToDevice(deviceId).catch((error) => {
+        getBleManager().connectToDevice(deviceId).catch((error) => {
           // Clear timeout if connection fails
           if (connectionTimeout) {
             clearTimeout(connectionTimeout);
@@ -1158,13 +1176,13 @@ class NFCBluetoothService {
    */
   private parseNdefRecord(record: any): string | null {
     try {
-      if (record.tnf === Ndef.TNF_WELL_KNOWN) {
+      if (record.tnf === getNfc().Ndef.TNF_WELL_KNOWN) {
         const recordType = record.type ? String.fromCharCode(...record.type) : '';
         
         if (recordType === 'T') {
           // Text record
           try {
-            const text = Ndef.text.decodePayload(record.payload);
+            const text = getNfc().Ndef.text.decodePayload(record.payload);
             return `Text: ${text}`;
           } catch (e) {
             return null;
@@ -1172,7 +1190,7 @@ class NFCBluetoothService {
         } else if (recordType === 'U') {
           // URI record
           try {
-            const uri = Ndef.uri.decodePayload(record.payload);
+            const uri = getNfc().Ndef.uri.decodePayload(record.payload);
             return `URI: ${uri}`;
           } catch (e) {
             return null;
@@ -1180,13 +1198,13 @@ class NFCBluetoothService {
         } else {
           return `Well Known: ${recordType}`;
         }
-      } else if (record.tnf === Ndef.TNF_ABSOLUTE_URI) {
+      } else if (record.tnf === getNfc().Ndef.TNF_ABSOLUTE_URI) {
         const uri = record.type ? String.fromCharCode(...record.type) : '';
         return `URI: ${uri}`;
-      } else if (record.tnf === Ndef.TNF_MIME_MEDIA) {
+      } else if (record.tnf === getNfc().Ndef.TNF_MIME_MEDIA) {
         const mime = record.type ? String.fromCharCode(...record.type) : '';
         return `MIME: ${mime}`;
-      } else if (record.tnf === Ndef.TNF_EXTERNAL_TYPE) {
+      } else if (record.tnf === getNfc().Ndef.TNF_EXTERNAL_TYPE) {
         const external = record.type ? String.fromCharCode(...record.type) : '';
         return `External: ${external}`;
       }
@@ -1333,7 +1351,10 @@ class NFCBluetoothService {
   async cleanup(): Promise<void> {
     await this.stopNFCListener();
     this.stopBluetoothScan();
-    bleManager.destroy();
+    if (_bleManager) {
+      _bleManager.destroy();
+      _bleManager = null;
+    }
   }
 }
 

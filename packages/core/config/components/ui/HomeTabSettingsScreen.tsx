@@ -135,16 +135,9 @@ export const HomeTabSettingsScreen: React.FC = () => {
   const handleSave = async () => {
     if (isSaving) return;
     const ids = allAvailableTabs.map((t) => t.id);
-    if (ids.length < 2) {
-      setSaveError(t('homeTabSettings.noTabsConfigured') || 'Tidak ada tab dikonfigurasi.');
-      return;
-    }
-    let left = (leftTabId && ids.includes(leftTabId)) ? leftTabId : ids[0];
-    let right = (rightTabId && ids.includes(rightTabId)) ? rightTabId : (ids[1] ?? ids[0]);
-    if (left === right) {
-      right = ids.find((id) => id !== left) ?? ids[0];
-    }
-    if (left === right) {
+    let left = (leftTabId ?? '') === '' ? '' : (ids.includes(leftTabId) ? leftTabId : '');
+    let right = (rightTabId ?? '') === '' ? '' : (ids.includes(rightTabId) ? rightTabId : '');
+    if (left && right && left === right) {
       setSaveError('Pilih tab yang berbeda untuk Kiri dan Kanan.');
       return;
     }
@@ -189,6 +182,7 @@ export const HomeTabSettingsScreen: React.FC = () => {
 
   const getTabLabelById = useCallback(
     (id: string) => {
+      if (id === '') return t('homeTabSettings.slotEmpty');
       if (id === BERANDA_TAB_ID) return t('homeTabSettings.slotCenter');
       const i18nLabel = t(`home.${id}`);
       if (i18nLabel && i18nLabel !== `home.${id}`) return i18nLabel;
@@ -198,9 +192,13 @@ export const HomeTabSettingsScreen: React.FC = () => {
     [allAvailableTabs, t]
   );
 
-  const dropdownOptions = allAvailableTabs.filter(
-    (tab) => tab.id !== (dropdownSlot === 'left' ? rightTabId : leftTabId)
-  );
+  const dropdownOptions = useMemo(() => {
+    const emptyOption = { id: '', label: t('homeTabSettings.slotEmpty') };
+    const others = allAvailableTabs.filter(
+      (tab) => tab.id !== (dropdownSlot === 'left' ? rightTabId : leftTabId)
+    );
+    return [emptyOption, ...others];
+  }, [allAvailableTabs, dropdownSlot, leftTabId, rightTabId, t]);
 
   useEffect(() => {
     if (allAvailableTabs.length === 0) return;
@@ -209,15 +207,15 @@ export const HomeTabSettingsScreen: React.FC = () => {
     let nextLeft = leftTabId;
     let nextRight = rightTabId;
     if (leftTabId && !validIds.has(leftTabId)) {
-      nextLeft = allAvailableTabs[0]?.id ?? '';
+      nextLeft = '';
       changed = true;
     }
     if (rightTabId && !validIds.has(rightTabId)) {
-      nextRight = allAvailableTabs.find((t) => t.id !== nextLeft)?.id ?? allAvailableTabs[1]?.id ?? '';
+      nextRight = '';
       changed = true;
     }
     if (nextLeft && nextRight && nextLeft === nextRight) {
-      nextRight = allAvailableTabs.find((t) => t.id !== nextLeft)?.id ?? allAvailableTabs[0]?.id ?? '';
+      nextRight = '';
       changed = true;
     }
     if (changed) {
@@ -228,15 +226,12 @@ export const HomeTabSettingsScreen: React.FC = () => {
 
   const getEnabledTabIds = useCallback((): string[] => {
     const ids = allAvailableTabs.map((t) => t.id);
-    let left = leftTabId && ids.includes(leftTabId) ? leftTabId : ids[0];
-    let right = rightTabId && ids.includes(rightTabId) ? rightTabId : ids[ids.length > 1 ? 1 : 0];
-    if (left === right) {
-      right = ids.find((id) => id !== left) ?? ids[0];
-    }
-    return [left || 'marketplace', BERANDA_TAB_ID, right || 'fnb'];
+    const left = (leftTabId && ids.includes(leftTabId)) ? leftTabId : '';
+    const right = (rightTabId && ids.includes(rightTabId)) ? rightTabId : '';
+    return [left, BERANDA_TAB_ID, right];
   }, [leftTabId, rightTabId, allAvailableTabs]);
 
-  const canSave = allAvailableTabs.length >= 2;
+  const canSave = true;
 
   const handleSelectTab = (id: string) => {
     setSaveError(null);
@@ -404,7 +399,7 @@ export const HomeTabSettingsScreen: React.FC = () => {
                   { color: colors.text, fontSize: getResponsiveFontSize('medium') },
                 ]}
               >
-                {leftTabId ? getTabLabelById(leftTabId) : t('homeTabSettings.slotLeft')}
+                {getTabLabelById(leftTabId || '')}
               </Text>
               <ArrowDown2 size={scale(18)} color={colors.textSecondary} variant="Linear" />
             </TouchableOpacity>
@@ -470,7 +465,7 @@ export const HomeTabSettingsScreen: React.FC = () => {
                   { color: colors.text, fontSize: getResponsiveFontSize('medium') },
                 ]}
               >
-                {rightTabId ? getTabLabelById(rightTabId) : t('homeTabSettings.slotRight')}
+                {getTabLabelById(rightTabId || '')}
               </Text>
               <ArrowDown2 size={scale(18)} color={colors.textSecondary} variant="Linear" />
             </TouchableOpacity>

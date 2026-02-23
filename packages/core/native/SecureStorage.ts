@@ -1,16 +1,16 @@
 /**
  * SecureStorage for native (iOS/Android).
- * - Sensitive keys (prefix @auth_): expo-secure-store (Keychain/Keystore).
- * - Other keys: AsyncStorage (multiGet/getAllKeys etc. supported).
+ * - Sensitive auth keys (auth_token, auth_refresh_token, auth_token_expiry): expo-secure-store (Keychain/Keystore).
+ * - Other keys: AsyncStorage. Expo SecureStore keys must be alphanumeric, ".", "-", "_" only (no @).
  * Web uses SecureStorage.web.ts.
  */
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const USE_SECURE_STORE_FOR_PREFIX = '@auth_';
+const SECURE_STORE_KEYS = new Set(['auth_token', 'auth_refresh_token', 'auth_token_expiry']);
 
 function useSecureStore(key: string): boolean {
-  return Platform.OS !== 'web' && key.startsWith(USE_SECURE_STORE_FOR_PREFIX);
+  return Platform.OS !== 'web' && SECURE_STORE_KEYS.has(key);
 }
 
 let SecureStore: {
@@ -66,15 +66,19 @@ const SecureStorage: SecureStorageInterface = {
     const keys = await AsyncStorage.getAllKeys();
     await AsyncStorage.multiRemove(keys);
     if (SecureStore) {
-      await SecureStore.deleteItemAsync('@auth_token');
-      await SecureStore.deleteItemAsync('@auth_refresh_token');
-      await SecureStore.deleteItemAsync('@auth_token_expiry');
+      for (const k of SECURE_STORE_KEYS) {
+        try {
+          await SecureStore.deleteItemAsync(k);
+        } catch {
+          // ignore
+        }
+      }
     }
   },
 
   async getAllKeys(): Promise<string[]> {
     const asyncKeys = await AsyncStorage.getAllKeys();
-    const secureKeys = ['@auth_token', '@auth_refresh_token', '@auth_token_expiry'];
+    const secureKeys = Array.from(SECURE_STORE_KEYS);
     const existing: string[] = [];
     for (const k of secureKeys) {
       if (SecureStore) {

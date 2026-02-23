@@ -12,7 +12,7 @@ export * from './services/topUpService';
 export * from './services/withdrawService';
 export * from './services/transferService';
 export * from './services/cardTransactionService';
-export * from './services/nfcBluetoothService';
+// nfcBluetoothService not re-exported: uses native NFC/BLE, loads only when imported directly (e.g. TopUpMemberScreen, BluetoothDeviceSelector)
 
 // Components - organized by feature
 export * from './components/topup';

@@ -27,7 +27,7 @@ import {
   FontFamily,
 } from '@core/config';
 import Toast from 'react-native-toast-message';
-import Clipboard from '@react-native-clipboard/clipboard';
+import { Clipboard } from '@core/native';
 type VaChannel = 'atm' | 'mbanking' | 'bankLain';
 
 interface RouteParams {
@@ -103,7 +103,7 @@ export const VirtualAccountScreen = () => {
   const handleCopyVA = async (vaNumberWithSpaces: string) => {
     try {
       const vaNumber = vaNumberWithSpaces.replace(/\s/g, '');
-      await Clipboard.setString(vaNumber);
+      Clipboard.setString(vaNumber);
 
       Toast.show({
         type: 'success',

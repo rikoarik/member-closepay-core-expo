@@ -19,6 +19,21 @@ module.exports = ({ config }) => {
 
   const plugins = [
     ...(Array.isArray(config.plugins) ? config.plugins : []),
+    [
+      'expo-camera',
+      {
+        cameraPermission: 'Aplikasi memerlukan kamera untuk scan QR code dan barcode serta mengambil foto profil.',
+        microphonePermission: 'Aplikasi memerlukan mikrofon untuk merekam video.',
+        recordAudioAndroid: true,
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'Aplikasi memerlukan akses galeri untuk memilih foto profil dan gambar QR.',
+        cameraPermission: 'Aplikasi memerlukan kamera untuk mengambil foto profil.',
+      },
+    ],
     ['freerasp-react-native/app.plugin.js', { android: { minSdkVersion: '23', R8Version: '8.3.37' } }],
     'react-native-ble-plx',
     'react-native-nfc-manager',
@@ -32,10 +47,13 @@ module.exports = ({ config }) => {
       ...config.ios,
       infoPlist: {
         ...(config.ios?.infoPlist || {}),
-        NSCameraUsageDescription: 'Aplikasi memerlukan kamera untuk scan QR dan mengambil foto profil.',
-        NSPhotoLibraryUsageDescription: 'Aplikasi memerlukan akses galeri untuk memilih foto profil.',
+        NSCameraUsageDescription: 'Aplikasi memerlukan kamera untuk scan QR code, barcode, dan mengambil foto profil.',
+        NSPhotoLibraryUsageDescription: 'Aplikasi memerlukan akses galeri untuk memilih foto profil dan gambar QR.',
         NSMicrophoneUsageDescription: 'Aplikasi memerlukan mikrofon untuk merekam video.',
-        NFCReaderUsageDescription: 'Aplikasi menggunakan NFC untuk pembayaran.',
+        NSLocationWhenInUseUsageDescription: 'Aplikasi memerlukan lokasi untuk fitur toko terdekat dan pemindaian perangkat Bluetooth (BLE).',
+        NSBluetoothAlwaysUsageDescription: 'Aplikasi memerlukan Bluetooth untuk terhubung dengan perangkat pembayaran NFC/kartu.',
+        NSBluetoothPeripheralUsageDescription: 'Aplikasi memerlukan Bluetooth untuk terhubung dengan perangkat pembayaran NFC/kartu.',
+        NFCReaderUsageDescription: 'Aplikasi menggunakan NFC untuk pembayaran dan membaca kartu.',
       },
     },
     android: {
@@ -43,10 +61,15 @@ module.exports = ({ config }) => {
       permissions: [
         'android.permission.CAMERA',
         'android.permission.RECORD_AUDIO',
+        'android.permission.READ_MEDIA_IMAGES',
+        'android.permission.READ_EXTERNAL_STORAGE',
         'android.permission.NFC',
         'android.permission.BLUETOOTH',
         'android.permission.BLUETOOTH_SCAN',
         'android.permission.BLUETOOTH_CONNECT',
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.ACCESS_COARSE_LOCATION',
+        'android.permission.POST_NOTIFICATIONS',
         ...(config.android?.permissions || []),
       ],
     },
