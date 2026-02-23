@@ -27,12 +27,15 @@ import {
   FontFamily,
   scale,
   getIconSize,
+  getTabPlugin,
+  PluginRegistry,
 } from '@core/config';
 import { ScreenHeader } from './ScreenHeader';
 import {
   loadHomeTabSettings,
   saveHomeTabSettings,
   BERANDA_TAB_ID,
+  HARDCODED_HOME_TAB_IDS,
   ALL_AVAILABLE_HOME_TABS,
   DEFAULT_BERANDA_WIDGETS,
   type AvailableHomeTab,
@@ -171,10 +174,17 @@ export const HomeTabSettingsScreen: React.FC = () => {
     const fromConfig = (config?.homeTabs || [])
       .filter((tab) => tab.id !== BERANDA_TAB_ID && tab.id !== 'home')
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    if (fromConfig.length > 0) {
-      return fromConfig.map((tab) => ({ id: tab.id, label: tab.label }));
+    const canTabLoad = (tabId: string): boolean => {
+      if (HARDCODED_HOME_TAB_IDS.has(tabId)) return true;
+      if (!PluginRegistry.isInitialized()) return true;
+      const mapping = getTabPlugin(tabId);
+      return Boolean(mapping && PluginRegistry.isPluginEnabled(mapping.pluginId));
+    };
+    const filtered = fromConfig.filter((tab) => canTabLoad(tab.id));
+    if (filtered.length > 0) {
+      return filtered.map((tab) => ({ id: tab.id, label: tab.label }));
     }
-    return ALL_AVAILABLE_HOME_TABS.map((tab) => {
+    return ALL_AVAILABLE_HOME_TABS.filter((tab) => canTabLoad(tab.id)).map((tab) => {
       const translated = t(tab.labelKey);
       return { id: tab.id, label: translated && translated !== tab.labelKey ? translated : tab.id };
     });
@@ -625,7 +635,7 @@ export const HomeTabSettingsScreen: React.FC = () => {
           {
             backgroundColor: colors.background,
             paddingHorizontal: getHorizontalPadding(),
-            paddingBottom: insets.bottom + moderateVerticalScale(16),
+            paddingBottom: insets.bottom ,
             paddingTop: moderateVerticalScale(16),
           },
         ]}
@@ -830,7 +840,6 @@ const styles = StyleSheet.create({
   saveErrorText: {
     fontFamily: fontRegular,
     fontSize: getResponsiveFontSize('small'),
-    marginBottom: moderateVerticalScale(8),
     textAlign: 'center',
   },
   saveButton: {

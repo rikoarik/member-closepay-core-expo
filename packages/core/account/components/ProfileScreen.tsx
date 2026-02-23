@@ -17,7 +17,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   Profile,
   DocumentText,
-  Grid,
   Sun1,
   Document,
   LogoutCurve,

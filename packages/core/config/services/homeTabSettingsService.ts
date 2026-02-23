@@ -10,6 +10,19 @@ const HOME_TAB_SETTINGS_KEY = '@home_tab_settings';
 export const MAX_HOME_TABS = 3;
 export const BERANDA_TAB_ID = 'beranda';
 
+/** Tab IDs that HomeScreen renders without a plugin (hardcoded branches). Used to filter loadable tabs in settings. */
+export const HARDCODED_HOME_TAB_IDS: ReadonlySet<string> = new Set([
+  'analytics',
+  'analitik',
+  'beranda-news',
+  'activity',
+  'aktivitas',
+  'news',
+  'berita',
+  'dashboard',
+  'transactions',
+]);
+
 export interface HomeTabSettings {
   enabledTabIds: string[];
   berandaWidgets?: BerandaWidgetConfig[];
@@ -31,7 +44,7 @@ export const ALL_AVAILABLE_HOME_TABS: AvailableHomeTab[] = [
   { id: 'activity', labelKey: 'home.activity' },
   { id: 'news', labelKey: 'home.news' },
   { id: 'beranda-news', labelKey: 'home.berandaNews' },
-  { id: 'sport-center', labelKey: 'home.sportCenter' },
+
 ];
 
 export const DEFAULT_BERANDA_WIDGETS: BerandaWidgetConfig[] = [
@@ -50,7 +63,7 @@ export const DEFAULT_BERANDA_WIDGETS: BerandaWidgetConfig[] = [
   { id: 'voucher-available', visible: true, order: 13 },
   { id: 'fnb-recent-orders', visible: true, order: 14 },
   { id: 'marketplace-featured', visible: true, order: 15 },
-  { id: 'sport-center-featured', visible: true, order: 16 },
+  
 ];
 
 function isStringArray(arr: unknown): arr is string[] {
@@ -82,7 +95,7 @@ function sanitizeBerandaWidgets(widgets: unknown): BerandaWidgetConfig[] | undef
     const order = typeof (w as BerandaWidgetConfig).order === 'number' ? (w as BerandaWidgetConfig).order : out.length + 1;
     out.push({ id, visible, order });
   }
-  return out.length > 0 ? out.sort((a, b) => a.order - b.order) : undefined;
+  return out.length > 0 ? out.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : undefined;
 }
 
 /**

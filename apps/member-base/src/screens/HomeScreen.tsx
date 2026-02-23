@@ -3,7 +3,7 @@
  * Dashboard screen sesuai design
  * Responsive untuk semua device termasuk EDC
  */
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo, Suspense } from 'react';
 import {
   View,
   ScrollView,
@@ -14,6 +14,7 @@ import {
   Platform,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -44,6 +45,7 @@ import {
   TransactionsTab,
 } from '../components/home';
 import { PluginTabContentRenderer } from '../components/home/PluginTabContentRenderer';
+import { getLazyTab, hasLazyTab } from '../components/home/LazyPluginTabs';
 import { useNewsState } from '../components/home';
 import { useNotifications } from '@core/notification';
 import Toast from 'react-native-toast-message';
@@ -84,13 +86,19 @@ const HomeScreenComponent = () => {
     const raw = config?.homeTabs || [];
     return raw
       .filter((tab) => tab.visible !== false)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [config?.homeTabs]);
+
+  /** Semua tab dari config (termasuk visible: false) untuk validasi tab pilihan user di settings */
+  const configHomeTabsFull = React.useMemo(() => {
+    const raw = config?.homeTabs || [];
+    return [...raw].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [config?.homeTabs]);
 
   const homeTabs = React.useMemo(() => {
     if (enabledTabIdsFromSettings === null) return configHomeTabs;
-    const tabById = new Map(configHomeTabs.map((tab) => [tab.id, tab]));
-    const validIds = configHomeTabs.map((tab) => tab.id);
+    const tabById = new Map(configHomeTabsFull.map((tab) => [tab.id, tab]));
+    const validIds = configHomeTabsFull.map((tab) => tab.id);
     if (validIds.length === 0) return configHomeTabs;
     if (enabledTabIdsFromSettings.length === 0) return configHomeTabs;
 
@@ -106,7 +114,7 @@ const HomeScreenComponent = () => {
       seen.add(fallback);
       return tabById.get(fallback) ?? { id: fallback, label: fallback, visible: true as const };
     });
-  }, [configHomeTabs, enabledTabIdsFromSettings]);
+  }, [configHomeTabs, configHomeTabsFull, enabledTabIdsFromSettings]);
 
   const tabs: Tab[] = React.useMemo(() => {
     return homeTabs.map((tab) => {
@@ -225,12 +233,47 @@ const HomeScreenComponent = () => {
         pluginMapping &&
         PluginRegistry.isPluginEnabled(pluginMapping.pluginId)
       ) {
+        const LazyTab = hasLazyTab(tabId) ? getLazyTab(tabId) : null;
+        if (LazyTab) {
+          return (
+            <Suspense
+              fallback={
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+              }
+            >
+              <LazyTab
+                isActive={activeTab === tabId}
+                isVisible={activeTab === tabId}
+                scrollEnabled={false}
+              />
+            </Suspense>
+          );
+        }
         return (
           <PluginTabContentRenderer
             tabId={tabId}
             activeTab={activeTab}
             scrollEnabled={false}
           />
+        );
+      }
+      if (pluginMapping && !PluginRegistry.isPluginEnabled(pluginMapping.pluginId)) {
+        return (
+          <View
+            style={{
+              width: layoutWidth,
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: getHorizontalPadding(),
+            }}
+          >
+            <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>
+              {t('home.tabModuleNotEnabled')}
+            </Text>
+          </View>
         );
       }
 
@@ -544,7 +587,7 @@ const HomeScreenComponent = () => {
             backgroundColor: colors.background,
           }}
         >
-          {tabs.length > 0 && (
+          {tabs.length > 1 && (
             <View
               style={{
                 paddingHorizontal: getHorizontalPadding(),

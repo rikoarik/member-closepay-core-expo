@@ -21,8 +21,9 @@ import { useTranslation } from '@core/i18n';
 
 // --- Types ---
 interface VirtualCardTabProps {
-  isActive: boolean;
-  isVisible: boolean;
+  isActive?: boolean;
+  isVisible?: boolean;
+  scrollEnabled?: boolean;
 }
 
 interface VirtualCardData {
@@ -240,7 +241,7 @@ function CardItem({
 }
 
 // --- Tab ---
-export const VirtualCardTab: React.FC<VirtualCardTabProps> = ({ isVisible }) => {
+export const VirtualCardTab: React.FC<VirtualCardTabProps> = ({ isVisible = true }) => {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -559,3 +560,5 @@ const s = StyleSheet.create({
   },
   btnText: { fontSize: moderateScale(16), fontWeight: '600' },
 });
+
+export default VirtualCardTab;

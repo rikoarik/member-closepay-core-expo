@@ -306,6 +306,7 @@ export const en = {
     tabsTutorialStep1: 'Choose tabs for Left and Right. Center tab is always Home.',
     tabsTutorialStep2: 'On Home, swipe left/right or tap a tab name to switch.',
     tabsTutorialStep3: 'Save to apply your settings.',
+    tabModuleNotEnabled: 'This feature is not enabled',
     sportCenter: 'Sport Center',
     invoice: 'Invoice',
     donasiZakat: 'Donation & Zakat',

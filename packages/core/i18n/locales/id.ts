@@ -309,6 +309,7 @@ export const id = {
     tabsTutorialStep1: 'Pilih tab untuk posisi Kiri dan Kanan. Tab tengah selalu Beranda.',
     tabsTutorialStep2: 'Di Beranda, geser kiri/kanan atau ketuk nama tab untuk pindah.',
     tabsTutorialStep3: 'Simpan untuk menerapkan pengaturan.',
+    tabModuleNotEnabled: 'Fitur ini belum diaktifkan',
     sportCenter: 'Sport Center',
     invoice: 'Tagihan',
     'sport-center': 'Sport Center',
