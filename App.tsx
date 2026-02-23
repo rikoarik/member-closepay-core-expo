@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import MemberbaseApp from './apps/member-base';
 
 const MOBILE_VIEWPORT_WIDTH = 414;
-
+const WEB_VIEWPORT_WIDTH = 1024;
+const MOBILE_VIEWPORT_HEIGHT = 896;
 export default function App() {
   const content = (
     <>
@@ -37,7 +38,7 @@ const styles = StyleSheet.create({
   webOuter: {
     flex: 1,
     width: '100%',
-    minHeight: '100%',
+    height: MOBILE_VIEWPORT_HEIGHT,
     backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
