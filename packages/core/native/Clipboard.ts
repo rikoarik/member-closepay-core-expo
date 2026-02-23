@@ -1,71 +1,47 @@
 /**
- * Clipboard Native Module
- *
- * Replaces @react-native-clipboard/clipboard
- * Note: Clipboard is NOT encrypted as it needs to interop with other apps
+ * Clipboard for native (iOS/Android) via expo-clipboard.
+ * Web uses Clipboard.web.ts.
  */
-import { NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
-const { ClipboardModule } = NativeModules;
+let ExpoClipboard: { setStringAsync: (s: string) => Promise<void>; getStringAsync: () => Promise<string> } | null = null;
 
-export interface ClipboardInterface {
-    setString(text: string): void;
-    getString(): Promise<string>;
-    hasString(): Promise<boolean>;
-    hasURL(): Promise<boolean>;
+if (Platform.OS !== 'web') {
+  try {
+    ExpoClipboard = require('expo-clipboard');
+  } catch {
+    ExpoClipboard = null;
+  }
 }
 
-/**
- * Check if the native module is available
- */
-const isAvailable = (): boolean => {
-    return Platform.OS === 'android' && ClipboardModule !== null;
-};
+export interface ClipboardInterface {
+  setString(text: string): void;
+  getString(): Promise<string>;
+  hasString(): Promise<boolean>;
+  hasURL(): Promise<boolean>;
+}
 
-/**
- * Clipboard API
- */
 const Clipboard: ClipboardInterface = {
-    /**
-     * Set string to clipboard
-     */
-    setString(text: string): void {
-        if (!isAvailable()) {
-            console.warn('Clipboard is not available on this platform');
-            return;
-        }
-        ClipboardModule.setString(text);
-    },
+  setString(text: string): void {
+    if (ExpoClipboard) {
+      void ExpoClipboard.setStringAsync(text);
+    }
+  },
 
-    /**
-     * Get string from clipboard
-     */
-    async getString(): Promise<string> {
-        if (!isAvailable()) {
-            return '';
-        }
-        return ClipboardModule.getString();
-    },
+  async getString(): Promise<string> {
+    if (!ExpoClipboard) return '';
+    return await ExpoClipboard.getStringAsync();
+  },
 
-    /**
-     * Check if clipboard has string content
-     */
-    async hasString(): Promise<boolean> {
-        if (!isAvailable()) {
-            return false;
-        }
-        return ClipboardModule.hasString();
-    },
+  async hasString(): Promise<boolean> {
+    const s = await Clipboard.getString();
+    return s.length > 0;
+  },
 
-    /**
-     * Check if clipboard has URL
-     */
-    async hasURL(): Promise<boolean> {
-        if (!isAvailable()) {
-            return false;
-        }
-        return ClipboardModule.hasURL();
-    },
+  async hasURL(): Promise<boolean> {
+    const s = await Clipboard.getString();
+    return /^https?:\/\//i.test(s.trim()) || /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(s.trim());
+  },
 };
 
 export default Clipboard;

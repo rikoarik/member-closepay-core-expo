@@ -1,127 +1,114 @@
 /**
- * SecureStorage Native Module
- *
- * Unified secure storage with iOS fallback to AsyncStorage.
- * - Android: Uses native encrypted storage (Tink AEAD AES-256-GCM)
- * - iOS: Falls back to AsyncStorage
+ * SecureStorage for native (iOS/Android).
+ * - Sensitive keys (prefix @auth_): expo-secure-store (Keychain/Keystore).
+ * - Other keys: AsyncStorage (multiGet/getAllKeys etc. supported).
+ * Web uses SecureStorage.web.ts.
  */
-import { NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { SecureStorageModule } = NativeModules;
+const USE_SECURE_STORE_FOR_PREFIX = '@auth_';
 
-export interface SecureStorageInterface {
-    setItem(key: string, value: string): Promise<void>;
-    getItem(key: string): Promise<string | null>;
-    removeItem(key: string): Promise<void>;
-    clear(): Promise<void>;
-    getAllKeys(): Promise<string[]>;
-    multiGet(keys: string[]): Promise<[string, string | null][]>;
-    multiSet(keyValuePairs: [string, string][]): Promise<void>;
-    multiRemove(keys: string[]): Promise<void>;
+function useSecureStore(key: string): boolean {
+  return Platform.OS !== 'web' && key.startsWith(USE_SECURE_STORE_FOR_PREFIX);
 }
 
-/**
- * Check if the native module is available (Android only)
- */
-const isNativeAvailable = (): boolean => {
-    return Platform.OS === 'android' && SecureStorageModule !== null;
-};
+let SecureStore: {
+  setItemAsync: (key: string, value: string) => Promise<void>;
+  getItemAsync: (key: string) => Promise<string | null>;
+  deleteItemAsync: (key: string) => Promise<void>;
+} | null = null;
 
-/**
- * SecureStorage API with iOS fallback to AsyncStorage
- */
+if (Platform.OS !== 'web') {
+  try {
+    SecureStore = require('expo-secure-store');
+  } catch {
+    SecureStore = null;
+  }
+}
+
+export interface SecureStorageInterface {
+  setItem(key: string, value: string): Promise<void>;
+  getItem(key: string): Promise<string | null>;
+  removeItem(key: string): Promise<void>;
+  clear(): Promise<void>;
+  getAllKeys(): Promise<string[]>;
+  multiGet(keys: string[]): Promise<[string, string | null][]>;
+  multiSet(keyValuePairs: [string, string][]): Promise<void>;
+  multiRemove(keys: string[]): Promise<void>;
+}
+
 const SecureStorage: SecureStorageInterface = {
-    /**
-     * Set an item (encrypted on Android, AsyncStorage on iOS)
-     */
-    async setItem(key: string, value: string): Promise<void> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.setItem(key, value);
-        }
-        // iOS fallback to AsyncStorage
-        return AsyncStorage.setItem(key, value);
-    },
+  async setItem(key: string, value: string): Promise<void> {
+    if (useSecureStore(key) && SecureStore) {
+      await SecureStore.setItemAsync(key, value);
+      return;
+    }
+    await AsyncStorage.setItem(key, value);
+  },
 
-    /**
-     * Get an item (decrypted on Android, AsyncStorage on iOS)
-     * Returns null if key doesn't exist
-     */
-    async getItem(key: string): Promise<string | null> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.getItem(key);
-        }
-        // iOS fallback to AsyncStorage
-        return AsyncStorage.getItem(key);
-    },
+  async getItem(key: string): Promise<string | null> {
+    if (useSecureStore(key) && SecureStore) {
+      return await SecureStore.getItemAsync(key);
+    }
+    return await AsyncStorage.getItem(key);
+  },
 
-    /**
-     * Remove an item
-     */
-    async removeItem(key: string): Promise<void> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.removeItem(key);
-        }
-        // iOS fallback to AsyncStorage
-        return AsyncStorage.removeItem(key);
-    },
+  async removeItem(key: string): Promise<void> {
+    if (useSecureStore(key) && SecureStore) {
+      await SecureStore.deleteItemAsync(key);
+      return;
+    }
+    await AsyncStorage.removeItem(key);
+  },
 
-    /**
-     * Clear all stored items
-     */
-    async clear(): Promise<void> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.clear();
-        }
-        // iOS fallback to AsyncStorage
-        return AsyncStorage.clear();
-    },
+  async clear(): Promise<void> {
+    const keys = await AsyncStorage.getAllKeys();
+    await AsyncStorage.multiRemove(keys);
+    if (SecureStore) {
+      await SecureStore.deleteItemAsync('@auth_token');
+      await SecureStore.deleteItemAsync('@auth_refresh_token');
+      await SecureStore.deleteItemAsync('@auth_token_expiry');
+    }
+  },
 
-    /**
-     * Get all stored keys
-     */
-    async getAllKeys(): Promise<string[]> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.getAllKeys();
+  async getAllKeys(): Promise<string[]> {
+    const asyncKeys = await AsyncStorage.getAllKeys();
+    const secureKeys = ['@auth_token', '@auth_refresh_token', '@auth_token_expiry'];
+    const existing: string[] = [];
+    for (const k of secureKeys) {
+      if (SecureStore) {
+        try {
+          const v = await SecureStore.getItemAsync(k);
+          if (v != null) existing.push(k);
+        } catch {
+          // skip
         }
-        // iOS fallback to AsyncStorage
-        const keys = await AsyncStorage.getAllKeys();
-        return keys as string[];
-    },
+      }
+    }
+    return [...new Set([...asyncKeys, ...existing])];
+  },
 
-    /**
-     * Get multiple items at once
-     */
-    async multiGet(keys: string[]): Promise<[string, string | null][]> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.multiGet(keys);
-        }
-        // iOS fallback to AsyncStorage
-        const result = await AsyncStorage.multiGet(keys);
-        return result as [string, string | null][];
-    },
+  async multiGet(keys: string[]): Promise<[string, string | null][]> {
+    const result: [string, string | null][] = [];
+    for (const key of keys) {
+      const value = await SecureStorage.getItem(key);
+      result.push([key, value]);
+    }
+    return result;
+  },
 
-    /**
-     * Set multiple items at once
-     */
-    async multiSet(keyValuePairs: [string, string][]): Promise<void> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.multiSet(keyValuePairs);
-        }
-        // iOS fallback to AsyncStorage
-        return AsyncStorage.multiSet(keyValuePairs);
-    },
+  async multiSet(keyValuePairs: [string, string][]): Promise<void> {
+    for (const [key, value] of keyValuePairs) {
+      await SecureStorage.setItem(key, value);
+    }
+  },
 
-    /**
-     * Remove multiple items at once
-     */
-    async multiRemove(keys: string[]): Promise<void> {
-        if (isNativeAvailable()) {
-            return SecureStorageModule.multiRemove(keys);
-        }
-        // iOS fallback to AsyncStorage
-        return AsyncStorage.multiRemove(keys);
-    },
+  async multiRemove(keys: string[]): Promise<void> {
+    for (const key of keys) {
+      await SecureStorage.removeItem(key);
+    }
+  },
 };
 
 export default SecureStorage;

@@ -13,8 +13,9 @@ const certificateHashes = Config.ANDROID_CERTIFICATE_HASH
   ? [Config.ANDROID_CERTIFICATE_HASH] 
   : [];
 
+const defaultPackageName = Config.ANDROID_PACKAGE_NAME || (Config.ENV === 'staging' ? 'com.solusinegeri.app.staging' : 'com.solusinegeri.app');
 const androidConfigBase = {
-  packageName: Config.ENV === 'staging' ? 'com.solusinegeri.app.staging' : 'com.solusinegeri.app',
+  packageName: defaultPackageName,
   supportedAlternativeStores: [
     'com.android.vending',
     'com.huawei.appmarket',
@@ -43,7 +44,7 @@ const androidConfig = certificateHashes.length > 0
 export const securityConfig: TalsecConfig = {
   ...(androidConfig ? { androidConfig } : {}),
   iosConfig: {
-    appBundleId: 'com.solusinegeri.app',
+    appBundleId: Config.IOS_BUNDLE_ID || 'com.solusinegeri.app',
     appTeamId: Config.IOS_APP_TEAM_ID || '',
   },
   watcherMail: Config.TALSEC_WATCHER_MAIL || '',
@@ -56,11 +57,11 @@ export const securityConfig: TalsecConfig = {
  */
 export const getNativeSecurityConfig = () => {
   return {
-    packageName: Config.ENV === 'staging' ? 'com.solusinegeri.app.staging' : 'com.solusinegeri.app',
+    packageName: defaultPackageName,
     certificateHashes: certificateHashes,
     isProd: isProduction,
     watcherMail: Config.TALSEC_WATCHER_MAIL || '',
-    appBundleId: 'com.solusinegeri.app',
+    appBundleId: Config.IOS_BUNDLE_ID || 'com.solusinegeri.app',
     appTeamId: Config.IOS_APP_TEAM_ID || '',
   };
 };

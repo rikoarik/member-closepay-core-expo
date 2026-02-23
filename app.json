@@ -13,7 +13,14 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Aplikasi memerlukan kamera untuk scan QR dan mengambil foto profil.",
+        "NSPhotoLibraryUsageDescription": "Aplikasi memerlukan akses galeri untuk memilih foto profil.",
+        "NSMicrophoneUsageDescription": "Aplikasi memerlukan mikrofon untuk merekam video.",
+        "NFCReaderUsageDescription": "Aplikasi menggunakan NFC untuk pembayaran."
+      },
+      "bundleIdentifier": "com.anonymous.memberclosepayexpo"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +28,23 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.NFC",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_ADMIN"
+      ],
+      "package": "com.anonymous.memberclosepayexpo"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

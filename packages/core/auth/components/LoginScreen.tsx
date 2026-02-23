@@ -34,7 +34,7 @@ import {
   getIconSize,
   FontFamily,
   ErrorModal,
-  getAppVersion,
+  getAppVersionAsync,
   useConfig,
 } from '@core/config';
 import { useTheme } from '@core/theme';
@@ -82,27 +82,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     : '';
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
 
-  // Get app version on mount (async)
+  // Get app version on mount (async; uses expo-application on native)
   useEffect(() => {
-    const loadVersion = async () => {
-      try {
-        // Try to get from native module async
-        const AppVersionModule = require('react-native').NativeModules.AppVersionModule;
-        if (AppVersionModule && typeof AppVersionModule.getVersion === 'function') {
-          const version = await AppVersionModule.getVersion();
-          if (version) {
-            setAppVersion(version);
-            return;
-          }
-        }
-      } catch (error) {
-        // Ignore and use fallback
-      }
-
-      // Fallback to sync version from package.json
-      setAppVersion(getAppVersion());
-    };
-    loadVersion();
+    getAppVersionAsync().then(setAppVersion).catch(() => setAppVersion('1.0.0'));
   }, []);
 
   // Show error modal only for API response errors

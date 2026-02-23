@@ -37,7 +37,7 @@ import {
   permissionService,
   ScreenHeader,
 } from '@core/config';
-import { MediaType } from 'react-native-image-picker/lib/typescript/types';
+import * as ImagePicker from 'expo-image-picker';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -157,84 +157,34 @@ export const EditProfileScreen: React.FC = () => {
     setShowPhotoPicker(true);
   };
 
-  const handleSelectFromGallery = () => {
+  const handleSelectFromGallery = async () => {
     setShowPhotoPicker(false);
 
-    if (Platform.OS === 'android') {
-      // Use native ImagePickerModule for Android (with crop)
-      const { NativeModules } = require('react-native');
-      const { ImagePickerModule } = NativeModules;
-
-      if (!ImagePickerModule || !ImagePickerModule.pickImage) {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
         Alert.alert(
-          t('common.error') || 'Error',
-          t('profile.imagePickerNotAvailable') || 'Image picker module tidak tersedia.',
+          t('profile.mediaLibraryPermissionRequired') || 'Izin Galeri Diperlukan',
+          t('profile.mediaLibraryPermissionMessage') ||
+            'Aplikasi memerlukan izin untuk mengakses galeri.',
           [{ text: t('common.ok') || 'OK' }]
         );
         return;
       }
 
-      ImagePickerModule.pickImage({
-        maxWidth: 1024,
-        maxHeight: 1024,
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
         quality: 0.8,
-      })
-        .then((result: any) => {
-          if (result && result.uri) {
-            const imageUri = result.uri.startsWith('file://') ? result.uri : `file://${result.uri}`;
-            setProfileImage(imageUri);
-          }
-        })
-        .catch((error: any) => {
-          console.error('Error selecting image from gallery:', error);
-
-          if (error.code === 'CANCELLED') {
-            return;
-          }
-
-          Alert.alert(
-            t('common.error') || 'Error',
-            error.message ||
-              t('profile.imagePickerError') ||
-              'Terjadi kesalahan saat memilih foto.',
-            [{ text: t('common.ok') || 'OK' }]
-          );
-        });
-    } else {
-      // iOS: Use basic image picker without crop for now
-      const { launchImageLibrary } = require('react-native-image-picker');
-
-      const options = {
-        mediaType: 'photo',
-        includeBase64: false,
-        maxHeight: 1024,
-        maxWidth: 1024,
-        quality: 0.8,
-      };
-
-      launchImageLibrary(options, (response: any) => {
-        if (response.didCancel) {
-          return;
-        }
-
-        if (response.errorMessage) {
-          Alert.alert(
-            t('common.error') || 'Error',
-            response.errorMessage ||
-              t('profile.imagePickerError') ||
-              'Terjadi kesalahan saat memilih foto.',
-            [{ text: t('common.ok') || 'OK' }]
-          );
-          return;
-        }
-
-        if (response.assets && response.assets[0]) {
-          const asset = response.assets[0];
-          if (asset.uri) {
-            setProfileImage(asset.uri);
-          }
-        }
       });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t('profile.imagePickerError') || 'Terjadi kesalahan saat memilih foto.';
+      Alert.alert(t('common.error') || 'Error', message, [{ text: t('common.ok') || 'OK' }]);
     }
   };
 
@@ -242,10 +192,8 @@ export const EditProfileScreen: React.FC = () => {
     setShowPhotoPicker(false);
 
     try {
-      // Request camera permission first
-      const permissionResult = await permissionService.requestCameraPermission();
-
-      if (permissionResult.status !== 'granted') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
         Alert.alert(
           t('profile.cameraPermissionRequired') || 'Izin Kamera Diperlukan',
           t('profile.cameraPermissionMessage') ||
@@ -267,79 +215,18 @@ export const EditProfileScreen: React.FC = () => {
         return;
       }
 
-      if (Platform.OS === 'android') {
-        // Use native ImagePickerModule for Android (with crop)
-        const { NativeModules } = require('react-native');
-        const { ImagePickerModule } = NativeModules;
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-        if (!ImagePickerModule || !ImagePickerModule.takePicture) {
-          Alert.alert(
-            t('common.error') || 'Error',
-            t('profile.imagePickerNotAvailable') || 'Image picker module tidak tersedia.',
-            [{ text: t('common.ok') || 'OK' }]
-          );
-          return;
-        }
-
-        const result = await ImagePickerModule.takePicture({
-          maxWidth: 1024,
-          maxHeight: 1024,
-          quality: 0.8,
-        });
-
-        if (result && result.uri) {
-          const imageUri = result.uri.startsWith('file://') ? result.uri : `file://${result.uri}`;
-          setProfileImage(imageUri);
-        }
-      } else {
-        // iOS: Use basic camera without crop for now
-        const { launchCamera } = require('react-native-image-picker');
-
-        const options = {
-          mediaType: 'photo',
-          includeBase64: false,
-          maxHeight: 1024,
-          maxWidth: 1024,
-          quality: 0.8,
-        };
-
-        launchCamera(options, (response: any) => {
-          if (response.didCancel) {
-            return;
-          }
-
-          if (response.errorMessage) {
-            Alert.alert(
-              t('common.error') || 'Error',
-              response.errorMessage ||
-                t('profile.cameraError') ||
-                'Terjadi kesalahan saat mengambil foto.',
-              [{ text: t('common.ok') || 'OK' }]
-            );
-            return;
-          }
-
-          if (response.assets && response.assets[0]) {
-            const asset = response.assets[0];
-            if (asset.uri) {
-              setProfileImage(asset.uri);
-            }
-          }
-        });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setProfileImage(result.assets[0].uri);
       }
-    } catch (error: any) {
-      console.error('Error taking photo:', error);
-
-      if (error.code === 'CANCELLED') {
-        // User cancelled, no need to show error
-        return;
-      }
-
-      Alert.alert(
-        t('common.error') || 'Error',
-        error.message || t('profile.cameraError') || 'Terjadi kesalahan saat mengambil foto.',
-        [{ text: t('common.ok') || 'OK' }]
-      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t('profile.cameraError') || 'Terjadi kesalahan saat mengambil foto.';
+      Alert.alert(t('common.error') || 'Error', message, [{ text: t('common.ok') || 'OK' }]);
     }
   };
 
