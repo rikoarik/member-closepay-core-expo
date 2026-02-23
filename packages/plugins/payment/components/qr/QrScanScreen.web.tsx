@@ -1,6 +1,6 @@
 /**
- * QrScanScreen - Web: kamera via getUserMedia + jsQR, tanpa animasi, full layer.
- * Container video diambil via nativeID + getElementById agar pasti dapat DOM node.
+ * QrScanScreen - Web: kamera via getUserMedia + jsQR.
+ * Video di-render lewat React agar preview tidak hilang saat re-render.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -32,9 +32,11 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
   const [value, setValue] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [useManualInput, setUseManualInput] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const animationRef = useRef<number | null>(null);
-  const lastScannedRef = useRef<string | null>(null);
+  const lastScannedRef = useRef<{ data: string; t: number } | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
 
   useEffect(() => {
@@ -52,99 +54,29 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
     }
   }, []);
 
+  // Start kamera dan set stream agar video di-render React
   useEffect(() => {
     if (!isActive || useManualInput) {
       stopCamera();
+      setStream(null);
       return;
     }
-    if (typeof document === 'undefined' || typeof navigator === 'undefined') return;
-
-    const getContainer = (): HTMLElement | null =>
-      document.getElementById(VIDEO_CONTAINER_ID);
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
 
     let mounted = true;
-    let container: HTMLElement | null = null;
-
-    const tryInit = () => {
-      if (!mounted) return;
-      container = getContainer();
-      if (!container) {
-        setTimeout(tryInit, 50);
-        return;
-      }
-      initCamera();
-    };
 
     const initCamera = async () => {
-      if (!container || !mounted) return;
-      let video: HTMLVideoElement;
-      let canvas: HTMLCanvasElement;
-      let ctx: CanvasRenderingContext2D | null;
-
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         });
         if (!mounted) {
-          stream.getTracks().forEach((t) => t.stop());
+          mediaStream.getTracks().forEach((t) => t.stop());
           return;
         }
-        streamRef.current = stream;
+        streamRef.current = mediaStream;
         setCameraError(null);
-
-        video = document.createElement('video');
-        video.setAttribute('autoplay', '');
-        video.setAttribute('playsInline', '');
-        video.setAttribute('muted', '');
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'cover';
-        video.style.objectPosition = 'center center';
-        video.srcObject = stream;
-        container.innerHTML = '';
-        container.appendChild(video);
-
-        await new Promise<void>((resolve, reject) => {
-          video.onloadedmetadata = () => {
-            video.play().then(() => {
-              if (mounted) setCameraReady(true);
-              resolve();
-            }).catch(reject);
-          };
-          video.onerror = () => reject(new Error('Video load failed'));
-        });
-
-        if (!mounted) return;
-        canvas = document.createElement('canvas');
-        ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        const tick = () => {
-          if (!mounted || !streamRef.current || !video || !ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
-            if (mounted) animationRef.current = requestAnimationFrame(tick);
-            return;
-          }
-          const w = video.videoWidth;
-          const h = video.videoHeight;
-          if (w === 0 || h === 0) {
-            animationRef.current = requestAnimationFrame(tick);
-            return;
-          }
-          canvas.width = w;
-          canvas.height = h;
-          ctx.drawImage(video, 0, 0, w, h);
-          const imageData = ctx.getImageData(0, 0, w, h);
-          const code = jsQR(imageData.data, w, h, { inversionAttempts: 'dontInvert' });
-          if (code && code.data) {
-            const now = Date.now();
-            if (lastScannedRef.current !== code.data || now - (lastScannedRef as any)._t > 2000) {
-              lastScannedRef.current = code.data;
-              (lastScannedRef as any)._t = now;
-              onScanned?.(code.data, 'qr');
-            }
-          }
-          animationRef.current = requestAnimationFrame(tick);
-        };
-        tick();
+        setStream(mediaStream);
       } catch (err) {
         if (mounted) {
           const msg = err instanceof Error ? err.message : 'Kamera tidak dapat diakses';
@@ -154,15 +86,64 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
       }
     };
 
-    tryInit();
+    initCamera();
 
     return () => {
       mounted = false;
       stopCamera();
-      container = getContainer();
-      if (container && typeof container.innerHTML !== 'undefined') container.innerHTML = '';
+      setStream(null);
     };
-  }, [isActive, useManualInput, onScanned, stopCamera]);
+  }, [isActive, useManualInput, stopCamera]);
+
+  // Loop jsQR setelah video siap (video di-render React, ref terisi)
+  useEffect(() => {
+    if (!stream || !cameraReady || !videoRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    let mounted = true;
+
+    const tick = () => {
+      if (!mounted || !streamRef.current || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        if (mounted) animationRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (w === 0 || h === 0) {
+        animationRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(video, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const code = jsQR(imageData.data, w, h, { inversionAttempts: 'dontInvert' });
+      if (code?.data) {
+        const now = Date.now();
+        if (
+          lastScannedRef.current?.data !== code.data ||
+          now - lastScannedRef.current.t > 2000
+        ) {
+          lastScannedRef.current = { data: code.data, t: now };
+          onScanned?.(code.data, 'qr');
+        }
+      }
+      animationRef.current = requestAnimationFrame(tick);
+    };
+    tick();
+
+    return () => {
+      mounted = false;
+      if (animationRef.current != null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, [stream, cameraReady, onScanned]);
 
   useEffect(() => {
     if (!isActive || useManualInput) setCameraReady(false);
@@ -206,12 +187,49 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
     );
   }
 
+  const videoContainerStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    minHeight: 200,
+  };
+
+  const videoStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition: 'center 55%',
+    display: 'block',
+  };
+
   return (
     <View style={styles.container}>
-      <View
-        nativeID={VIDEO_CONTAINER_ID}
-        style={styles.videoWrapper}
-      />
+      {typeof document !== 'undefined' && (
+        <div id={VIDEO_CONTAINER_ID} style={videoContainerStyle}>
+          {stream && (
+            <video
+              ref={(el) => {
+                videoRef.current = el;
+                if (el) el.srcObject = stream;
+              }}
+              autoPlay
+              playsInline
+              muted
+              style={videoStyle}
+              onLoadedMetadata={() => {
+                videoRef.current?.play().then(() => setCameraReady(true)).catch(() => {});
+              }}
+              onError={() => setCameraReady(false)}
+            />
+          )}
+        </div>
+      )}
       {!cameraError && !cameraReady && (
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color="#fff" />
@@ -219,19 +237,10 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
         </View>
       )}
       {!cameraError && cameraReady && (
-        <View style={styles.staticFrame} pointerEvents="none">
-          <View style={[styles.corner, styles.topLeft, { borderColor: colors.primary }]} />
-          <View style={[styles.corner, styles.topRight, { borderColor: colors.primary }]} />
-          <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary }]} />
-          <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary }]} />
-        </View>
+        <View style={styles.staticFrame} pointerEvents="none"/>
+         
       )}
-      <TouchableOpacity
-        style={styles.switchInput}
-        onPress={() => setUseManualInput(true)}
-      >
-        <Text style={styles.linkText}>Input kode manual</Text>
-      </TouchableOpacity>
+     
     </View>
   );
 };
@@ -239,10 +248,7 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 0,
-    minHeight: 0,
-    alignSelf: 'stretch',
-    position: 'relative',
+    marginTop: '50%',
   },
   manualInputContainer: {
     paddingHorizontal: 24,
@@ -268,7 +274,6 @@ const styles = StyleSheet.create({
   linkText: { color: '#076409', fontSize: 14 },
   videoWrapper: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
@@ -286,44 +291,25 @@ const styles = StyleSheet.create({
   overlayText: { color: '#fff', marginTop: 12 },
   staticFrame: {
     position: 'absolute',
-    top: '15%',
-    left: '10%',
-    right: '10%',
-    bottom: '15%',
+    bottom: 0,
+    left: 0,
+    right: 0,
+   
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: scale(12),
   },
   corner: {
     position: 'absolute',
+
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: scale(24),
     height: scale(24),
     borderWidth: 4,
   },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-  },
+ 
   switchInput: {
     position: 'absolute',
     bottom: 16,
