@@ -1,0 +1,30 @@
+---
+description: Komponen React, theme, i18n, StyleSheet, dan import core
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# React & Styling
+
+## Imports
+
+- Theme: `import { useTheme } from '@core/theme'` → `const { colors, isDark } = useTheme();`
+- i18n: `import { useTranslation } from '@core/i18n'` → `const { t } = useTranslation();`
+- Config/scale/helpers: `import { scale, useConfig, getResponsiveFontSize, FontFamily, ... } from '@core/config'`
+- Navigation: `import { useNavigation } from '@react-navigation/native'`
+- Safe area: `SafeAreaView`, `useSafeAreaInsets` dari `react-native-safe-area-context`
+
+## Komponen
+
+- Functional components; hooks untuk state dan side effects.
+- Screen: gunakan `useTheme()` untuk warna, `useTranslation()` untuk teks; style pakai `StyleSheet.create` dan gabungkan dengan `colors` dari theme (e.g. `style={[styles.x, { color: colors.text }]`).
+
+## Styling
+
+- `StyleSheet.create` di bawah component atau di file terpisah (e.g. `styles.ts`). Hindari inline object besar; untuk nilai dinamis (theme) pakai array style dengan object inline.
+- Font: pakai `FontFamily?.monasans?.regular` (atau semiBold) dari config; fallback `'System'`.
+- Responsive: gunakan helpers dari `@core/config` (`scale`, `moderateVerticalScale`, `getResponsiveFontSize`, `getHorizontalPadding`, `getMinTouchTarget`, `getIconSize`) agar konsisten dengan app.
+
+## Provider Order (Root)
+
+- Urutan di app root: `SafeAreaProvider` → `ThemeProvider` → `I18nProvider` → `SecurityProviderWrapper` → `FontLoader` → konten. Jangan ubah urutan tanpa alasan.

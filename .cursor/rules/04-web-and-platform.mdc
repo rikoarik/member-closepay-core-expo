@@ -1,0 +1,30 @@
+---
+description: Platform-specific code (.web), web viewport, dan stubs
+globs: **/*.web.tsx,**/*.web.ts,**/native/**/*,App.tsx
+alwaysApply: false
+---
+
+# Web & Platform-Specific Code
+
+## File Platform-Specific
+
+- **Native**: default file (e.g. `QrScanScreen.tsx`, `Clipboard.ts`).
+- **Web**: gunakan ekstensi `.web.tsx` atau `.web.ts` (e.g. `QrScanScreen.web.tsx`, `Clipboard.web.ts`). Metro/Expo akan pilih sesuai platform; tidak perlu import beda di kode pemanggil.
+- Untuk modul di `packages/core/native/` (Clipboard, Config, SecureStorage): implementasi web di file terpisah dengan nama sama + `.web.ts` di lokasi yang di-resolve sama (biasanya sibling atau lewat resolver).
+
+## Branching di Kode
+
+- Cek platform: `Platform.OS === 'web'` (dan bila perlu `typeof window !== 'undefined'`) untuk behavior khusus web.
+- Contoh: history/back handling, viewport wrapper, atau fitur yang tidak ada di web (NFC, kamera asli).
+
+## Web Viewport (Root)
+
+- Di `App.tsx`, untuk web: konten dibungkus dengan lebar max (e.g. 414px) dan centered; background abu-abu di luar, konten dalam container dengan shadow. Non-web: full width.
+
+## Web Stubs
+
+- Fitur native yang tidak ada di web pakai stub: SecurityProvider → `SecurityProvider.web.tsx`, Config/SecurityConfig → `*.web.ts`, permission/NFC/BLE → `*Service.web.ts`, clipboard → `Clipboard.web.ts` (navigator.clipboard). QR scan di web boleh pakai `QrScanScreen.web.tsx` (getUserMedia + jsQR atau input manual).
+
+## Build & Deploy Web
+
+- Build: `npm run build:web` / `npx expo export -p web` → output `dist/`. Deploy (e.g. Vercel): Build Command = build:web, Output Directory = dist; routing client-side pakai rewrites (vercel.json).

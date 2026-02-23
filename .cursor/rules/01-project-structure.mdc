@@ -1,0 +1,33 @@
+---
+description: Struktur monorepo, path aliases, dan konvensi folder
+alwaysApply: true
+---
+
+# Struktur Project (Member Closepay Expo)
+
+## Monorepo
+
+- **Root**: Expo app (iOS, Android, Web). Entry: `App.tsx` → `apps/member-base`.
+- **packages/core**: Auth, config, theme, i18n, account, navigation, notification, security. Shared logic dan UI core.
+- **packages/plugins**: Modul fitur (balance, payment, card-transaction, marketplace, marketplace-fnb, invoice, donasi-zakat, sport-center, dll). Setiap plugin punya `plugin.manifest.json` dan export lewat `index.ts`.
+- **apps/member-base**: App member base; config di `config/app.config.ts`, screens & components di `src/`.
+
+## Path Aliases (tsconfig + metro.config.js)
+
+- `@core/*` → `packages/core/*`
+- `@plugins/*` → `packages/plugins/*`
+- `@app/*` → `apps/member-base/src/*`
+
+Gunakan alias ini untuk import; jangan relative path lintas package (mis. `import { useTheme } from '@core/theme'`).
+
+## Konvensi Folder per Package
+
+- **Core/Plugin**: `components/`, `services/`, `hooks/`, `models/`, `types/`. Screens di `components/screens/` atau `components/<feature>/`.
+- **Plugin**: `plugin.manifest.json` di root plugin; `index.ts` re-export types, services, components.
+- **App**: `src/screens/`, `src/components/`, `config/` (app.config, theme.color).
+
+## Menambah Plugin Baru
+
+1. Buat folder `packages/plugins/<pluginId>/` dengan `plugin.manifest.json` dan `index.ts`.
+2. Di `packages/core/config/plugins/pluginLoader.ts` tambah entry di `MANIFEST_LOADERS` dan pastikan path ke `plugin.manifest.json` benar.
+3. Aktifkan di app config: `enabledModules` di `apps/member-base/config/app.config.ts`.

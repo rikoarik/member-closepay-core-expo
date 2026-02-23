@@ -1,9 +1,23 @@
 /**
- * QrScanScreen - Web: kamera via getUserMedia + jsQR, fallback input manual
+ * QrScanScreen - Web: kamera via getUserMedia + jsQR, fallback input manual.
+ * Overlay & scan line animation match native QR screen.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Animated,
+  Easing,
+} from 'react-native';
 import jsQR from 'jsqr';
+import { scale } from '@core/config';
+import { useTheme } from '@core/theme';
+
+const SCAN_WINDOW_SIZE = scale(260);
 
 interface QrScanScreenProps {
   isActive: boolean;
@@ -16,6 +30,7 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
   onScanned,
   onHeaderActionsReady,
 }) => {
+  const { colors } = useTheme();
   const [value, setValue] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [useManualInput, setUseManualInput] = useState(false);
@@ -24,6 +39,7 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
   const animationRef = useRef<number | null>(null);
   const lastScannedRef = useRef<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const scanAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     onHeaderActionsReady?.(null);
@@ -131,6 +147,32 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
     if (!isActive || useManualInput) setCameraReady(false);
   }, [isActive, useManualInput]);
 
+  // Scan line animation when camera is active
+  useEffect(() => {
+    if (!isActive || !cameraReady || useManualInput) {
+      scanAnim.setValue(0);
+      return;
+    }
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanAnim, {
+          toValue: 0,
+          duration: 2000,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isActive, cameraReady, useManualInput, scanAnim]);
+
   const handleSubmit = () => {
     if (value.trim() && onScanned) {
       onScanned(value.trim(), 'qr');
@@ -178,9 +220,41 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
         style={styles.videoWrapper}
       />
       {!cameraError && !cameraReady && (
-        <View style={styles.overlay} pointerEvents="none">
+        <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.overlayText}>Mengaktifkan kamera...</Text>
+        </View>
+      )}
+      {/* Dark overlay with scan window + corners + scan line (when camera ready) */}
+      {!cameraError && cameraReady && (
+        <View style={styles.scanOverlayContainer} pointerEvents="box-none">
+          <View style={styles.overlayTop} pointerEvents="none" />
+          <View style={styles.overlayMiddle} pointerEvents="none">
+            <View style={styles.overlaySide} pointerEvents="none" />
+            <View style={[styles.scanWindow, { width: SCAN_WINDOW_SIZE, height: SCAN_WINDOW_SIZE }]} pointerEvents="none">
+              <View style={[styles.corner, styles.topLeft, { borderColor: colors.primary }]} pointerEvents="none" />
+              <View style={[styles.corner, styles.topRight, { borderColor: colors.primary }]} pointerEvents="none" />
+              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary }]} pointerEvents="none" />
+              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary }]} pointerEvents="none" />
+              <Animated.View
+                style={[
+                  styles.scanLine,
+                  {
+                    backgroundColor: colors.primary,
+                    transform: [{
+                      translateY: scanAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, SCAN_WINDOW_SIZE],
+                      }),
+                    }],
+                  },
+                ]}
+                pointerEvents="none"
+              />
+            </View>
+            <View style={styles.overlaySide} pointerEvents="none" />
+          </View>
+          <View style={styles.overlayBottom} pointerEvents="none" />
         </View>
       )}
       <TouchableOpacity
@@ -226,13 +300,86 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 12,
   },
-  overlay: {
+  loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   overlayText: { color: '#fff', marginTop: 12 },
+  scanOverlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+    pointerEvents: 'box-none',
+  },
+  overlayTop: {
+    flex: 0.7,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  overlayMiddle: {
+    flexDirection: 'row',
+    height: SCAN_WINDOW_SIZE,
+  },
+  overlayBottom: {
+    flex: 1.3,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  overlaySide: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  scanWindow: {
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  corner: {
+    position: 'absolute',
+    width: scale(20),
+    height: scale(20),
+    borderWidth: 4,
+    borderColor: 'white',
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  scanLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    width: '100%',
+    height: 2,
+    shadowColor: '#00ff00',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 4,
+    shadowRadius: scale(10),
+  },
   switchInput: {
     position: 'absolute',
     bottom: 24,

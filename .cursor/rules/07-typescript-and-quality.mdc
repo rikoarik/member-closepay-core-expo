@@ -1,0 +1,42 @@
+---
+description: TypeScript, error handling di component, dan praktik umum
+globs: **/*.ts,**/*.tsx
+alwaysApply: false
+---
+
+# TypeScript & Kualitas Kode
+
+## TypeScript
+
+- Strict mode aktif (tsconfig). Hindari `any`; gunakan type dari `@core/config/plugins/types`, `@core/theme/types`, atau definisi lokal.
+- Export type bila dipakai di luar file: `export type { X }` atau `export interface X`.
+
+## Error Handling di Component
+
+- Jangan catch kosong. Log error dan tampilkan feedback (toast atau state error).
+- Async di useEffect: gunakan flag `cancelled` untuk avoid setState setelah unmount.
+
+```ts
+useEffect(() => {
+  let cancelled = false;
+  const load = async () => {
+    try {
+      const data = await fetchData();
+      if (!cancelled) setData(data);
+    } catch (e) {
+      if (!cancelled) setError(e);
+    }
+  };
+  load();
+  return () => { cancelled = true; };
+}, []);
+```
+
+## Logging
+
+- Pakai `logger` dari `@core/config` (bukan `console.log` di production path). Service pakai `this.log` dari BaseService.
+
+## Naming
+
+- Screen: akhiran `Screen` (e.g. `TopUpScreen`, `HomeTabSettingsScreen`). Component umum: PascalCase. File: PascalCase untuk component, camelCase untuk util/services.
+- Konstanta: UPPER_SNAKE atau camelCase untuk config object.

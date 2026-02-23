@@ -3,10 +3,11 @@
  * Navigation builder that creates app navigation from tenant config and plugin manifests
  */
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { NavigationContainer, CommonActions } from '@react-navigation/native';
+import type { NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { TenantId, getTenantConfig, getCurrentTenantId, PluginRegistry, getPluginComponentLoader, QuickMenuSettingsScreen, HomeTabSettingsScreen, OnboardingScreen, onboardingService, logger } from '@core/config';
 import { ProfileScreen, EditProfileScreen } from '@core/account';
 import { LanguageSelectionScreen } from '@core/i18n';
@@ -74,6 +75,29 @@ export function createAppNavigator({
     const [isLoading, setIsLoading] = useState(true);
     const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
     const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
+    const navigationRef = useRef<NavigationContainerRef<Record<string, object | undefined>> | null>(null);
+
+    // Web: tombol back browser → goBack in-app (tetap di app, bukan keluar)
+    useEffect(() => {
+      if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+      const onPopState = () => {
+        const nav = navigationRef.current;
+        if (nav?.canGoBack()) nav.dispatch(CommonActions.goBack());
+      };
+      window.addEventListener('popstate', onPopState);
+      return () => window.removeEventListener('popstate', onPopState);
+    }, []);
+
+    const prevRouteCountRef = useRef(0);
+    const handleWebStateChange = React.useCallback(() => {
+      if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+      const state = navigationRef.current?.getRootState();
+      const count = state?.routes?.length ?? 0;
+      if (count > prevRouteCountRef.current) {
+        window.history.pushState(null, '', window.location.href);
+      }
+      prevRouteCountRef.current = count;
+    }, []);
 
     // Process app screens
     const validAppScreens = React.useMemo(() => {
@@ -237,7 +261,7 @@ export function createAppNavigator({
 
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef} onStateChange={handleWebStateChange}>
           <Stack.Navigator
             screenOptions={{
               headerShown: false, // Hide default iOS header for all screens

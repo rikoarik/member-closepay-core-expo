@@ -1,0 +1,28 @@
+---
+description: createAppNavigator, Stack.Screen, appScreens, dan route plugin
+globs: **/*Screen*.tsx,**/navigation/**/*,apps/member-base/index.tsx
+alwaysApply: false
+---
+
+# Navigation & Screens
+
+## createAppNavigator
+
+- Dari `@core/navigation`: `createAppNavigator({ tenantId, HomeScreen, appScreens })`.
+- **appScreens**: React Fragment atau array dari `Stack.Screen`; dipakai untuk inject screen app-specific ke stack (Notifications, News, Search, Settings, dll).
+- Navigator dibangun dari tenant config + plugin manifests (routes dari PluginRegistry); jangan hardcode daftar screen plugin di navigator.
+
+## Naming & Registration
+
+- Screen name di `Stack.Screen name="..."` harus unik dan konsisten dengan nama yang dipakai untuk navigate (mis. `navigation.navigate('ScanQr')`).
+- Screen yang dari plugin: nama di manifest `routes[].name` dipakai untuk register oleh createAppNavigator; app hanya import component-nya dan bisa pakai nama lain di appScreens jika perlu (mis. ScanQr → QrScreen).
+
+## App Entry (member-base)
+
+- `MemberBaseAppContent`: load config → `initializePlugins()` → render `AppNavigator` dari `createAppNavigator(...)`.
+- App-specific screens diberikan lewat `appScreens` (Fragment berisi banyak `Stack.Screen`).
+
+## Web
+
+- Back button browser: di createAppNavigator, `popstate` → `goBack()` jika `canGoBack()`.
+- Push state: pada state change, jika route count naik, `history.pushState` agar back tetap in-app.

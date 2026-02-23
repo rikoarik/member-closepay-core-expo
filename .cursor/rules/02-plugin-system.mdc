@@ -1,0 +1,46 @@
+---
+description: Plugin manifest, routes, exports, dan loader
+globs: packages/plugins/**/*,packages/core/config/plugins/**/*
+alwaysApply: false
+---
+
+# Plugin System
+
+## plugin.manifest.json
+
+- **Wajib**: `id`, `name`, `version`, `description`, `type` (`core-plugin` | `segment-plugin` | `company-plugin`), `dependencies`, `exports`, `permissions`, `routes` (opsional).
+- **exports**: `components`, `services`, `screens` (nama route → nama component), `tabs`, `widgets` sesuai kebutuhan.
+- **routes**: Array of `{ name, path, component, permissions, meta?: { title, showInMenu?, icon? } }`. `component` harus string nama component yang di-export.
+
+Contoh (snippet):
+
+```json
+{
+  "id": "payment",
+  "type": "core-plugin",
+  "dependencies": ["balance"],
+  "exports": {
+    "components": ["TopUpScreen", "QrScreen"],
+    "services": ["paymentService", "topUpService"],
+    "screens": { "TopUp": "TopUpScreen", "Qr": "QrScreen" }
+  },
+  "routes": [
+    { "name": "TopUp", "path": "/payment/topup", "component": "TopUpScreen", "permissions": ["payment:topup"], "meta": { "title": "Top Up", "showInMenu": true } }
+  ],
+  "permissions": ["payment:topup", "payment:withdraw"]
+}
+```
+
+## Registrasi Plugin
+
+- Manifest loader: hanya di `pluginLoader.ts` via `MANIFEST_LOADERS`. Metro butuh static import path.
+- Jangan hardcode daftar plugin di tempat lain; pakai `PluginRegistry.getEnabledPlugins()`, `getEnabledRoutes()`, `getRouteByName()`.
+
+## Core vs Enabled
+
+- `type === 'core-plugin'` otomatis diload.
+- Plugin lain di-load jika ada di `config.enabledModules` (app config).
+
+## Validasi
+
+- Pakai `validateManifestOrThrow` dari `@core/config` sebelum register; manifest harus lolos `manifestValidator`.

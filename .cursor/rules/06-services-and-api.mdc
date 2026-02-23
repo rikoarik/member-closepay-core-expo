@@ -1,0 +1,30 @@
+---
+description: Services, BaseService, error handling, validasi, dan API
+globs: **/services/**/*.ts,packages/core/config/utils/**/*
+alwaysApply: false
+---
+
+# Services & API
+
+## BaseService (@core/config)
+
+- Service yang butuh error handling, validasi, dan logging: extend `BaseService`.
+- Wajib: `protected abstract readonly serviceName: string`. Pakai `this.log` (logger child) untuk log.
+- Method: `handleError(error, context?)` untuk log + return user-friendly message; `validateId`, `validateString`, `validateEmail`, `validatePhone` (dari `@core/config/utils/validation`) dan `throwIfInvalid` untuk validasi input.
+
+## Error Handling
+
+- Pakai `handleApiError`, `getUserFriendlyMessage`, `getErrorDetails` dari `@core/config/utils/errorHandler`.
+- Types: `ApiError`, `NetworkError`, `ValidationError`, `AuthError` dari `@core/config/types/errors`.
+
+## Validasi
+
+- Import dari `@core/config/utils/validation`: `validateId`, `validateString`, `validateEmail`, `validatePhone`, `throwIfInvalid`, `ValidationResult`. Jangan validasi manual untuk field standar.
+
+## API & Config
+
+- Axios instance dan base URL dari config: `axiosInstance`, `configService.getConfig()` dari `@core/config`. Jangan hardcode base URL.
+
+## Plugin Services
+
+- Plugin export services lewat manifest `exports.services`; konsumen import dari `@plugins/<pluginId>` (re-export di plugin `index.ts`). Service plugin boleh extend `BaseService` dan pakai balance operations lewat `@core/config/plugins/contracts/balance` bila perlu.
