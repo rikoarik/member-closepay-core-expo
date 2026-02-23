@@ -2,7 +2,7 @@
  * BalanceDetailScreen Component
  * Screen detail saldo with bottom sheet transaction history
  */
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -548,6 +548,28 @@ export const BalanceDetailScreen = () => {
     })
   ).current;
 
+  const handleBalanceAction = useCallback(
+    (actionId: string) => {
+      switch (actionId) {
+        case 'fillBalance':
+          (navigation as any).navigate('TopUp');
+          break;
+        case 'tfMember':
+          (navigation as any).navigate('TransferMember');
+          break;
+        case 'tfBank':
+          (navigation as any).navigate('Withdraw');
+          break;
+        case 'pay':
+          (navigation as any).navigate('Qr');
+          break;
+        default:
+          break;
+      }
+    },
+    [navigation]
+  );
+
   const renderBalanceMenuCard = ({ item }: { item: (typeof MOCK_BALANCE_ACCOUNTS)[0] }) => {
     const accountActions = getAccountActionButtons(item);
     // Get balance card color from config, fallback to primary color
@@ -576,7 +598,7 @@ export const BalanceDetailScreen = () => {
               <TouchableOpacity
                 key={button.id}
                 style={styles.actionButton}
-                onPress={() => console.log(button.id)}
+                onPress={() => handleBalanceAction(button.id)}
               >
                 <View style={[styles.actionIconContainer, { backgroundColor: colors.background }]}>
                   <IconComponent size={scale(22)} color={colors.textSecondary} variant="Outline" />
