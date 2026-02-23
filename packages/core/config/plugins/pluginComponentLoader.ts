@@ -115,7 +115,9 @@ const STATIC_COMPONENT_LOADERS: Record<string, Record<string, () => Promise<any>
     FnBRecentOrders: () => import('../../../plugins/marketplace-fnb/components/widgets/FnBRecentOrders'),
   },
   payment: {
+    TopUpEntryScreen: () => import('../../../plugins/payment/components/topup/TopUpEntryScreen'),
     TopUpScreen: () => import('../../../plugins/payment/components/topup/TopUpScreen'),
+    TopUpCloseScreen: () => import('../../../plugins/payment/components/topup/TopUpCloseScreen'),
     VirtualAccountScreen: () => import('../../../plugins/payment/components/virtual-account/VirtualAccountScreen'),
     WithdrawScreen: () => import('../../../plugins/payment/components/withdraw/WithdrawScreen'),
     WithdrawSuccessScreen: () => import('../../../plugins/payment/components/withdraw/WithdrawSuccessScreen'),

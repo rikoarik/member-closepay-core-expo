@@ -176,6 +176,10 @@ export const VirtualAccountScreen = () => {
     return t('virtualAccount.petunjukTopUpBankLain');
   };
 
+  const amount = params?.amount;
+  const formatAmount = (value: number): string =>
+    value.toLocaleString('id-ID');
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -217,6 +221,44 @@ export const VirtualAccountScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + moderateVerticalScale(16) }]}
       >
+        {amount != null && amount > 0 && (
+          <View
+            style={[
+              styles.card,
+              styles.summaryCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.summaryRow}>
+              <Text style={[styles.labelSmall, { color: colors.textSecondary }]}>
+                {t('virtualAccount.totalTopUp')}
+              </Text>
+              <Text style={[styles.summaryAmount, { color: colors.text }]}>
+                Rp {formatAmount(amount)}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.labelSmall, { color: colors.textSecondary }]}>
+                {t('virtualAccount.payBefore')}
+              </Text>
+              <Text style={[styles.timerText, { color: colors.error }]}>
+                {timeRemaining.hours} {t('virtualAccount.hours')} {timeRemaining.minutes} {t('virtualAccount.minutes')} {timeRemaining.seconds} {t('virtualAccount.seconds')}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.labelSmall, { color: colors.textSecondary }]}>
+                {t('virtualAccount.dueDate')}
+              </Text>
+              <Text style={[styles.summaryDueDate, { color: colors.text }]}>
+                {formatDate(expiryTime)}, {formatTime(expiryTime)}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Kartu bank (tanpa status) */}
         <View
           style={[
@@ -406,6 +448,23 @@ const styles = StyleSheet.create({
     padding: scale(16),
     marginTop: moderateVerticalScale(12),
     marginBottom: moderateVerticalScale(12),
+  },
+  summaryCard: {
+    marginTop: 0,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: moderateVerticalScale(8),
+  },
+  summaryAmount: {
+    fontSize: moderateScale(16),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  summaryDueDate: {
+    fontSize: moderateScale(12),
+    fontFamily: FontFamily.monasans.medium,
   },
   warningBox: {
     marginHorizontal: horizontalPadding,

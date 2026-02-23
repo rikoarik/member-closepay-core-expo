@@ -1,7 +1,9 @@
 /**
  * Top-up Components
  */
+export { TopUpEntryScreen } from './TopUpEntryScreen';
 export { TopUpScreen } from './TopUpScreen';
+export { TopUpCloseScreen } from './TopUpCloseScreen';
 export { TopUpMemberScreen } from './TopUpMemberScreen';
 export { TopUpMemberPinScreen } from './TopUpMemberPinScreen';
 export { TopUpMemberSummaryScreen } from './TopUpMemberSummaryScreen';

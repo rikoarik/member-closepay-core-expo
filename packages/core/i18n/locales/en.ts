@@ -761,6 +761,10 @@ export const en = {
     failedToUseBluetooth: 'Failed to use Bluetooth device',
     failedToReadCardViaBluetooth: 'Failed to read card via Bluetooth',
     detectingNFCCard: 'Detecting NFC card...',
+    enterAmount: 'Enter amount',
+    enterAmountDescription: 'Enter top up amount then select VA bank',
+    directVA: 'Direct VA',
+    directVADescription: 'Select bank and payment channel without entering amount',
   },
   virtualAccount: {
     title: 'Virtual Account',

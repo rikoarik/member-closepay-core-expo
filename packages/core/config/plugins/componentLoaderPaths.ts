@@ -104,7 +104,9 @@ export const COMPONENT_LOADER_PATHS: Record<string, Record<string, string>> = {
     FnBRecentOrders: '../../../plugins/marketplace-fnb/components/widgets/FnBRecentOrders',
   },
   payment: {
+    TopUpEntryScreen: '../../../plugins/payment/components/topup/TopUpEntryScreen',
     TopUpScreen: '../../../plugins/payment/components/topup/TopUpScreen',
+    TopUpCloseScreen: '../../../plugins/payment/components/topup/TopUpCloseScreen',
     VirtualAccountScreen: '../../../plugins/payment/components/virtual-account/VirtualAccountScreen',
     WithdrawScreen: '../../../plugins/payment/components/withdraw/WithdrawScreen',
     WithdrawSuccessScreen: '../../../plugins/payment/components/withdraw/WithdrawSuccessScreen',

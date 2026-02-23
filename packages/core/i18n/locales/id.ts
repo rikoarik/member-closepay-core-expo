@@ -792,6 +792,10 @@ export const id = {
     failedToUseBluetooth: 'Gagal menggunakan perangkat Bluetooth',
     failedToReadCardViaBluetooth: 'Gagal membaca kartu melalui Bluetooth',
     detectingNFCCard: 'Mendeteksi kartu NFC...',
+    enterAmount: 'Input nominal',
+    enterAmountDescription: 'Isi nominal top up lalu pilih bank VA',
+    directVA: 'Langsung VA',
+    directVADescription: 'Pilih bank dan channel pembayaran tanpa input nominal',
   },
   virtualAccount: {
     title: 'Virtual Account',

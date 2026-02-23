@@ -10,7 +10,9 @@
     ],
     "exports": {
         "components": [
+            "TopUpEntryScreen",
             "TopUpScreen",
+            "TopUpCloseScreen",
             "VirtualAccountScreen",
             "WithdrawScreen",
             "WithdrawSuccessScreen",
@@ -36,7 +38,9 @@
             "cardTransactionService"
         ],
         "screens": {
-            "TopUp": "TopUpScreen",
+            "TopUp": "TopUpEntryScreen",
+            "TopUpDirect": "TopUpScreen",
+            "TopUpClose": "TopUpCloseScreen",
             "VirtualAccount": "VirtualAccountScreen",
             "Withdraw": "WithdrawScreen",
             "WithdrawSuccess": "WithdrawSuccessScreen",
@@ -70,13 +74,37 @@
         {
             "name": "TopUp",
             "path": "/payment/topup",
-            "component": "TopUpScreen",
+            "component": "TopUpEntryScreen",
             "permissions": [
                 "payment:topup"
             ],
             "meta": {
                 "title": "Top Up Balance",
                 "showInMenu": true
+            }
+        },
+        {
+            "name": "TopUpDirect",
+            "path": "/payment/topup-direct",
+            "component": "TopUpScreen",
+            "permissions": [
+                "payment:topup"
+            ],
+            "meta": {
+                "title": "Top Up VA",
+                "showInMenu": false
+            }
+        },
+        {
+            "name": "TopUpClose",
+            "path": "/payment/topup-close",
+            "component": "TopUpCloseScreen",
+            "permissions": [
+                "payment:topup"
+            ],
+            "meta": {
+                "title": "Isi Saldo",
+                "showInMenu": false
             }
         },
         {
@@ -248,6 +276,7 @@
         "maxTopUp": 10000000,
         "minWithdraw": 10000,
         "maxWithdraw": 100000000,
-        "withdrawalFee": 2500
+        "withdrawalFee": 2500,
+        "topUpVAMode": "both"
     }
 }
