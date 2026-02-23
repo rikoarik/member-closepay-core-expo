@@ -10,7 +10,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Dimensions,
   Animated,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -27,6 +26,7 @@ import {
   FontFamily,
   SvgLinearGradientView,
   scale,
+  useDimensions,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -44,14 +44,10 @@ interface VirtualCardData {
   hasTransactionPin?: boolean;
 }
 
-// --- Dimensions (single source of truth) ---
-const W = Dimensions.get('window').width;
-const CARD_W = W * 0.82;
-const CARD_H = CARD_W * 1.58;
+// --- Dimensions: PAD/GAP konstan; lebar kartu & snap dihitung di component (reaktif + cap di web) ---
 const PAD = moderateScale(20);
 const GAP = scaleSize(16);
-const SNAP = CARD_W + GAP * 3;
-const LIST_PAD = Math.max(0, (W - CARD_W - GAP * 2) / 2);
+const MAX_WIDTH_WEB = 414;
 
 // --- Format currency helper ---
 const formatCurrency = (amount: number): string => {
@@ -106,28 +102,34 @@ function CardItem({
   index,
   scrollX,
   onPress,
+  cardW,
+  cardH,
+  snap,
 }: {
   item: VirtualCardData;
   index: number;
   scrollX: Animated.Value;
   onPress: () => void;
+  cardW: number;
+  cardH: number;
+  snap: number;
 }) {
   const { t } = useTranslation();
   const [showBalance, setShowBalance] = React.useState(false);
   const cardScale = scrollX.interpolate({
-    inputRange: [(index - 1) * SNAP, index * SNAP, (index + 1) * SNAP],
+    inputRange: [(index - 1) * snap, index * snap, (index + 1) * snap],
     outputRange: [0.92, 1, 0.92],
     extrapolate: 'clamp',
   });
   const opacity = scrollX.interpolate({
-    inputRange: [(index - 1) * SNAP, index * SNAP, (index + 1) * SNAP],
+    inputRange: [(index - 1) * snap, index * snap, (index + 1) * snap],
     outputRange: [0.88, 1, 0.88],
     extrapolate: 'clamp',
   });
 
   return (
     <TouchableOpacity activeOpacity={1} onPress={onPress} style={styles.cardTouchable}>
-      <Animated.View style={[styles.cardOuter, { transform: [{ scale: cardScale }], opacity }]}>
+      <Animated.View style={[styles.cardOuter, { width: cardW, height: cardH, transform: [{ scale: cardScale }], opacity }]}>
         <SvgLinearGradientView colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBg}>
           <View style={styles.pattern1} />
           <View style={styles.pattern2} />
@@ -192,8 +194,16 @@ export const VirtualCardScreen: React.FC = () => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useDimensions();
   const scrollX = useRef(new Animated.Value(0)).current;
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const effectiveWidth =
+    Platform.OS === 'web' ? Math.min(screenWidth, MAX_WIDTH_WEB) : screenWidth;
+  const cardW = effectiveWidth * 0.82;
+  const cardH = cardW * 1.58;
+  const snap = cardW + GAP * 3;
+  const listPad = Math.max(0, (effectiveWidth - cardW - GAP * 2) / 2);
 
   const handleBack = () => {
     navigation.goBack();
@@ -216,12 +226,15 @@ export const VirtualCardScreen: React.FC = () => {
     (navigation as any).navigate('AddVirtualCard');
   };
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const x = e.nativeEvent.contentOffset.x;
-    scrollX.setValue(x);
-    const index = Math.round(x / SNAP);
-    setActiveIndex(Math.min(Math.max(0, index), MOCK_CARDS.length - 1));
-  }, [scrollX]);
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const x = e.nativeEvent.contentOffset.x;
+      scrollX.setValue(x);
+      const index = Math.round(x / snap);
+      setActiveIndex(Math.min(Math.max(0, index), MOCK_CARDS.length - 1));
+    },
+    [scrollX, snap]
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -262,14 +275,20 @@ export const VirtualCardScreen: React.FC = () => {
                 index={index}
                 scrollX={scrollX}
                 onPress={() => handleCardPress(item)}
+                cardW={cardW}
+                cardH={cardH}
+                snap={snap}
               />
             )}
             horizontal
             showsHorizontalScrollIndicator={false}
-            snapToInterval={SNAP}
+            snapToInterval={snap}
             snapToAlignment="center"
             decelerationRate="fast"
-            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + moderateVerticalScale(20) }]}
+            contentContainerStyle={[
+              styles.list,
+              { paddingHorizontal: listPad, paddingBottom: insets.bottom + moderateVerticalScale(20) },
+            ]}
             onScroll={onScroll}
             scrollEventThrottle={16}
             nestedScrollEnabled
@@ -330,20 +349,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   list: {
-    paddingHorizontal: LIST_PAD,
     paddingVertical: scaleSize(12),
   },
   cardTouchable: {
     marginHorizontal: GAP,
   },
   cardOuter: {
-    width: CARD_W,
-    height: CARD_H,
     borderRadius: moderateScale(24),
     overflow: 'visible',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12 },
       android: { elevation: 10 },
+      web: { boxShadow: '0 6px 12px rgba(0,0,0,0.1)' },
     }),
   },
   cardBg: {

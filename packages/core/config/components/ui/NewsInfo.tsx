@@ -122,7 +122,7 @@ export const NewsInfo: React.FC<NewsInfoProps> = React.memo(({
             styles.title,
             {
               color: colors.text,
-              paddingHorizontal: horizontalPadding,
+          
             },
           ]}
         >
@@ -135,7 +135,7 @@ export const NewsInfo: React.FC<NewsInfoProps> = React.memo(({
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingLeft: horizontalPadding,
+         
             paddingRight: horizontalPadding,
           },
         ]}
