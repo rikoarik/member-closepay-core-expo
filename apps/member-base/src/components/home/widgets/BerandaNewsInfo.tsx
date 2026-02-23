@@ -232,7 +232,7 @@ export const BerandaNewsInfo: React.FC<BerandaNewsInfoProps> = React.memo(({
   return (
     <View style={styles.container}>
       {/* Header dengan title dan tombol Lihat Semua */}
-      <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
+      <View style={[styles.header]}>
         <Text style={[styles.title, { color: colors.text }]}>
           {t('home.newsInfo') || 'Info Berita'}
         </Text>
@@ -270,6 +270,8 @@ BerandaNewsInfo.displayName = 'BerandaNewsInfo';
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    width: '100%',
     marginTop: moderateVerticalScale(16),
     marginBottom: moderateVerticalScale(16),
   },

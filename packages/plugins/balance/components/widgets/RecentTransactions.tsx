@@ -112,7 +112,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = React.memo(
 
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
+        <View style={[styles.header]}>
           <Text style={[styles.title, { color: colors.text }]}>
             {t('home.recentTransactions') || 'Transaksi Terbaru'}
           </Text>
@@ -179,6 +179,8 @@ RecentTransactions.displayName = 'RecentTransactions';
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    width: '100%',
     marginTop: moderateVerticalScale(16),
     marginBottom: moderateVerticalScale(16),
   },

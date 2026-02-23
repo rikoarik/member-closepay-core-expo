@@ -311,7 +311,6 @@ const BerandaTabContent: React.FC<BerandaTabProps> = React.memo(
           ]}
           contentContainerStyle={{
             paddingBottom: insets.bottom + moderateVerticalScale(24),
-            paddingHorizontal: horizontalPadding,
             paddingTop: moderateVerticalScale(16),
           }}
           refreshControl={

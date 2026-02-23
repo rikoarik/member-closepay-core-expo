@@ -67,6 +67,8 @@ const PREVIEW_SNAP_POINTS = [100];
 const QUICK_ACCESS_MAX_SLOTS = 7;
 const SELECTED_GRID_COLUMNS = 4;
 const DEFAULT_FIXED_TOP_COUNT = 3;
+/** Di web, Dimensions bisa return lebar browser penuh; cap agar grid & preview sesuai mobile */
+const MAX_WIDTH_FOR_LAYOUT = 414;
 
 type CategoryKey = 'transaksi' | 'simpan' | 'lifestyle' | 'lainnya';
 const CATEGORY_ORDER: CategoryKey[] = ['transaksi', 'simpan', 'lifestyle', 'lainnya'];
@@ -443,13 +445,15 @@ export const QuickMenuSettingsScreen: React.FC = () => {
   );
 
   const { width: screenWidth } = useDimensions();
+  const effectiveWidth =
+    Platform.OS === 'web' ? Math.min(screenWidth, MAX_WIDTH_FOR_LAYOUT) : screenWidth;
   const SELECTED_GRID_GAP = scale(8);
   const selectedGridItemWidth = useMemo(() => {
     const horizontalPadding = getHorizontalPadding();
     const totalGap = SELECTED_GRID_GAP * (SELECTED_GRID_COLUMNS - 1);
-    const availableWidth = screenWidth - horizontalPadding * 2;
+    const availableWidth = effectiveWidth - horizontalPadding * 2;
     return (availableWidth - totalGap) / SELECTED_GRID_COLUMNS;
-  }, [screenWidth]);
+  }, [effectiveWidth]);
   const GRID_GAP = scale(12);
   const gridRowHeight = selectedGridItemWidth + SELECTED_GRID_GAP;
 
@@ -1014,12 +1018,12 @@ export const QuickMenuSettingsScreen: React.FC = () => {
     const horizontalPadding = getHorizontalPadding();
     const cardPadding = scale(40);
     const totalGap = gap * (itemsPerRow - 1);
-    const availableWidth = screenWidth - horizontalPadding * 2 - cardPadding * 2;
+    const availableWidth = effectiveWidth - horizontalPadding * 2 - cardPadding * 2;
     const calculatedWidth = (availableWidth - totalGap) / itemsPerRow;
     const minWidth = scale(60);
     const maxWidth = scale(100);
     return Math.max(minWidth, Math.min(maxWidth, Math.floor(calculatedWidth)));
-  }, [screenWidth]);
+  }, [effectiveWidth]);
 
   const dashedBoxAnimatedStyle = useAnimatedStyle(() => ({
     opacity: dashedBoxOpacity.value,
