@@ -1,0 +1,134 @@
+{
+  "id": "marketplace",
+  "name": "Marketplace",
+  "version": "1.0.0",
+  "description": "Complete marketplace with search and product browsing",
+  "type": "segment-plugin",
+  "author": "Closepay Team",
+  "dependencies": [
+    "payment"
+  ],
+  "exports": {
+    "components": [
+      "ProductCard",
+      "ProductCardSkeleton",
+      "CartBar",
+      "StoreCard"
+    ],
+    "screens": {
+      "MarketplaceScreen": "MarketplaceScreen",
+      "SearchScreen": "SearchScreen",
+      "SearchResultsScreen": "SearchResultsScreen",
+      "CartScreen": "CartScreen",
+      "ProductDetailScreen": "ProductDetailScreen",
+      "StoreDetailScreen": "StoreDetailScreen",
+      "CheckoutScreen": "CheckoutScreen"
+    },
+    "hooks": {
+      "useMarketplaceData": "useMarketplaceData",
+      "useSearch": "useSearch",
+      "getCategories": "getCategories",
+      "useMarketplaceCart": "useMarketplaceCart"
+    },
+    "tabs": {
+      "marketplace": "MarketplaceTab",
+      "marketplace-general": "MarketplaceGeneralTab",
+      "marketplace-balance": "MarketplaceBalanceTab",
+      "marketplace-transaction": "MarketplaceTransactionTab"
+    },
+    "widgets": {
+      "marketplace-featured": "MarketplaceFeatured"
+    }
+  },
+  "routes": [
+    {
+      "name": "Marketplace",
+      "path": "/marketplace",
+      "component": "MarketplaceScreen",
+      "permissions": [
+        "marketplace:view"
+      ],
+      "meta": {
+        "title": "Marketplace",
+        "showInMenu": true
+      }
+    },
+    {
+      "name": "MarketplaceSearch",
+      "path": "/marketplace/search",
+      "component": "SearchScreen",
+      "permissions": [
+        "marketplace:search"
+      ],
+      "meta": {
+        "title": "Pencarian",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "MarketplaceSearchResults",
+      "path": "/marketplace/search/results",
+      "component": "SearchResultsScreen",
+      "permissions": [
+        "marketplace:search"
+      ],
+      "meta": {
+        "title": "Hasil Pencarian",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "Cart",
+      "path": "/marketplace/cart",
+      "component": "CartScreen",
+      "permissions": [
+        "marketplace:view"
+      ],
+      "meta": {
+        "title": "Keranjang",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "ProductDetail",
+      "path": "/marketplace/product/:id",
+      "component": "ProductDetailScreen",
+      "permissions": [
+        "marketplace:view"
+      ],
+      "meta": {
+        "title": "Detail Produk",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "Checkout",
+      "path": "/marketplace/checkout",
+      "component": "CheckoutScreen",
+      "permissions": [
+        "marketplace:order"
+      ],
+      "meta": {
+        "title": "Checkout",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "StoreDetail",
+      "path": "/marketplace/store/:id",
+      "component": "StoreDetailScreen",
+      "permissions": [
+        "marketplace:view"
+      ],
+      "meta": {
+        "title": "Detail Toko",
+        "showInMenu": false
+      }
+    }
+  ],
+  "permissions": [
+    "marketplace:view",
+    "marketplace:search",
+    "marketplace:order"
+  ]
+}
