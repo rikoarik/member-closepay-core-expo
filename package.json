@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "expo export -p web",
+    "build:web": "expo export -p web && npx workbox-cli generateSW workbox-config.js",
     "postinstall": "node -e \"var fs=require('fs'); var p='node_modules/react-native-linear-gradient/index.web.js'; var s='shim-linear-gradient.web.js'; if(fs.existsSync(s)) fs.copyFileSync(s,p);\""
   },
   "dependencies": {
@@ -66,7 +66,8 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "workbox-cli": "^7.4.0"
   },
   "private": true
 }
