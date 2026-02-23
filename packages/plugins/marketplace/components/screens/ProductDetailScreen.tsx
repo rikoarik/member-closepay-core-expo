@@ -33,6 +33,12 @@ import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
 import { getAllStores } from '../../hooks/useMarketplaceData';
+
+const PRODUCT_PLACEHOLDER_400 =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect fill="#CCCCCC" width="400" height="400"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="24" font-family="sans-serif">Product</text></svg>'
+  );
 import type { Product } from '../shared/ProductCard';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -251,9 +257,8 @@ export const ProductDetailScreen: React.FC = () => {
           <Image
             source={{
               uri: imageError
-                ? 'https://via.placeholder.com/400x400/CCCCCC/FFFFFF?text=Product'
-                : product.imageUrl ||
-                  'https://via.placeholder.com/400x400/CCCCCC/FFFFFF?text=Product',
+                ? PRODUCT_PLACEHOLDER_400
+                : product.imageUrl || PRODUCT_PLACEHOLDER_400,
             }}
             style={styles.productImage}
             resizeMode="cover"
@@ -481,9 +486,8 @@ export const ProductDetailScreen: React.FC = () => {
           <Image
             source={{
               uri: imageError
-                ? 'https://via.placeholder.com/400x400/CCCCCC/FFFFFF?text=Product'
-                : product.imageUrl ||
-                  'https://via.placeholder.com/400x400/CCCCCC/FFFFFF?text=Product',
+                ? PRODUCT_PLACEHOLDER_400
+                : product.imageUrl || PRODUCT_PLACEHOLDER_400,
             }}
             style={styles.flyingImage}
             resizeMode="cover"

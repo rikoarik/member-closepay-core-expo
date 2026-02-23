@@ -1,6 +1,6 @@
 /**
- * QrScanScreen - Web: kamera via getUserMedia + jsQR, fallback input manual.
- * Overlay & scan line animation match native QR screen.
+ * QrScanScreen - Web: kamera via getUserMedia + jsQR, tanpa animasi, full layer.
+ * Container video diambil via nativeID + getElementById agar pasti dapat DOM node.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -10,14 +10,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Animated,
-  Easing,
 } from 'react-native';
 import jsQR from 'jsqr';
 import { scale } from '@core/config';
 import { useTheme } from '@core/theme';
 
-const SCAN_WINDOW_SIZE = scale(260);
+const VIDEO_CONTAINER_ID = 'qr-scan-video-container-web';
 
 interface QrScanScreenProps {
   isActive: boolean;
@@ -34,12 +32,10 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
   const [value, setValue] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [useManualInput, setUseManualInput] = useState(false);
-  const containerRef = useRef<HTMLElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationRef = useRef<number | null>(null);
   const lastScannedRef = useRef<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const scanAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     onHeaderActionsReady?.(null);
@@ -62,19 +58,37 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
       return;
     }
     if (typeof document === 'undefined' || typeof navigator === 'undefined') return;
-    const raw = containerRef.current;
-    const container = raw && typeof (raw as any).appendChild === 'function' ? (raw as HTMLElement) : null;
-    if (!container) return;
 
-    let video: HTMLVideoElement;
-    let canvas: HTMLCanvasElement;
-    let ctx: CanvasRenderingContext2D | null;
+    const getContainer = (): HTMLElement | null =>
+      document.getElementById(VIDEO_CONTAINER_ID);
 
-    const init = async () => {
+    let mounted = true;
+    let container: HTMLElement | null = null;
+
+    const tryInit = () => {
+      if (!mounted) return;
+      container = getContainer();
+      if (!container) {
+        setTimeout(tryInit, 50);
+        return;
+      }
+      initCamera();
+    };
+
+    const initCamera = async () => {
+      if (!container || !mounted) return;
+      let video: HTMLVideoElement;
+      let canvas: HTMLCanvasElement;
+      let ctx: CanvasRenderingContext2D | null;
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
         });
+        if (!mounted) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         streamRef.current = stream;
         setCameraError(null);
 
@@ -85,6 +99,7 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
         video.style.width = '100%';
         video.style.height = '100%';
         video.style.objectFit = 'cover';
+        video.style.objectPosition = 'center center';
         video.srcObject = stream;
         container.innerHTML = '';
         container.appendChild(video);
@@ -92,19 +107,20 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
         await new Promise<void>((resolve, reject) => {
           video.onloadedmetadata = () => {
             video.play().then(() => {
-              setCameraReady(true);
+              if (mounted) setCameraReady(true);
               resolve();
             }).catch(reject);
           };
           video.onerror = () => reject(new Error('Video load failed'));
         });
 
+        if (!mounted) return;
         canvas = document.createElement('canvas');
-        ctx = canvas.getContext('2d');
+        ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         const tick = () => {
-          if (!streamRef.current || !video || !ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
-            animationRef.current = requestAnimationFrame(tick);
+          if (!mounted || !streamRef.current || !video || !ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
+            if (mounted) animationRef.current = requestAnimationFrame(tick);
             return;
           }
           const w = video.videoWidth;
@@ -130,48 +146,27 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
         };
         tick();
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Kamera tidak dapat diakses';
-        setCameraError(msg);
-        setUseManualInput(true);
+        if (mounted) {
+          const msg = err instanceof Error ? err.message : 'Kamera tidak dapat diakses';
+          setCameraError(msg);
+          setUseManualInput(true);
+        }
       }
     };
 
-    init();
+    tryInit();
+
     return () => {
+      mounted = false;
       stopCamera();
-      if (container) container.innerHTML = '';
+      container = getContainer();
+      if (container && typeof container.innerHTML !== 'undefined') container.innerHTML = '';
     };
   }, [isActive, useManualInput, onScanned, stopCamera]);
 
   useEffect(() => {
     if (!isActive || useManualInput) setCameraReady(false);
   }, [isActive, useManualInput]);
-
-  // Scan line animation when camera is active
-  useEffect(() => {
-    if (!isActive || !cameraReady || useManualInput) {
-      scanAnim.setValue(0);
-      return;
-    }
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanAnim, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [isActive, cameraReady, useManualInput, scanAnim]);
 
   const handleSubmit = () => {
     if (value.trim() && onScanned) {
@@ -181,7 +176,7 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
 
   if (useManualInput) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.manualInputContainer]}>
         <Text style={styles.title}>Masukkan kode manual</Text>
         {cameraError ? (
           <Text style={styles.subtitle}>Kamera: {cameraError}. Atau masukkan kode di bawah:</Text>
@@ -214,9 +209,7 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
   return (
     <View style={styles.container}>
       <View
-        ref={(r) => {
-          containerRef.current = r != null ? (r as unknown as HTMLElement) : null;
-        }}
+        nativeID={VIDEO_CONTAINER_ID}
         style={styles.videoWrapper}
       />
       {!cameraError && !cameraReady && (
@@ -225,36 +218,12 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
           <Text style={styles.overlayText}>Mengaktifkan kamera...</Text>
         </View>
       )}
-      {/* Dark overlay with scan window + corners + scan line (when camera ready) */}
       {!cameraError && cameraReady && (
-        <View style={styles.scanOverlayContainer} pointerEvents="box-none">
-          <View style={styles.overlayTop} pointerEvents="none" />
-          <View style={styles.overlayMiddle} pointerEvents="none">
-            <View style={styles.overlaySide} pointerEvents="none" />
-            <View style={[styles.scanWindow, { width: SCAN_WINDOW_SIZE, height: SCAN_WINDOW_SIZE }]} pointerEvents="none">
-              <View style={[styles.corner, styles.topLeft, { borderColor: colors.primary }]} pointerEvents="none" />
-              <View style={[styles.corner, styles.topRight, { borderColor: colors.primary }]} pointerEvents="none" />
-              <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary }]} pointerEvents="none" />
-              <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary }]} pointerEvents="none" />
-              <Animated.View
-                style={[
-                  styles.scanLine,
-                  {
-                    backgroundColor: colors.primary,
-                    transform: [{
-                      translateY: scanAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, SCAN_WINDOW_SIZE],
-                      }),
-                    }],
-                  },
-                ]}
-                pointerEvents="none"
-              />
-            </View>
-            <View style={styles.overlaySide} pointerEvents="none" />
-          </View>
-          <View style={styles.overlayBottom} pointerEvents="none" />
+        <View style={styles.staticFrame} pointerEvents="none">
+          <View style={[styles.corner, styles.topLeft, { borderColor: colors.primary }]} />
+          <View style={[styles.corner, styles.topRight, { borderColor: colors.primary }]} />
+          <View style={[styles.corner, styles.bottomLeft, { borderColor: colors.primary }]} />
+          <View style={[styles.corner, styles.bottomRight, { borderColor: colors.primary }]} />
         </View>
       )}
       <TouchableOpacity
@@ -270,8 +239,14 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    minHeight: 400,
+    padding: 0,
+    minHeight: 0,
+    alignSelf: 'stretch',
+    position: 'relative',
+  },
+  manualInputContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
   },
   title: { fontSize: 20, fontWeight: '600', marginBottom: 8 },
   subtitle: { fontSize: 14, color: '#666', marginBottom: 16 },
@@ -297,8 +272,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    width: '100%',
+    height: '100%',
     overflow: 'hidden',
-    borderRadius: 12,
+    backgroundColor: '#000',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -307,42 +284,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   overlayText: { color: '#fff', marginTop: 12 },
-  scanOverlayContainer: {
+  staticFrame: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-    pointerEvents: 'box-none',
-  },
-  overlayTop: {
-    flex: 0.7,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  overlayMiddle: {
-    flexDirection: 'row',
-    height: SCAN_WINDOW_SIZE,
-  },
-  overlayBottom: {
-    flex: 1.3,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  overlaySide: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  scanWindow: {
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    top: '15%',
+    left: '10%',
+    right: '10%',
+    bottom: '15%',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: scale(12),
   },
   corner: {
     position: 'absolute',
-    width: scale(20),
-    height: scale(20),
+    width: scale(24),
+    height: scale(24),
     borderWidth: 4,
-    borderColor: 'white',
   },
   topLeft: {
     top: 0,
@@ -368,21 +324,11 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderTopWidth: 0,
   },
-  scanLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    width: '100%',
-    height: 2,
-    shadowColor: '#00ff00',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 4,
-    shadowRadius: scale(10),
-  },
   switchInput: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 16,
+    left: 16,
+    right: 16,
     alignSelf: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,

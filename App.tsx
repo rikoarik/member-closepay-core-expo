@@ -30,7 +30,7 @@ export default function App() {
   );
 }
 
-const MOBILE_MAX_WIDTH = 410;
+const MOBILE_MAX_WIDTH = 414;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

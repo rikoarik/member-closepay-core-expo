@@ -40,7 +40,11 @@ export const MarketplaceGeneralTab: React.FC<MarketplaceGeneralTabProps> = React
         price: 199000,
         rating: 4.8,
         sold: 120,
-        image: 'https://via.placeholder.com/150',
+        image:
+          'data:image/svg+xml,' +
+          encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect fill="#CCCCCC" width="150" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
+          ),
       },
       {
         id: 2,
@@ -48,7 +52,11 @@ export const MarketplaceGeneralTab: React.FC<MarketplaceGeneralTabProps> = React
         price: 450000,
         rating: 4.9,
         sold: 85,
-        image: 'https://via.placeholder.com/150',
+        image:
+          'data:image/svg+xml,' +
+          encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect fill="#CCCCCC" width="150" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
+          ),
       },
       {
         id: 3,
@@ -56,7 +64,11 @@ export const MarketplaceGeneralTab: React.FC<MarketplaceGeneralTabProps> = React
         price: 299000,
         rating: 4.7,
         sold: 210,
-        image: 'https://via.placeholder.com/150',
+        image:
+          'data:image/svg+xml,' +
+          encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect fill="#CCCCCC" width="150" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
+          ),
       },
       {
         id: 4,
@@ -64,7 +76,11 @@ export const MarketplaceGeneralTab: React.FC<MarketplaceGeneralTabProps> = React
         price: 350000,
         rating: 4.6,
         sold: 50,
-        image: 'https://via.placeholder.com/150',
+        image:
+          'data:image/svg+xml,' +
+          encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect fill="#CCCCCC" width="150" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
+          ),
       },
     ];
 

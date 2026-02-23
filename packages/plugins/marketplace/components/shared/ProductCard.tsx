@@ -34,7 +34,10 @@ interface ProductCardProps {
 }
 
 const PLACEHOLDER_IMAGE =
-  'https://via.placeholder.com/200x200/CCCCCC/FFFFFF?text=Product';
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect fill="#CCCCCC" width="200" height="200"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="14" font-family="sans-serif">Product</text></svg>'
+  );
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('id-ID', {

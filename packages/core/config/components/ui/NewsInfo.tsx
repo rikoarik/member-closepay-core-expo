@@ -64,7 +64,11 @@ export interface NewsInfoProps {
   imageHeight?: number;
 }
 
-const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/300x200/CCCCCC/FFFFFF?text=News';
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect fill="#CCCCCC" width="300" height="200"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="14" font-family="sans-serif">News</text></svg>'
+  );
 
 const formatNewsDate = (date: Date, t: (key: string) => string): string => {
   const day = date.getDate();

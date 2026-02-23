@@ -123,7 +123,11 @@ export const CartScreen: React.FC = () => {
       const store = allStores.find((s) => s.name === storeName) || {
         id: 'generic-store',
         name: storeName,
-        imageUrl: 'https://via.placeholder.com/150',
+        imageUrl:
+        'data:image/svg+xml,' +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect fill="#CCCCCC" width="150" height="150"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Store</text></svg>'
+        ),
         rating: 4.5,
         followers: 100,
         location: 'Unknown',

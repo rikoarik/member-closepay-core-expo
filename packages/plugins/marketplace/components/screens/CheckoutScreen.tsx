@@ -144,7 +144,10 @@ export const CheckoutScreen: React.FC = () => {
               source={{
                 uri:
                   product.imageUrl ||
-                  'https://via.placeholder.com/100x100/CCCCCC/FFFFFF?text=Product',
+                  'data:image/svg+xml,' +
+                    encodeURIComponent(
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="#CCCCCC" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
+                    ),
               }}
               style={styles.productImage}
               resizeMode="cover"

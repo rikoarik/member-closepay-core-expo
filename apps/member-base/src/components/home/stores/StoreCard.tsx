@@ -30,7 +30,11 @@ interface StoreCardProps {
   width?: number;
 }
 
-const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/80x80/CCCCCC/FFFFFF?text=Store';
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="#CCCCCC" width="80" height="80"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif">Store</text></svg>'
+  );
 
 const StoreCardComponent: React.FC<StoreCardProps> = ({ store, onPress, width }) => {
   const { colors } = useTheme();

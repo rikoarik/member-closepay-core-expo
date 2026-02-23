@@ -21,7 +21,11 @@ interface NewsItemProps {
   onPress?: (news: News) => void;
 }
 
-const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/56x56/CCCCCC/FFFFFF?text=News';
+const PLACEHOLDER_IMAGE =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><rect fill="#CCCCCC" width="56" height="56"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="10" font-family="sans-serif">News</text></svg>'
+  );
 
 const NewsItemComponent: React.FC<NewsItemProps> = ({ news, onPress }) => {
   const { colors } = useTheme();

@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     Animated,
     Easing,
-    Dimensions,
     Platform,
     UIManager,
     ScrollView,
@@ -21,6 +20,7 @@ import {
     ScreenHeader,
     FontFamily,
     getHorizontalPadding,
+    useDimensions,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -36,7 +36,7 @@ const QrScanScreenExpoLazy = lazy(() =>
   import('./QrScanScreenExpo').then((m) => ({ default: m.QrScanScreenExpo }))
 );
 
-const { width } = Dimensions.get('window');
+const MAX_WIDTH_WEB = 414;
 
 type QrTab = 'display' | 'scan';
 type BalanceType = 'plafon' | 'makan' | 'utama';
@@ -52,6 +52,9 @@ export const QrScreen = () => {
     const { t } = useTranslation();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { width: screenWidth } = useDimensions();
+    const width =
+        Platform.OS === 'web' ? Math.min(screenWidth, MAX_WIDTH_WEB) : screenWidth;
 
     const [activeTab, setActiveTab] = useState<QrTab>('scan');
     const [selectedBalance, setSelectedBalance] = useState<BalanceType>('plafon');
@@ -197,8 +200,8 @@ export const QrScreen = () => {
                 onMomentumScrollEnd={handlePagerMomentumEnd}
                 style={StyleSheet.absoluteFill}
             >
-                {/* Scan Tab */}
-                <View style={{ width }} pointerEvents={activeTab === 'scan' ? 'auto' : 'none'}>
+                {/* Scan Tab - full height agar area QR/kamera full ke bawah */}
+                <View style={{ width, alignSelf: 'stretch' }} pointerEvents={activeTab === 'scan' ? 'auto' : 'none'}>
                     <Suspense fallback={
                         <View style={[styles.expoGoPlaceholder, { backgroundColor: colors.surface }]}>
                             <ActivityIndicator size="large" color={colors.primary} />
@@ -221,7 +224,7 @@ export const QrScreen = () => {
                 </View>
 
                 {/* Display Tab */}
-                <View style={{ width }} pointerEvents={activeTab === 'display' ? 'auto' : 'none'}>
+                <View style={{ width, alignSelf: 'stretch' }} pointerEvents={activeTab === 'display' ? 'auto' : 'none'}>
                     <QrDisplayScreen isActive={activeTab === 'display'} selectedBalance={selectedBalance} />
                 </View>
             </Animated.ScrollView>
