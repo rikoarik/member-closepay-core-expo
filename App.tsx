@@ -3,9 +3,6 @@ import { StyleSheet, View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MemberbaseApp from './apps/member-base';
 
-const MOBILE_VIEWPORT_WIDTH = 414;
-const WEB_VIEWPORT_WIDTH = 1024;
-const MOBILE_VIEWPORT_HEIGHT = 896;
 export default function App() {
   const content = (
     <>
@@ -33,19 +30,22 @@ export default function App() {
   );
 }
 
+const MOBILE_MAX_WIDTH = 410;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   webOuter: {
     flex: 1,
     width: '100%',
-    height: MOBILE_VIEWPORT_HEIGHT,
+    minHeight: '100%',
     backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
   },
   webInner: {
-    width: MOBILE_VIEWPORT_WIDTH,
-    maxWidth: '100%',
+    width: '100%',
+    maxWidth: MOBILE_MAX_WIDTH,
+    flex: 1,
     minHeight: '100%',
     backgroundColor: '#f5f5f5',
     shadowColor: '#000',

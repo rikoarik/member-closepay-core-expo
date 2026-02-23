@@ -4,7 +4,7 @@
  * Menggunakan menu dari quick menu settings
  */
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import {
   ArrowDown2,
   Call,
@@ -59,6 +59,9 @@ interface QuickAccessButton {
 }
 
 const QUICK_ACCESS_MAX_SLOTS = 7;
+const GRID_COLUMNS = 4;
+/** Di web, Dimensions.get('window') bisa return lebar browser penuh; cap agar grid tetap 4 kolom */
+const MAX_WIDTH_FOR_GRID = 414;
 
 interface QuickAccessButtonsProps {
   buttons?: QuickAccessButton[];
@@ -177,18 +180,18 @@ const DEFAULT_MENU_ITEMS: QuickMenuItem[] = [];
 
 // Skeleton component for loading state
 const QuickAccessSkeleton = React.memo(() => {
-  const skeletonItems = useMemo(() => Array.from({ length: 4 }), []);
+  const skeletonItems = useMemo(() => Array.from({ length: GRID_COLUMNS }), []);
   const gap = useMemo(() => scale(12), []);
   const { width: screenWidth } = useDimensions();
 
-  // Re-calculate buttonWidth for skeleton
   const horizontalPadding = getHorizontalPadding();
-  const itemsPerRow = 4;
+  const effectiveWidth =
+    Platform.OS === 'web' ? Math.min(screenWidth, MAX_WIDTH_FOR_GRID) : screenWidth;
   const buttonWidth = useMemo(() => {
-    const totalGap = gap * (itemsPerRow - 1);
-    const availableWidth = screenWidth - horizontalPadding * 2;
-    return Math.floor((availableWidth - totalGap) / itemsPerRow);
-  }, [screenWidth, horizontalPadding, gap, itemsPerRow]);
+    const totalGap = gap * (GRID_COLUMNS - 1);
+    const availableWidth = effectiveWidth - horizontalPadding * 2;
+    return Math.floor((availableWidth - totalGap) / GRID_COLUMNS);
+  }, [effectiveWidth, horizontalPadding, gap]);
 
   return (
     <View style={styles.aksesCepatRow}>
@@ -198,7 +201,7 @@ const QuickAccessSkeleton = React.memo(() => {
           style={[
             {
               width: buttonWidth,
-              marginRight: (index + 1) % itemsPerRow === 0 ? 0 : gap,
+              marginRight: (index + 1) % GRID_COLUMNS === 0 ? 0 : gap,
               marginBottom: moderateVerticalScale(12),
             },
           ]}
@@ -350,15 +353,17 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
     const displayedSlots = baseButtons.slice(0, QUICK_ACCESS_MAX_SLOTS);
     const buttonsToRender = [...displayedSlots, allMenuButton];
     const buttonCount = buttonsToRender.length;
-    const itemsPerRow = 4;
+    const itemsPerRow = GRID_COLUMNS;
 
-    // Hitung width button untuk 4 per row dengan gap
+    // Hitung width button untuk grid 4 kolom; di web cap lebar agar tidak pakai lebar browser penuh
     const horizontalPadding = getHorizontalPadding();
+    const effectiveWidth =
+      Platform.OS === 'web' ? Math.min(stableScreenWidth, MAX_WIDTH_FOR_GRID) : stableScreenWidth;
     const buttonWidth = useMemo(() => {
       const totalGap = gap * (itemsPerRow - 1);
-      const availableWidth = stableScreenWidth - horizontalPadding * 2;
+      const availableWidth = effectiveWidth - horizontalPadding * 2;
       return Math.floor((availableWidth - totalGap) / itemsPerRow);
-    }, [stableScreenWidth, horizontalPadding, gap, itemsPerRow]);
+    }, [effectiveWidth, horizontalPadding, gap, itemsPerRow]);
 
     // Memoized button style calculator
     const getButtonStyle = useCallback(
