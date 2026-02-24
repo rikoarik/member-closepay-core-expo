@@ -169,7 +169,7 @@ export const loadThemePreference = async (): Promise<ThemeMode> => {
   } catch (error) {
     console.error('Failed to load theme preference:', error);
   }
-  return 'system'; // Default: follow system
+  return 'light'; // Default: light mode
 };
 
 /**
