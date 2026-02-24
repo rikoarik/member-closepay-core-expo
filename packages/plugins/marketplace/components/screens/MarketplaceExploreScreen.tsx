@@ -26,6 +26,7 @@ import { MarketplaceCategoryTabs } from '../shared/MarketplaceCategoryTabs';
 import { useMarketplaceData, getCategories, getAllStores } from '../../hooks/useMarketplaceData';
 import { useMarketplaceAnalytics } from '../../hooks/useMarketplaceAnalytics';
 import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
+import { useMarketplaceWishlist } from '../../hooks/useMarketplaceWishlist';
 import { useTabBar } from '../navigation/TabBarContext';
 
 const PAGE_SIZE = 20;
@@ -46,6 +47,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
 
   const { toggleTabBar } = useTabBar();
+  const { isFavorite, toggleFavorite } = useMarketplaceWishlist();
   const lastContentOffset = React.useRef(0);
 
   const { itemCount, subtotal, getItemQuantity } = useMarketplaceCart();
@@ -138,8 +140,15 @@ export const MarketplaceExploreScreen: React.FC = () => {
   );
 
   const renderProduct = useCallback(
-    ({ item }: { item: Product }) => <ProductCard product={item} onPress={handleProductPress} />,
-    [handleProductPress]
+    ({ item }: { item: Product }) => (
+      <ProductCard
+        product={item}
+        onPress={handleProductPress}
+        isFavorite={isFavorite(item.id)}
+        onToggleFavorite={toggleFavorite}
+      />
+    ),
+    [handleProductPress, isFavorite, toggleFavorite]
   );
 
   const renderFooter = () => {
@@ -203,7 +212,12 @@ export const MarketplaceExploreScreen: React.FC = () => {
           >
             {bestSellerProducts.map((product) => (
               <View key={product.id} style={{ width: scale(160), marginRight: scale(12) }}>
-                <ProductCard product={product} onPress={handleProductPress} />
+                <ProductCard
+                  product={product}
+                  onPress={handleProductPress}
+                  isFavorite={isFavorite(product.id)}
+                  onToggleFavorite={toggleFavorite}
+                />
               </View>
             ))}
           </ScrollView>

@@ -91,6 +91,7 @@ const STATIC_COMPONENT_LOADERS: Record<string, Record<string, () => Promise<any>
     ProductDetailScreen: () => import('../../../plugins/marketplace/components/screens/ProductDetailScreen'),
     StoreDetailScreen: () => import('../../../plugins/marketplace/components/screens/StoreDetailScreen'),
     CheckoutScreen: () => import('../../../plugins/marketplace/components/screens/CheckoutScreen'),
+    MarketplaceOrderDetailScreen: () => import('../../../plugins/marketplace/components/screens/MarketplaceOrderDetailScreen'),
     MarketplaceTab: () => import('../../../plugins/marketplace/components/tabs/MarketplaceTab'),
     MarketplaceGeneralTab: () => import('../../../plugins/marketplace/components/tabs/MarketplaceGeneralTab'),
     MarketplaceBalanceTab: () => import('../../../plugins/marketplace/components/tabs/MarketplaceBalanceTab'),

@@ -22,13 +22,15 @@
       "CartScreen": "CartScreen",
       "ProductDetailScreen": "ProductDetailScreen",
       "StoreDetailScreen": "StoreDetailScreen",
-      "CheckoutScreen": "CheckoutScreen"
+      "CheckoutScreen": "CheckoutScreen",
+      "MarketplaceOrderDetailScreen": "MarketplaceOrderDetailScreen"
     },
     "hooks": {
       "useMarketplaceData": "useMarketplaceData",
       "useSearch": "useSearch",
       "getCategories": "getCategories",
-      "useMarketplaceCart": "useMarketplaceCart"
+      "useMarketplaceCart": "useMarketplaceCart",
+      "useMarketplaceWishlist": "useMarketplaceWishlist"
     },
     "tabs": {
       "marketplace": "MarketplaceTab",
@@ -38,7 +40,11 @@
     },
     "widgets": {
       "marketplace-featured": "MarketplaceFeatured"
-    }
+    },
+    "services": [
+      "marketplaceOrderService",
+      "marketplaceInstallmentService"
+    ]
   },
   "routes": [
     {
@@ -122,6 +128,18 @@
       ],
       "meta": {
         "title": "Detail Toko",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "MarketplaceOrderDetail",
+      "path": "/marketplace/order/:orderId",
+      "component": "MarketplaceOrderDetailScreen",
+      "permissions": [
+        "marketplace:view"
+      ],
+      "meta": {
+        "title": "Detail Pesanan",
         "showInMenu": false
       }
     }

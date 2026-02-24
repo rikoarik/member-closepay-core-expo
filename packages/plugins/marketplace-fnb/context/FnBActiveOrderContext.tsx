@@ -80,7 +80,9 @@ export const FnBActiveOrderProvider: React.FC<{ children: React.ReactNode }> = (
       if (!order) return;
       const next = getNextStatus(order.status);
       if (next === 'completed') {
-        setOrder({ ...order, status: 'completed' }).then(() => setOrder(null));
+        setOrder({ ...order, status: 'completed' });
+        // Jangan setOrder(null) agar layar Detail Pesanan (take away/delivery) tetap punya data
+        // Widget sudah otomatis hilang karena visible = false saat status === 'completed'
       } else if (next) {
         setOrder({ ...order, status: next });
       }

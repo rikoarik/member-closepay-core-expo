@@ -26,6 +26,7 @@ import {
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useTabBar } from '../navigation/TabBarContext';
+import { useMarketplaceOrders } from '../../context/MarketplaceOrderContext';
 
 export type OrderStatusFilter =
   | 'semua'
@@ -52,20 +53,6 @@ const ORDER_STATUS_KEYS: OrderStatusFilter[] = [
   'ditinjau',
 ];
 
-const transactions: Array<{
-  id: string;
-  item: string;
-  price: number;
-  date: string;
-  status: OrderStatusFilter;
-}> = [
-  { id: 'INV/2023/MP/001', item: 'Kemeja Flannel', price: 199000, date: '10 Feb 2024', status: 'selesai' },
-  { id: 'INV/2023/MP/002', item: 'Wireless Earbuds', price: 450000, date: '08 Feb 2024', status: 'dikirim' },
-  { id: 'INV/2023/MP/003', item: 'Tas Ransel', price: 299000, date: '05 Feb 2024', status: 'diproses' },
-  { id: 'INV/2023/MP/004', item: 'Sepatu Sneakers', price: 450000, date: '01 Feb 2024', status: 'belum_dibayar' },
-  { id: 'INV/2023/MP/005', item: 'Jaket Hoodie', price: 350000, date: '12 Jan 2024', status: 'dibatalkan' },
-];
-
 const ORDER_STATUS_I18N: Record<OrderStatusFilter, string> = {
   semua: 'marketplace.orderStatusAll',
   belum_dibayar: 'marketplace.orderStatusUnpaid',
@@ -79,6 +66,15 @@ const ORDER_STATUS_I18N: Record<OrderStatusFilter, string> = {
   ditinjau: 'marketplace.orderStatusReviewed',
 };
 
+const formatOrderDate = (iso: string): string => {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+};
+
 export const MarketplaceRiwayatScreen: React.FC = () => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -86,13 +82,14 @@ export const MarketplaceRiwayatScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const paddingH = getHorizontalPadding();
   const { toggleTabBar } = useTabBar();
+  const { getOrders } = useMarketplaceOrders();
   const lastContentOffset = useRef(0);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatusFilter>('semua');
 
-  const filteredTransactions = useMemo(() => {
-    if (selectedStatus === 'semua') return transactions;
-    return transactions.filter((tx) => tx.status === selectedStatus);
-  }, [selectedStatus]);
+  const filteredOrders = useMemo(
+    () => getOrders(selectedStatus),
+    [getOrders, selectedStatus]
+  );
 
   const goToExplore = useCallback(() => {
     navigation.navigate('MarketplaceExplore' as never);
@@ -212,27 +209,44 @@ export const MarketplaceRiwayatScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('marketplace.orderHistory') || 'Transaksi Belanja'}
           </Text>
-          {filteredTransactions.length === 0 ? (
+          {filteredOrders.length === 0 ? (
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {t('marketplace.noOrdersInStatus')}
+              {t('marketplace.noOrdersInStatus') || 'Tidak ada pesanan'}
             </Text>
           ) : (
-            filteredTransactions.map((tx) => (
-              <View key={tx.id} style={[styles.card, { backgroundColor: colors.surface }]}>
+            filteredOrders.map((order) => (
+              <TouchableOpacity
+                key={order.id}
+                style={[styles.card, { backgroundColor: colors.surface }]}
+                onPress={() =>
+                  navigation.navigate('MarketplaceOrderDetail' as never, {
+                    orderId: order.id,
+                  } as never)
+                }
+                activeOpacity={0.7}
+              >
                 <View style={styles.cardHeader}>
-                  <Text style={[styles.invoice, { color: colors.primary }]}>{tx.id}</Text>
-                  <Text style={[styles.status, { color: getStatusColor(tx.status) }]}>
-                    {t(ORDER_STATUS_I18N[tx.status])}
+                  <Text style={[styles.invoice, { color: colors.primary }]}>
+                    {order.orderNumber}
+                  </Text>
+                  <Text style={[styles.status, { color: getStatusColor(order.status) }]}>
+                    {t(ORDER_STATUS_I18N[order.status])}
                   </Text>
                 </View>
-                <Text style={[styles.item, { color: colors.text }]}>{tx.item}</Text>
+                <Text style={[styles.item, { color: colors.text }]} numberOfLines={2}>
+                  {order.items.length === 1
+                    ? order.items[0].product.name
+                    : `${order.items.length} item`}
+                </Text>
                 <View style={styles.cardFooter}>
-                  <Text style={[styles.date, { color: colors.textSecondary }]}>{tx.date}</Text>
+                  <Text style={[styles.date, { color: colors.textSecondary }]}>
+                    {formatOrderDate(order.createdAt)}
+                  </Text>
                   <Text style={[styles.price, { color: colors.text }]}>
-                    Rp {tx.price.toLocaleString('id-ID')}
+                    Rp {order.total.toLocaleString('id-ID')}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>

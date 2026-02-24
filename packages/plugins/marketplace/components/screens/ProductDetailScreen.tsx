@@ -32,6 +32,7 @@ import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
+import { useMarketplaceWishlist } from '../../hooks/useMarketplaceWishlist';
 import { getAllStores } from '../../hooks/useMarketplaceData';
 
 const PRODUCT_PLACEHOLDER_400 =
@@ -63,6 +64,7 @@ export const ProductDetailScreen: React.FC = () => {
 
   const product = route.params?.product;
   const { addItem, getItemQuantity, itemCount, subtotal } = useMarketplaceCart();
+  const { isFavorite, toggleFavorite } = useMarketplaceWishlist();
 
   const [quantity, setQuantity] = useState(1);
   const [imageError, setImageError] = useState(false);
@@ -217,6 +219,20 @@ export const ProductDetailScreen: React.FC = () => {
         <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
           {t('marketplace.productDetail')}
         </Text>
+
+        {product && (
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => toggleFavorite(product)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Heart
+              size={scale(24)}
+              color={isFavorite(product.id) ? (colors.error ?? '#E53935') : colors.text}
+              variant={isFavorite(product.id) ? 'Bold' : 'Linear'}
+            />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           ref={cartIconRef}

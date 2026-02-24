@@ -1,9 +1,9 @@
 /**
  * CheckoutScreen Component
- * Handles direct checkout for Buy Now purchases
+ * Handles checkout: single product (Buy Now) or cart (selected items)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,19 +12,29 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  Alert,
+  ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { StackActions } from '@react-navigation/native';
 import { ArrowLeft2, Location, Wallet3, TickCircle } from 'iconsax-react-nativejs';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { paymentService } from '@plugins/payment';
+import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
+import { useMarketplaceOrders } from '../../context/MarketplaceOrderContext';
 import type { Product } from '../shared/ProductCard';
+import type { MarketplaceOrder, MarketplaceOrderItem } from '../../models/MarketplaceOrder';
+import type { MarketplaceInstallment } from '../../models/MarketplaceInstallment';
 
 type CheckoutRouteParams = {
   Checkout: {
-    product: Product;
-    quantity: number;
+    product?: Product;
+    quantity?: number;
+    fromCart?: boolean;
   };
 };
 
@@ -47,11 +57,147 @@ export const CheckoutScreen: React.FC = () => {
   const route = useRoute<RouteProp<CheckoutRouteParams, 'Checkout'>>();
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
+  const { cartItems, removeSelected } = useMarketplaceCart();
+  const { addOrder } = useMarketplaceOrders();
 
   const params = route.params || {};
-  const { product, quantity = 1 } = params as CheckoutRouteParams['Checkout'];
+  const { product, quantity = 1, fromCart } = params as CheckoutRouteParams['Checkout'];
 
-  if (!product) {
+  const isCartMode = fromCart === true || (!product && cartItems.some((i) => i.selected));
+  const selectedCartItems = useMemo(
+    () => cartItems.filter((i) => i.selected),
+    [cartItems]
+  );
+
+  const orderItems: MarketplaceOrderItem[] = useMemo(() => {
+    if (product && quantity) {
+      return [
+        {
+          product,
+          quantity,
+          subtotal: product.price * quantity,
+        },
+      ];
+    }
+    return selectedCartItems.map(({ product: p, quantity: q, subtotal: s }) => ({
+      product: p,
+      quantity: q,
+      subtotal: s,
+    }));
+  }, [product, quantity, selectedCartItems]);
+
+  const subtotal = useMemo(
+    () => orderItems.reduce((sum, i) => sum + i.subtotal, 0),
+    [orderItems]
+  );
+  const total = subtotal + SHIPPING_FEE;
+
+  const [address, setAddress] = useState('');
+  const [selectedPayment, setSelectedPayment] = useState<string>('cod');
+  const [allowInstallment, setAllowInstallment] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const hasItems = orderItems.length > 0;
+
+  const handleBack = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  const handlePlaceOrder = useCallback(async () => {
+    if (!hasItems) {
+      Alert.alert(
+        t('common.error') || 'Error',
+        t('marketplace.selectItemToCheckout') || 'Pilih minimal satu produk.'
+      );
+      return;
+    }
+    if (!address.trim()) {
+      Alert.alert(
+        t('common.error') || 'Error',
+        t('marketplace.enterAddress') || 'Masukkan alamat pengiriman.'
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    const orderId = `MP-${Date.now()}`;
+    const orderNumber = `INV/MP/${new Date().toISOString().slice(0, 10).replace(/-/g, '')}/${String(Date.now()).slice(-6)}`;
+
+    try {
+      await paymentService.payWithBalance(total, orderId, {
+        storeName: 'Marketplace',
+        itemCount: orderItems.length,
+      });
+
+      const installments: MarketplaceInstallment[] | undefined = allowInstallment
+        ? (() => {
+            const half = Math.round(total / 2);
+            const now = new Date();
+            return [
+              {
+                id: `${orderId}-inst-1`,
+                orderId,
+                amount: half,
+                dueDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                status: 'unpaid',
+              },
+              {
+                id: `${orderId}-inst-2`,
+                orderId,
+                amount: total - half,
+                dueDate: new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+                status: 'unpaid',
+              },
+            ];
+          })()
+        : undefined;
+
+      const order: MarketplaceOrder = {
+        id: orderId,
+        orderNumber,
+        items: orderItems,
+        subtotal,
+        shippingFee: SHIPPING_FEE,
+        total,
+        address: address.trim(),
+        paymentMethod: selectedPayment,
+        status: 'dipesan',
+        createdAt: new Date().toISOString(),
+        allowInstallment: !!allowInstallment,
+        installments,
+      };
+
+      await addOrder(order);
+      if (isCartMode) removeSelected();
+
+      navigation.dispatch(
+        StackActions.replace('MarketplaceOrderDetail', { orderId: order.id })
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error && err.message.toLowerCase().includes('insufficient')
+          ? t('marketplace.insufficientBalance') || 'Saldo tidak mencukupi.'
+          : t('marketplace.orderFailed') || 'Gagal memproses pesanan.';
+      Alert.alert(t('common.error') || 'Error', msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    hasItems,
+    address,
+    orderItems,
+    subtotal,
+    total,
+    selectedPayment,
+    allowInstallment,
+    isCartMode,
+    addOrder,
+    removeSelected,
+    navigation,
+    t,
+  ]);
+
+  if (!hasItems && !product) {
     return (
       <View
         style={[
@@ -68,29 +214,6 @@ export const CheckoutScreen: React.FC = () => {
       </View>
     );
   }
-
-  const [address, setAddress] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState<string>('cod');
-
-  const subtotal = product.price * quantity;
-  const total = subtotal + SHIPPING_FEE;
-
-  const handleBack = useCallback(() => {
-    navigation.goBack();
-  }, [navigation]);
-
-  const handlePlaceOrder = useCallback(() => {
-    // TODO: Implement actual order submission
-    console.log('Order placed:', {
-      product,
-      quantity,
-      address,
-      paymentMethod: selectedPayment,
-      total,
-    });
-    // Navigate to success screen or back
-    navigation.goBack();
-  }, [product, quantity, address, selectedPayment, total, navigation]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -139,32 +262,33 @@ export const CheckoutScreen: React.FC = () => {
             {t('marketplace.orderSummary')}
           </Text>
 
-          <View style={styles.productRow}>
-            <Image
-              source={{
-                uri:
-                  product.imageUrl ||
-                  'data:image/svg+xml,' +
-                    encodeURIComponent(
-                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="#CCCCCC" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
-                    ),
-              }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-
-            <View style={styles.productInfo}>
-              <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
-                {product.name}
-              </Text>
-              <Text style={[styles.productPrice, { color: colors.primary }]}>
-                {formatPrice(product.price)}
-              </Text>
-              <Text style={[styles.quantityText, { color: colors.textSecondary }]}>
-                {t('marketplace.quantity')}: {quantity}
-              </Text>
+          {orderItems.map((item, index) => (
+            <View key={`${item.product.id}-${index}`} style={styles.productRow}>
+              <Image
+                source={{
+                  uri:
+                    item.product.imageUrl ||
+                    'data:image/svg+xml,' +
+                      encodeURIComponent(
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="#CCCCCC" width="100" height="100"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12" font-family="sans-serif">Product</text></svg>'
+                      ),
+                }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+              <View style={styles.productInfo}>
+                <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
+                  {item.product.name}
+                </Text>
+                <Text style={[styles.productPrice, { color: colors.primary }]}>
+                  {formatPrice(item.product.price)}
+                </Text>
+                <Text style={[styles.quantityText, { color: colors.textSecondary }]}>
+                  {t('marketplace.quantity')}: {item.quantity}
+                </Text>
+              </View>
             </View>
-          </View>
+          ))}
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
@@ -265,6 +389,19 @@ export const CheckoutScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           ))}
+
+        {/* Cicilan option */}
+        <View style={[styles.installmentRow, { borderTopColor: colors.border }]}>
+          <Text style={[styles.installmentLabel, { color: colors.text }]}>
+            {t('marketplace.payWithInstallment') || 'Bayar dengan cicilan (2x)'}
+          </Text>
+          <Switch
+            value={allowInstallment}
+            onValueChange={setAllowInstallment}
+            trackColor={{ false: colors.border, true: colors.primaryLight }}
+            thumbColor={allowInstallment ? colors.primary : colors.textSecondary}
+          />
+        </View>
         </View>
       </ScrollView>
 
@@ -289,11 +426,19 @@ export const CheckoutScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.placeOrderButton, { backgroundColor: colors.primary }]}
+          style={[
+            styles.placeOrderButton,
+            { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 },
+          ]}
           onPress={handlePlaceOrder}
           activeOpacity={0.8}
+          disabled={isSubmitting}
         >
-          <Text style={styles.placeOrderButtonText}>{t('marketplace.placeOrder')}</Text>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.placeOrderButtonText}>{t('marketplace.placeOrder')}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -428,6 +573,18 @@ const styles = StyleSheet.create({
   },
   paymentName: {
     flex: 1,
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.medium,
+  },
+  installmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: scale(12),
+    paddingTop: scale(12),
+    borderTopWidth: 1,
+  },
+  installmentLabel: {
     fontSize: scale(14),
     fontFamily: FontFamily.monasans.medium,
   },

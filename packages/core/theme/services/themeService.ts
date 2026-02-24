@@ -60,9 +60,9 @@ const lightColors: ThemeColors = {
 const darkColors: ThemeColors = {
   errorContainer: '#F87171',
   successContainer: '#34D399',
-  background: '#111827',
-  surface: '#1F2937',
-  surfaceSecondary: '#374151',
+  background: '#09101a',
+  surface: '#29374a',
+  surfaceSecondary: '#324057',
 
   text: '#F9FAFB',
   textSecondary: '#D1D5DB',

@@ -37,6 +37,7 @@ import { TransactionHistoryScreen } from '@plugins/balance';
 import { ProfileScreen } from '@core/account';
 import { PlaceholderScreen } from './src/screens/PlaceholderScreen';
 import { FnBCartProvider, FnBActiveOrderProvider } from '@plugins/marketplace-fnb';
+import { MarketplaceOrderProvider } from '@plugins/marketplace';
 
 const Stack = createNativeStackNavigator();
 
@@ -220,11 +221,13 @@ function MemberBaseAppContent(): React.JSX.Element {
   return (
     <>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <FnBCartProvider>
-        <FnBActiveOrderProvider>
-          <AppNavigator />
-        </FnBActiveOrderProvider>
-      </FnBCartProvider>
+      <MarketplaceOrderProvider>
+        <FnBCartProvider>
+          <FnBActiveOrderProvider>
+            <AppNavigator />
+          </FnBActiveOrderProvider>
+        </FnBCartProvider>
+      </MarketplaceOrderProvider>
       <Toast config={toastConfig} />
     </>
   );

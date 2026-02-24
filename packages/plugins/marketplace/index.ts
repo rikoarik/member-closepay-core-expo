@@ -11,6 +11,8 @@ export { CartScreen } from './components/screens/CartScreen';
 export { ProductDetailScreen } from './components/screens/ProductDetailScreen';
 export { StoreDetailScreen } from './components/screens/StoreDetailScreen';
 export { CheckoutScreen } from './components/screens/CheckoutScreen';
+export { MarketplaceOrderDetailScreen } from './components/screens/MarketplaceOrderDetailScreen';
+export { MarketplaceOrderProvider } from './context/MarketplaceOrderContext';
 export { ProductCard } from './components/shared/ProductCard';
 export type { Product } from './components/shared/ProductCard';
 export { ProductCardSkeleton } from './components/shared/ProductCardSkeleton';
@@ -20,6 +22,12 @@ export type { Store } from './hooks/useMarketplaceData';
 export { StoreCard } from './components/shared/StoreCard';
 export { useSearch } from './hooks/useSearch';
 export { useMarketplaceCart } from './hooks/useMarketplaceCart';
+export { useMarketplaceWishlist } from './hooks/useMarketplaceWishlist';
+export { marketplaceOrderService } from './services/marketplaceOrderService';
+export {
+  marketplaceInstallmentService,
+  type InstallmentWithOrder,
+} from './services/marketplaceInstallmentService';
 
 // Module definition
 export const MarketplaceModule = {
@@ -33,5 +41,6 @@ export const MarketplaceModule = {
     ProductDetail: 'ProductDetailScreen',
     StoreDetail: 'StoreDetailScreen',
     Checkout: 'CheckoutScreen',
+    MarketplaceOrderDetail: 'MarketplaceOrderDetailScreen',
   },
 };

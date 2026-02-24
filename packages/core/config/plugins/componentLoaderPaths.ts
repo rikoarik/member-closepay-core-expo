@@ -80,6 +80,7 @@ export const COMPONENT_LOADER_PATHS: Record<string, Record<string, string>> = {
     ProductDetailScreen: '../../../plugins/marketplace/components/screens/ProductDetailScreen',
     StoreDetailScreen: '../../../plugins/marketplace/components/screens/StoreDetailScreen',
     CheckoutScreen: '../../../plugins/marketplace/components/screens/CheckoutScreen',
+    MarketplaceOrderDetailScreen: '../../../plugins/marketplace/components/screens/MarketplaceOrderDetailScreen',
     MarketplaceTab: '../../../plugins/marketplace/components/tabs/MarketplaceTab',
     MarketplaceGeneralTab: '../../../plugins/marketplace/components/tabs/MarketplaceGeneralTab',
     MarketplaceBalanceTab: '../../../plugins/marketplace/components/tabs/MarketplaceBalanceTab',

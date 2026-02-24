@@ -95,7 +95,7 @@ export const CartScreen: React.FC = () => {
       return;
     }
     // @ts-ignore
-    navigation.navigate('Checkout');
+    navigation.navigate('Checkout', { fromCart: true });
   }, [navigation, selectedCount, t]);
 
   const handleRemoveSelected = useCallback(() => {

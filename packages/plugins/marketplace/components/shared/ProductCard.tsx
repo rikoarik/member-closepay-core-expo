@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Heart } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
@@ -31,6 +32,9 @@ interface ProductCardProps {
   onPress?: (product: Product) => void;
   /** Optional width untuk horizontal scroll (compact) */
   width?: number;
+  /** Tampilkan tombol favorit dan callback toggle */
+  isFavorite?: boolean;
+  onToggleFavorite?: (product: Product) => void;
 }
 
 const PLACEHOLDER_IMAGE =
@@ -47,7 +51,13 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onPress, width }) => {
+const ProductCardComponent: React.FC<ProductCardProps> = ({
+  product,
+  onPress,
+  width,
+  isFavorite = false,
+  onToggleFavorite,
+}) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const { width: screenWidth } = useDimensions();
@@ -60,8 +70,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onPress, wi
   const discountPercentage =
     product.originalPrice && product.originalPrice > product.price
       ? Math.round(
-        ((product.originalPrice - product.price) / product.originalPrice) * 100
-      )
+          ((product.originalPrice - product.price) / product.originalPrice) * 100
+        )
       : null;
 
   return (
@@ -88,6 +98,22 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onPress, wi
           resizeMode="cover"
           onError={() => setImageError(true)}
         />
+
+        {onToggleFavorite && (
+          <TouchableOpacity
+            style={[styles.favoriteBtn, { backgroundColor: 'rgba(255,255,255,0.9)' }]}
+            onPress={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(product);
+            }}
+          >
+            <Heart
+              size={scale(18)}
+              color={isFavorite ? (colors.error ?? '#E53935') : colors.textSecondary}
+              variant={isFavorite ? 'Bold' : 'Linear'}
+            />
+          </TouchableOpacity>
+        )}
 
         {discountPercentage && (
           <View style={[styles.discountBadge, { backgroundColor: colors.error }]}>
@@ -225,5 +251,12 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveFontSize('xxxsmall'),
     fontFamily: FontFamily.monasans.regular,
     opacity: 0.8,
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    top: scale(8),
+    right: scale(8),
+    padding: scale(6),
+    borderRadius: scale(20),
   },
 });
