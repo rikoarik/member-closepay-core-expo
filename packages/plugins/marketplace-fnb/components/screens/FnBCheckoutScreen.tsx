@@ -15,7 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, StackActions } from '@react-navigation/native';
 import { ArrowLeft2, Shop, Truck, Box, Location as LocationIcon } from 'iconsax-react-nativejs';
 import Toast from 'react-native-toast-message';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
@@ -26,7 +26,8 @@ import { useBalance } from '@plugins/balance';
 import { paymentService } from '@plugins/payment';
 import { useFnBData, useFnBCart } from '../../hooks';
 import { getAvailableOrderTypes } from '../../models';
-import type { OrderType, EntryPoint } from '../../models';
+import type { OrderType, EntryPoint, FnBOrder, FnBOrderItem } from '../../models';
+import { useFnBActiveOrder } from '../../context/FnBActiveOrderContext';
 import { getLastDelivery, setLastDelivery } from '../../utils/deliveryStorage';
 import { FnBLocationPickerModal } from '../shared/FnBLocationPickerModal';
 
@@ -58,6 +59,7 @@ export const FnBCheckoutScreen: React.FC = () => {
   const { user } = useAuth();
   const { store } = useFnBData(entryPoint, storeId);
   const { cartItems, subtotal, itemCount, clearCart, getTotal } = useFnBCart(entryPoint);
+  const { setActiveOrder } = useFnBActiveOrder();
   const { balance } = useBalance();
 
   // Empty cart guard: show message and back button if user landed without items
@@ -208,13 +210,41 @@ export const FnBCheckoutScreen: React.FC = () => {
         if (selectedOrderType === 'delivery' && phoneNumber.trim() && deliveryAddress.trim()) {
           setLastDelivery({ phoneNumber: phoneNumber.trim(), deliveryAddress: deliveryAddress.trim() }).catch(() => {});
         }
+        const orderItems: FnBOrderItem[] = cartItems.map(({ item, quantity, variant, addons, notes, subtotal: itemSubtotal }) => ({
+          item,
+          quantity,
+          variant,
+          addons,
+          notes,
+          subtotal: itemSubtotal,
+        }));
+        const order: FnBOrder = {
+          id: orderId,
+          storeId: storeId ?? store?.id ?? '',
+          storeName: store?.name,
+          items: orderItems,
+          orderType: selectedOrderType,
+          entryPoint,
+          customerName: customerName.trim(),
+          tableNumber: selectedOrderType === 'dine-in' ? tableNumber.trim() || undefined : undefined,
+          deliveryAddress: selectedOrderType === 'delivery' ? deliveryAddress.trim() || undefined : undefined,
+          phoneNumber: selectedOrderType === 'delivery' ? phoneNumber.trim() || undefined : undefined,
+          pickupTime: selectedOrderType === 'take-away' ? pickupTime.trim() || undefined : undefined,
+          subtotal,
+          deliveryFee: selectedOrderType === 'delivery' && store?.delivery ? store.delivery.fee : undefined,
+          serviceFee,
+          total,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        };
+        await setActiveOrder(order);
         clearCart();
         Toast.show({
           type: 'success',
           text1: t('fnb.orderSuccess') || 'Pesanan Berhasil',
           text2: t('fnb.orderSuccessMessage') || 'Pesanan Anda sedang diproses.',
         });
-        navigation.goBack();
+        navigation.dispatch(StackActions.replace('FnBOrderStatus', { orderId: order.id }));
       }
     } catch (error) {
       const message =
@@ -229,6 +259,7 @@ export const FnBCheckoutScreen: React.FC = () => {
     isFormValid,
     total,
     clearCart,
+    setActiveOrder,
     navigation,
     store?.isOpen,
     store?.id,
@@ -241,6 +272,14 @@ export const FnBCheckoutScreen: React.FC = () => {
     selectedOrderType,
     phoneNumber,
     deliveryAddress,
+    customerName,
+    tableNumber,
+    pickupTime,
+    subtotal,
+    serviceFee,
+    cartItems,
+    deliveryAddress,
+    store?.delivery,
   ]);
 
   // Open in-app map picker (Grab-style); on web show toast

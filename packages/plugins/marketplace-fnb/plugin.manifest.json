@@ -23,7 +23,9 @@
       "FnBMerchantDetail": "FnBMerchantDetailScreen",
       "FnBCheckout": "FnBCheckoutScreen",
       "FnBScan": "FnBScanScreen",
-      "FnBFavorites": "FnBFavoritesScreen"
+      "FnBFavorites": "FnBFavoritesScreen",
+      "FnBOrderStatus": "FnBOrderStatusScreen",
+      "FnBOrderTracking": "FnBOrderTrackingScreen"
     },
     "hooks": [
       "useFnBData",
@@ -51,7 +53,8 @@
       "fnb-balance": "FnBBalanceTab"
     },
     "widgets": {
-      "fnb-recent-orders": "FnBRecentOrders"
+      "fnb-recent-orders": "FnBRecentOrders",
+      "fnb-order-floating": "FnBOrderFloatingWidget"
     }
   },
   "routes": [
@@ -112,6 +115,30 @@
       ],
       "meta": {
         "title": "Favorites",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBOrderStatus",
+      "path": "/fnb/order-status",
+      "component": "FnBOrderStatusScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Status Pesanan",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBOrderTracking",
+      "path": "/fnb/order-tracking",
+      "component": "FnBOrderTrackingScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Lacak Pesanan",
         "showInMenu": false
       }
     }

@@ -21,6 +21,7 @@ export interface FnBOrderItem {
 export interface FnBOrder {
     id: string;
     storeId: string;
+    storeName?: string; // for display in widget and status screen
     items: FnBOrderItem[];
     orderType: OrderType;
     entryPoint: EntryPoint;

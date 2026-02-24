@@ -31,8 +31,10 @@ import {
   loadHomeTabSettings,
   MAX_HOME_TABS,
   getTabPlugin,
+  getWidgetPlugin,
   PluginRegistry,
   validateEnabledTabIds,
+  usePluginComponent,
 } from '@core/config';
 import {
   TopBar,
@@ -53,11 +55,23 @@ import { QrScanIcon } from '@core/config/components/icons';
 import { scale, moderateScale } from '@core/config';
 import { useBalance } from '@plugins/balance';
 
+const FNB_ORDER_FLOATING_WIDGET_ID = 'fnb-order-floating';
+
 const HomeScreenComponent = () => {
   const navigation = useNavigation();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
   const { width: screenWidth, height: screenHeight } = useDimensions();
+  const fnbFloatingWidgetPlugin = getWidgetPlugin(FNB_ORDER_FLOATING_WIDGET_ID);
+  const { Component: FnBOrderFloatingWidget, loading: fnbWidgetLoading } = usePluginComponent({
+    pluginId: fnbFloatingWidgetPlugin?.pluginId ?? '',
+    componentName: fnbFloatingWidgetPlugin?.componentName ?? '',
+  });
+  const showFnBFloatingWidget =
+    fnbFloatingWidgetPlugin &&
+    PluginRegistry.isPluginEnabled(fnbFloatingWidgetPlugin.pluginId) &&
+    !fnbWidgetLoading &&
+    FnBOrderFloatingWidget;
   // State for News Tab (Lifted Up)
   const newsState = useNewsState();
 
@@ -648,6 +662,13 @@ const HomeScreenComponent = () => {
         </View>
       </ScrollView>
 
+      {/* FnB active order floating widget (Grab/GoFood style) */}
+      {showFnBFloatingWidget && (
+        <View style={styles.fnbFloatingWidgetContainer} pointerEvents="box-none">
+          <FnBOrderFloatingWidget />
+        </View>
+      )}
+
       {/* FAB QR Button */}
       {config?.showQrButton !== false && (
         <Animated.View
@@ -700,6 +721,13 @@ const styles = StyleSheet.create({
   },
   tabContentContainer: {
     flex: 1,
+  },
+  fnbFloatingWidgetContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0, // above FAB QR button
+    zIndex: 99999999999,
   },
   fab: {
     position: 'absolute',

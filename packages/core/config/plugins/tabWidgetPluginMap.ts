@@ -66,6 +66,7 @@ export const WIDGET_TO_PLUGIN_MAP: Record<string, TabWidgetPluginMapping> = {
   'sport-center-featured': { pluginId: 'sport-center', componentName: 'SportCenterFeatured' },
   'marketplace-featured': { pluginId: 'marketplace', componentName: 'MarketplaceFeatured' },
   'fnb-recent-orders': { pluginId: 'marketplace-fnb', componentName: 'FnBRecentOrders' },
+  'fnb-order-floating': { pluginId: 'marketplace-fnb', componentName: 'FnBOrderFloatingWidget' },
   'card-summary': { pluginId: 'card-transaction', componentName: 'CardSummary' },
   'activity-summary': { pluginId: 'balance', componentName: 'ActivitySummary' },
   'savings-goal': { pluginId: 'balance', componentName: 'SavingsGoal' },

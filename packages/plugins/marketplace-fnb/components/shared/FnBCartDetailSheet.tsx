@@ -3,21 +3,22 @@
  * Bottom sheet for viewing and editing cart items
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-  ScrollView,
   Modal,
   Pressable,
+  Animated,
 } from 'react-native';
 import { CloseCircle, Add, Minus, Trash, ShoppingCart, Edit2 } from 'iconsax-react-nativejs';
 import { scale, moderateVerticalScale, FontFamily, getHorizontalPadding } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FnBOrderItem } from '../../models';
 
 interface CartItem extends FnBOrderItem {
@@ -51,7 +52,15 @@ export const FnBCartDetailSheet: React.FC<FnBCartDetailSheetProps> = ({
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerParallaxTranslate = scrollY.interpolate({
+    inputRange: [0, 100, 200],
+    outputRange: [0, -35, -70],
+    extrapolate: 'clamp',
+  });
 
   const handleIncrement = useCallback(
     (cartId: string, currentQty: number) => {
@@ -86,11 +95,6 @@ export const FnBCartDetailSheet: React.FC<FnBCartDetailSheetProps> = ({
         onPress={() => onEditItem(cartItem)}
         activeOpacity={0.7}
       >
-        {/* Edit Button overlay (optional) or just rely on row press, but plan asked for explicit button.
-                    Let's put an edit button on the right side or top right.
-                    Actually, let's put it next to the name or in a visible spot.
-                 */}
-
         {/* Item Image */}
         <View style={styles.itemImageContainer}>
           {item.imageUrl ? (
@@ -185,45 +189,55 @@ export const FnBCartDetailSheet: React.FC<FnBCartDetailSheetProps> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal style={{ marginTop: insets.top }} visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
-          {/* Drag handle */}
-          <View style={styles.handleContainer}>
-            <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          </View>
-
-          {/* Header */}
-          <View
+          {/* Parallax header: handle + title */}
+          <Animated.View
             style={[
-              styles.header,
-              { paddingHorizontal: horizontalPadding, borderBottomColor: colors.border },
+              styles.parallaxHeader,
+              { backgroundColor: colors.surface, transform: [{ translateY: headerParallaxTranslate }] },
             ]}
           >
-            <View style={styles.headerLeft}>
-              <ShoppingCart size={scale(22)} color={colors.text} variant="Bold" />
-              <Text style={[styles.headerTitle, { color: colors.text }]}>
-                {t('fnb.cart') || 'Keranjang'}
-              </Text>
-              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.badgeText, { color: colors.surface }]}>
-                  {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-                </Text>
-              </View>
+            <View style={styles.handleContainer}>
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
             </View>
-            <TouchableOpacity
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            <View
+              style={[
+                styles.header,
+                { paddingHorizontal: horizontalPadding, borderBottomColor: colors.border },
+              ]}
             >
-              <CloseCircle size={scale(28)} color={colors.textSecondary} variant="Bold" />
-            </TouchableOpacity>
-          </View>
+              <View style={styles.headerLeft}>
+                <ShoppingCart size={scale(22)} color={colors.text} variant="Bold" />
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                  {t('fnb.cart') || 'Keranjang'}
+                </Text>
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.badgeText, { color: colors.surface }]}>
+                    {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <CloseCircle size={scale(28)} color={colors.textSecondary} variant="Bold" />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
 
-          {/* Cart Items */}
-          <ScrollView
+          {/* Cart Items - scroll drives parallax */}
+          <Animated.ScrollView
             style={styles.scrollView}
             contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
             showsVerticalScrollIndicator={false}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
           >
             {cartItems.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -234,7 +248,7 @@ export const FnBCartDetailSheet: React.FC<FnBCartDetailSheetProps> = ({
             ) : (
               cartItems.map((item, index) => renderCartItem(item, index))
             )}
-          </ScrollView>
+          </Animated.ScrollView>
 
           {/* Bottom Bar - Summary & Checkout */}
           {cartItems.length > 0 && (
@@ -286,6 +300,9 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
+  },
+  parallaxHeader: {
+    zIndex: 1,
   },
   handleContainer: {
     alignItems: 'center',

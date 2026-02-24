@@ -93,9 +93,9 @@ export const FnBItemDetailSheet: React.FC<FnBItemDetailSheetProps> = ({
         setSelectedAddons([]);
         setNotes('');
       }
-      // Scroll to top when opening (guard: KeyboardAwareScrollView ref may not expose scrollTo)
-      const node = scrollViewRef.current;
-      if (node && typeof node.scrollTo === 'function') {
+      // Scroll to top when opening (KeyboardAwareScrollView ref may expose scrollTo on inner ScrollView)
+      const node = scrollViewRef.current as { scrollTo?: (opts: { x: number; y: number; animated: boolean }) => void } | null;
+      if (node?.scrollTo) {
         node.scrollTo({ x: 0, y: 0, animated: false });
       }
     }
@@ -180,10 +180,13 @@ export const FnBItemDetailSheet: React.FC<FnBItemDetailSheetProps> = ({
             <ArrowLeft2 size={scale(24)} color="#FFFFFF" variant="Linear" />
           </TouchableOpacity>
 
-          {/* Favorite button */}
+          {/* Favorite button - align with back button (same top as header padding) */}
           {onToggleFavorite && item && (
             <TouchableOpacity
-              style={[styles.favoriteButton, { backgroundColor: 'rgba(0,0,0,0.4)' }]}
+              style={[
+                styles.favoriteButton,
+                { backgroundColor: 'rgba(0,0,0,0.4)', top: insets.top + scale(8) },
+              ]}
               onPress={() => onToggleFavorite(item)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
@@ -521,8 +524,8 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     position: 'absolute',
-    top: 0,
     right: scale(16),
+    /* top set inline to match header paddingTop (insets.top + scale(8)) */
     width: scale(40),
     height: scale(40),
     borderRadius: scale(20),

@@ -21,8 +21,9 @@ export type {
 } from './models';
 export { getAvailableOrderTypes, isStoreOpen, parseFnBQRCode } from './models';
 
-// Context (required for shared cart between MerchantDetail and Checkout)
+// Context (required for shared cart and active order)
 export { FnBCartProvider, FnBCartContext } from './context/FnBCartContext';
+export { FnBActiveOrderProvider, useFnBActiveOrder } from './context/FnBActiveOrderContext';
 
 // Hooks
 export { useFnBData, useFnBCart, useFnBFavorites } from './hooks';
@@ -37,7 +38,7 @@ export {
 } from './components/shared';
 
 // Screens
-export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBScanScreen, FnBFavoritesScreen } from './components/screens';
+export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen } from './components/screens';
 
 // Module definition
 export const FnBModule = {

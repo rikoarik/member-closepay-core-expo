@@ -20,6 +20,7 @@ import { CloseCircle, Location as LocationIcon } from 'iconsax-react-nativejs';
 import { scale, moderateVerticalScale, FontFamily, getHorizontalPadding } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEFAULT_REGION: Region = {
   latitude: -6.2088,
@@ -28,7 +29,9 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.01,
 };
 
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = 500;
+/** Minimum change (degrees) to trigger new reverse geocode ~5m */
+const GEOCODE_THRESHOLD = 0.00005;
 
 function formatGeocodeAddress(geocode: ExpoLocation.LocationGeocodedAddress | null): string {
   if (!geocode) return '';
@@ -57,6 +60,7 @@ export const FnBLocationPickerModal: React.FC<FnBLocationPickerModalProps> = ({
 }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [addressText, setAddressText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -64,19 +68,26 @@ export const FnBLocationPickerModal: React.FC<FnBLocationPickerModalProps> = ({
   const mapRef = useRef<MapView>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCenterRef = useRef({ latitude: region.latitude, longitude: region.longitude });
+  const lastGeocodedCenterRef = useRef({ latitude: 0, longitude: 0 });
+  const hasFirstAddressRef = useRef(false);
 
   const doReverseGeocode = useCallback(
     async (latitude: number, longitude: number) => {
       if (Platform.OS === 'web') return;
-      setIsGeocoding(true);
+      const isFirstLoad = !hasFirstAddressRef.current;
+      if (isFirstLoad) setIsGeocoding(true);
       try {
         const [result] = await ExpoLocation.reverseGeocodeAsync({ latitude, longitude });
         const formatted = formatGeocodeAddress(result);
         setAddressText(formatted || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        lastGeocodedCenterRef.current = { latitude, longitude };
+        hasFirstAddressRef.current = true;
       } catch {
         setAddressText(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        lastGeocodedCenterRef.current = { latitude, longitude };
+        hasFirstAddressRef.current = true;
       } finally {
-        setIsGeocoding(false);
+        if (isFirstLoad) setIsGeocoding(false);
       }
     },
     []
@@ -86,10 +97,14 @@ export const FnBLocationPickerModal: React.FC<FnBLocationPickerModalProps> = ({
     (r: Region) => {
       setRegion(r);
       lastCenterRef.current = { latitude: r.latitude, longitude: r.longitude };
+      const last = lastGeocodedCenterRef.current;
+      const latDiff = Math.abs(r.latitude - last.latitude);
+      const lngDiff = Math.abs(r.longitude - last.longitude);
+      if (latDiff < GEOCODE_THRESHOLD && lngDiff < GEOCODE_THRESHOLD) return;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        doReverseGeocode(r.latitude, r.longitude);
         debounceRef.current = null;
+        doReverseGeocode(r.latitude, r.longitude);
       }, DEBOUNCE_MS);
     },
     [doReverseGeocode]
@@ -137,6 +152,8 @@ export const FnBLocationPickerModal: React.FC<FnBLocationPickerModalProps> = ({
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
+    hasFirstAddressRef.current = false;
+    lastGeocodedCenterRef.current = { latitude: 0, longitude: 0 };
     setIsLoading(true);
     setAddressText('');
     if (Platform.OS === 'web') {
@@ -192,7 +209,7 @@ export const FnBLocationPickerModal: React.FC<FnBLocationPickerModalProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { marginTop: insets.top, backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.text }]}>
             {t('fnb.locationPickerTitle') || 'Pilih lokasi'}

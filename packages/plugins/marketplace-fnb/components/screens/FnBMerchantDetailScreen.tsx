@@ -266,7 +266,7 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
                   onPress={clearSearch}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <CloseCircle size={scale(18)} color={colors.textSecondary} variant="Bold" />
+                  <CloseCircle size={scale(18)} color={colors.error} variant="Linear" />
                 </TouchableOpacity>
               )}
             </View>
@@ -284,12 +284,12 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
               { backgroundColor: isSearchActive ? colors.primary : colors.background },
             ]}
             onPress={toggleSearch}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {isSearchActive ? (
-              <Text style={[styles.searchButtonText, { color: colors.surface }]}></Text>
+              <CloseCircle size={scale(24)} color={colors.surface} variant="Linear" />
             ) : (
-              <SearchNormal size={scale(20)} color={colors.text} variant="Linear" />
+              <SearchNormal size={scale(24)} color={colors.text} variant="Linear" />
             )}
           </TouchableOpacity>
         </View>
