@@ -45,12 +45,12 @@ export const appConfig: AppConfig = {
   homeVariant: 'member', // Options: 'dashboard' | 'simple' | 'member' | 'custom'
 
   // Home tabs configuration (for member variant)
-  // Default 3 tab: Analitik (kiri), Beranda (tengah), Marketplace (kanan)
+  // Default 3 tab: FnB (kiri), Beranda (tengah), Berita dan Info (kanan)
   homeTabs: [
-    // ========== DEFAULT 3 TAB: Analitik | Beranda | Marketplace ==========
+    // ========== DEFAULT 3 TAB: FnB | Beranda | Berita dan Info ==========
     {
-      id: 'analytics',
-      label: 'Analitik',
+      id: 'fnb',
+      label: 'F&B',
       visible: true,
       order: 1,
     },
@@ -61,10 +61,23 @@ export const appConfig: AppConfig = {
       order: 2,
     },
     {
-      id: 'marketplace',
-      label: 'Marketplace',
+      id: 'news',
+      label: 'Berita',
       visible: true,
       order: 3,
+    },
+    // ========== TAB LAIN (bisa diaktifkan di Pengaturan Tab Beranda) ==========
+    {
+      id: 'analytics',
+      label: 'Analitik',
+      visible: false,
+      order: 4,
+    },
+    {
+      id: 'marketplace',
+      label: 'Marketplace',
+      visible: false,
+      order: 5,
     },
     // ========== BERANDA & DASHBOARD ==========
     {
@@ -94,13 +107,7 @@ export const appConfig: AppConfig = {
       order: 7,
     },
     
-    // ========== MARKETPLACE - F&B ==========
-    {
-      id: 'fnb',
-      label: 'Food & Beverage',
-      visible: false,
-      order: 8,
-    },
+    // ========== MARKETPLACE - F&B (fnb default tab kiri, definisi di atas) ==========
     {
       id: 'fnb-order',
       label: 'Pesan Makanan',
@@ -395,25 +402,11 @@ export const appConfig: AppConfig = {
   // QR Button configuration
   showQrButton: true, // Show/hide QR scan button on home screen
 
-  // Beranda widgets - bisa diatur on/off dan urutan di Profile > Pengaturan Tab Beranda
+  // Beranda widgets - default: balance card, quick access, promo & banners (bisa diatur on/off dan urutan di Profile > Pengaturan Tab Beranda)
   berandaWidgets: [
-    { id: 'greeting-card', visible: true, order: 1 },
-    { id: 'balance-card', visible: true, order: 2 },
-    { id: 'quick-access', visible: true, order: 3 },
-    { id: 'recent-transactions', visible: true, order: 4 },
-    { id: 'news-info', visible: true, order: 5 },
-    { id: 'promo-banner', visible: true, order: 6 },
-    { id: 'store-nearby', visible: true, order: 7 },
-    { id: 'card-summary', visible: true, order: 8 },
-    { id: 'activity-summary', visible: true, order: 9 },
-    { id: 'savings-goal', visible: true, order: 10 },
-    { id: 'referral-banner', visible: true, order: 11 },
-    { id: 'rewards-points', visible: true, order: 12 },
-    { id: 'voucher-available', visible: true, order: 13 },
-    { id: 'fnb-recent-orders', visible: true, order: 14 },
-    { id: 'marketplace-featured', visible: true, order: 15 },
-    { id: 'sport-center-featured', visible: false, order: 16 }, // false = widget Sport Center tidak tampil di Beranda
-    { id: 'invoice-featured', visible: true, order: 17 },
+    { id: 'balance-card', visible: true, order: 1 },
+    { id: 'quick-access', visible: true, order: 2 },
+    { id: 'promo-banner', visible: true, order: 3 },
   ],
 
   // ============================================================================
@@ -448,7 +441,7 @@ export const appConfig: AppConfig = {
   // Atur fitur pilihan: drag-to-reorder (enableDrag), fixed top slots (fixedTopCount)
   quickMenu: {
     enableDrag: true,
-    fixedTopCount: 4,
+    fixedTopCount: 3,
   },
 
   /** Sembunyikan "Atur menu" (Quick Menu Settings) dari menu Profil */

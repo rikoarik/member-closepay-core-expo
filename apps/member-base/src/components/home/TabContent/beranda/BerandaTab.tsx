@@ -53,22 +53,9 @@ interface BerandaTabProps {
 }
 
 const DEFAULT_BERANDA_WIDGETS = [
-  { id: 'greeting-card', visible: true, order: 1 },
-  { id: 'balance-card', visible: true, order: 2 },
-  { id: 'quick-access', visible: true, order: 3 },
-  { id: 'recent-transactions', visible: true, order: 4 },
-  { id: 'news-info', visible: true, order: 5 },
-  { id: 'promo-banner', visible: true, order: 6 },
-  { id: 'store-nearby', visible: true, order: 7 },
-  { id: 'card-summary', visible: true, order: 8 },
-  { id: 'activity-summary', visible: true, order: 9 },
-  { id: 'savings-goal', visible: true, order: 10 },
-  { id: 'referral-banner', visible: true, order: 11 },
-  { id: 'rewards-points', visible: true, order: 12 },
-  { id: 'voucher-available', visible: true, order: 13 },
-  { id: 'fnb-recent-orders', visible: true, order: 14 },
-  { id: 'marketplace-featured', visible: true, order: 15 },
-  { id: 'sport-center-featured', visible: true, order: 16 },
+  { id: 'balance-card', visible: true, order: 1 },
+  { id: 'quick-access', visible: true, order: 2 },
+  { id: 'promo-banner', visible: true, order: 3 },
 ];
 
 const BerandaTabContent: React.FC<BerandaTabProps> = React.memo(

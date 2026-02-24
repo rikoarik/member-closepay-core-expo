@@ -228,7 +228,7 @@ export const id = {
     recentTransactions: 'Transaksi Terbaru',
     yesterday: 'Kemarin',
     marketplace: 'Marketplace',
-    fnb: 'Food & Beverage',
+    fnb: 'F&B',
     copyCardNumber: 'Salin Nomor Kartu',
     cardNumberCopied: 'Nomor kartu berhasil disalin',
     virtualCardInfo: 'Informasi Kartu Virtual',
