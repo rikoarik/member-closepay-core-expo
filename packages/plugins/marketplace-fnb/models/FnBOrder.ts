@@ -9,6 +9,16 @@ export type OrderType = 'dine-in' | 'take-away' | 'delivery';
 export type EntryPoint = 'scan-qr' | 'browse';
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
 
+/** Driver info from tracking/order detail API (e.g. relay phone for call) */
+export interface FnBOrderDriver {
+    name?: string;
+    phoneNumber?: string;
+    vehiclePlate?: string;
+    /** Live position untuk tracking motor di peta (dari backend/websocket) */
+    latitude?: number;
+    longitude?: number;
+}
+
 export interface FnBOrderItem {
     item: FnBItem;
     quantity: number;
@@ -36,6 +46,8 @@ export interface FnBOrder {
     total: number;
     status: OrderStatus;
     createdAt: string;
+    /** Set when delivery is assigned; phoneNumber may be relay from backend */
+    driver?: FnBOrderDriver;
 }
 
 /**

@@ -109,6 +109,7 @@ const STATIC_COMPONENT_LOADERS: Record<string, Record<string, () => Promise<any>
     FnBCheckoutScreen: () => import('../../../plugins/marketplace-fnb/components/screens/FnBCheckoutScreen'),
     FnBOrderStatusScreen: () => import('../../../plugins/marketplace-fnb/components/screens/FnBOrderStatusScreen'),
     FnBOrderTrackingScreen: () => import('../../../plugins/marketplace-fnb/components/screens/FnBOrderTrackingScreen'),
+    FnBChatDriverScreen: () => import('../../../plugins/marketplace-fnb/components/screens/FnBChatDriverScreen'),
     FnBScanScreen: () => import('../../../plugins/marketplace-fnb/components/screens/FnBScanScreen'),
     FnBTab: () => import('../../../plugins/marketplace-fnb/components/tabs/FnBTab'),
     FnBOrderTab: () => import('../../../plugins/marketplace-fnb/components/tabs/FnBOrderTab'),

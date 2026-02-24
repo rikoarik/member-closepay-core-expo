@@ -25,7 +25,8 @@
       "FnBScan": "FnBScanScreen",
       "FnBFavorites": "FnBFavoritesScreen",
       "FnBOrderStatus": "FnBOrderStatusScreen",
-      "FnBOrderTracking": "FnBOrderTrackingScreen"
+      "FnBOrderTracking": "FnBOrderTrackingScreen",
+      "FnBChatDriver": "FnBChatDriverScreen"
     },
     "hooks": [
       "useFnBData",
@@ -139,6 +140,18 @@
       ],
       "meta": {
         "title": "Lacak Pesanan",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBChatDriver",
+      "path": "/fnb/chat-driver",
+      "component": "FnBChatDriverScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Chat",
         "showInMenu": false
       }
     }

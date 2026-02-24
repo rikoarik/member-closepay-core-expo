@@ -38,7 +38,7 @@ export {
 } from './components/shared';
 
 // Screens
-export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen } from './components/screens';
+export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
 
 // Module definition
 export const FnBModule = {
