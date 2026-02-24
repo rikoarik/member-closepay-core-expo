@@ -22,6 +22,12 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       filePath: path.resolve(projectRoot, shim),
     };
   }
+  if (moduleName === 'react-native-maps' && platform === 'web') {
+    return {
+      type: 'sourceFile',
+      filePath: path.resolve(projectRoot, 'shim-maps.web.js'),
+    };
+  }
   const aliasMatch = Object.keys(ALIAS).find((alias) => moduleName === alias || moduleName.startsWith(alias + '/'));
   if (aliasMatch) {
     const fs = require('fs');
