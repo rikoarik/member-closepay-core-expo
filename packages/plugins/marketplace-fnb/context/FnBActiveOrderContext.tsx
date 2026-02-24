@@ -3,9 +3,22 @@
  * Persists to AsyncStorage so widget and status screen stay in sync across app restarts.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { FnBOrder } from '../models';
+import type { OrderStatus } from '../models';
 import { getActiveOrder, setActiveOrder as setActiveOrderStorage } from '../utils/activeOrderStorage';
+
+/** Dummy mode: auto-advance status untuk testing cepat (hanya __DEV__) */
+const FNBDUMMY_AUTO_STATUS = __DEV__;
+const FNBDUMMY_DELAY_MS = 2000;
+
+const STATUS_SEQUENCE: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'completed'];
+
+function getNextStatus(current: OrderStatus): OrderStatus | null {
+  const i = STATUS_SEQUENCE.indexOf(current);
+  if (i < 0 || i >= STATUS_SEQUENCE.length - 1) return null;
+  return STATUS_SEQUENCE[i + 1];
+}
 
 export interface FnBActiveOrderContextValue {
   activeOrder: FnBOrder | null;
@@ -28,6 +41,9 @@ export function useFnBActiveOrder(): FnBActiveOrderContextValue {
 
 export const FnBActiveOrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeOrder, setActiveOrderState] = useState<FnBOrder | null>(null);
+  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const orderRef = useRef<FnBOrder | null>(null);
+  const setActiveOrderRef = useRef<(order: FnBOrder | null) => Promise<void>>(async () => {});
 
   const refreshActiveOrder = useCallback(async () => {
     const order = await getActiveOrder();
@@ -48,6 +64,32 @@ export const FnBActiveOrderProvider: React.FC<{ children: React.ReactNode }> = (
     await setActiveOrderStorage(order);
     setActiveOrderState(order);
   }, []);
+
+  setActiveOrderRef.current = setActiveOrder;
+  orderRef.current = activeOrder;
+
+  useEffect(() => {
+    if (!FNBDUMMY_AUTO_STATUS || !activeOrder || activeOrder.status === 'completed' || activeOrder.status === 'cancelled') {
+      return;
+    }
+    orderRef.current = activeOrder;
+    const delay = FNBDUMMY_DELAY_MS;
+    advanceTimeoutRef.current = setTimeout(() => {
+      const order = orderRef.current;
+      const setOrder = setActiveOrderRef.current;
+      if (!order) return;
+      const next = getNextStatus(order.status);
+      if (next === 'completed') {
+        setOrder({ ...order, status: 'completed' }).then(() => setOrder(null));
+      } else if (next) {
+        setOrder({ ...order, status: next });
+      }
+    }, delay);
+    return () => {
+      if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
+    };
+  }, [activeOrder?.id, activeOrder?.status]);
 
   const value = useMemo<FnBActiveOrderContextValue>(
     () => ({

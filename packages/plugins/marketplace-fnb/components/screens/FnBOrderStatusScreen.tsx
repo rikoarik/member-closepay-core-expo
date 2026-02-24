@@ -24,6 +24,12 @@ import {
   Box,
   UserSquare,
   RecordCircle,
+  Bag2,
+  ShoppingCart,
+  Moneys,
+  DocumentText,
+  Reserve,
+  ShopAdd,
 } from "iconsax-react-nativejs";
 import {
   scale,
@@ -156,15 +162,27 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     : styles.stepperInactiveBg,
                 ]}
               >
-                <DirectInbox
-                  size={scale(24)}
-                  color={
-                    currentStepIndex >= 0
-                      ? colors.primary
-                      : colors.textSecondary
-                  }
-                  variant="Bold"
-                />
+                {order.orderType === "delivery" ? (
+                  <DirectInbox
+                    size={scale(24)}
+                    color={
+                      currentStepIndex >= 0
+                        ? colors.primary
+                        : colors.textSecondary
+                    }
+                    variant="Bold"
+                  />
+                ) : (
+                  <Reserve
+                    size={scale(24)}
+                    color={
+                      currentStepIndex >= 0
+                        ? colors.primary
+                        : colors.textSecondary
+                    }
+                    variant="Bold"
+                  />
+                )}
               </View>
               <Text
                 style={[
@@ -210,7 +228,9 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     : styles.stepperLabelInactive,
                 ]}
               >
-                Dalam Pengiriman
+                {order.orderType === "delivery"
+                  ? "Dalam Pengiriman"
+                  : "Dalam Proses"}
               </Text>
             </View>
 
@@ -265,25 +285,58 @@ export const FnBOrderStatusScreen: React.FC = () => {
         {/* Chips and Target Time */}
         <View style={styles.metaRow}>
           <View style={styles.chipsRow}>
-            {order.orderType === "delivery" && (
-              <View style={styles.chipDelivery}>
+            <View style={styles.chipDelivery}>
+              {order.orderType === "delivery" ? (
                 <TruckFast
                   size={scale(16)}
                   color={colors.textSecondary}
                   variant="Bold"
                 />
-                <Text style={styles.chipText}>Delivery</Text>
-              </View>
-            )}
-            <View style={styles.chipName}>
-              <Shop
-                size={scale(16)}
-                color={colors.textSecondary}
-                variant="Bold"
-              />
+              ) : order.orderType === "take-away" ? (
+                <Bag2
+                  size={scale(16)}
+                  color={colors.textSecondary}
+                  variant="Bold"
+                />
+              ) : (
+                <Shop
+                  size={scale(16)}
+                  color={colors.textSecondary}
+                  variant="Bold"
+                />
+              )}
               <Text style={styles.chipText}>
-                Atas Nama {order.customerName || "Cust"}
+                {order.orderType === "delivery"
+                  ? "Delivery"
+                  : order.orderType === "take-away"
+                    ? "Take Away"
+                    : "Dine In"}
               </Text>
+            </View>
+            <View style={styles.chipName}>
+              {order.orderType === "dine-in" ? (
+                <>
+                  <Reserve
+                    size={scale(16)}
+                    color={colors.textSecondary}
+                    variant="Bold"
+                  />
+                  <Text style={styles.chipText}>
+                    Meja NO {order.tableNumber || "-"}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Shop
+                    size={scale(16)}
+                    color={colors.textSecondary}
+                    variant="Bold"
+                  />
+                  <Text style={styles.chipText}>
+                    Atas Nama {order.customerName || "Cust"}
+                  </Text>
+                </>
+              )}
             </View>
           </View>
         </View>
@@ -292,135 +345,279 @@ export const FnBOrderStatusScreen: React.FC = () => {
           Food already on {estimatedReady}
         </Text>
 
-        {/* Sender & Receiver Info Card */}
-        <View style={[styles.card, { borderColor: colors.border }]}>
-          {/* Pengirim */}
-          <View style={styles.addressSection}>
-            <View style={styles.addressHeader}>
-              <Shop
-                size={scale(16)}
-                color={colors.textSecondary}
-                variant="Bold"
-              />
-              <Text style={styles.addressLabel}>Pengirim</Text>
+        {/* Modular Cards Rendered Based on Order Type */}
+        {(() => {
+          const renderAddressCard = () => (
+            <View style={[styles.card, { borderColor: colors.border }]}>
+              <View style={styles.addressSection}>
+                <View style={styles.addressHeader}>
+                  <Shop
+                    size={scale(16)}
+                    color={colors.textSecondary}
+                    variant="Bold"
+                  />
+                  <Text style={styles.addressLabel}>Pengirim</Text>
+                </View>
+                <Text style={[styles.addressTitle, { color: colors.text }]}>
+                  {order.storeName || "Merchant Name"}
+                </Text>
+              </View>
+              <View style={[styles.addressSection, { marginTop: scale(16) }]}>
+                <View style={styles.addressHeader}>
+                  <UserSquare
+                    size={scale(16)}
+                    color={colors.textSecondary}
+                    variant="Bold"
+                  />
+                  <Text style={styles.addressLabel}>Penerima</Text>
+                </View>
+                <Text style={[styles.addressTitle, { color: colors.text }]}>
+                  {order.customerName} - {order.phoneNumber || "08XXX"}
+                </Text>
+                <Text
+                  style={[
+                    styles.addressDetail,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  {order.deliveryAddress || "Alamat tidak tersedia"}
+                </Text>
+              </View>
             </View>
-            <Text style={[styles.addressTitle, { color: colors.text }]}>
-              Amanda Brownies Ruko Jetis
-            </Text>
-          </View>
+          );
 
-          {/* Penerima */}
-          <View style={[styles.addressSection, { marginTop: scale(16) }]}>
-            <View style={styles.addressHeader}>
-              <UserSquare
-                size={scale(16)}
-                color={colors.textSecondary}
-                variant="Bold"
-              />
-              <Text style={styles.addressLabel}>Penerima</Text>
-            </View>
-            <Text style={[styles.addressTitle, { color: colors.text }]}>
-              {order.customerName} - {order.phoneNumber || "08XXX"}
-            </Text>
-            <Text
-              style={[styles.addressDetail, { color: colors.textSecondary }]}
+          const renderDriverCard = () => (
+            <View
+              style={[
+                styles.card,
+                { borderColor: colors.border, marginTop: scale(16) },
+              ]}
             >
-              {order.deliveryAddress || "Alamat tidak tersedia"}
-            </Text>
-          </View>
-        </View>
-
-        {/* Driver Card */}
-        {order.orderType === "delivery" && (
-          <View
-            style={[
-              styles.card,
-              { borderColor: colors.border, marginTop: scale(16) },
-            ]}
-          >
-            <View style={styles.addressHeader}>
-              <Box
-                size={scale(16)}
-                color={colors.textSecondary}
-                variant="Bold"
-              />
-              <Text style={styles.addressLabel}>Pengiriman</Text>
-            </View>
-
-            <View style={styles.driverRow}>
-              <View style={styles.driverInfo}>
-                <RecordCircle
-                  size={scale(20)}
-                  color={colors.primary}
+              <View style={styles.addressHeader}>
+                <Box
+                  size={scale(16)}
+                  color={colors.textSecondary}
                   variant="Bold"
                 />
-                <Text style={[styles.driverName, { color: colors.text }]}>
-                  Gojek
-                </Text>
+                <Text style={styles.addressLabel}>Pengiriman</Text>
               </View>
-              <Text style={[styles.driverPrice, { color: colors.text }]}>
-                {formatPrice(order.deliveryFee || 12000)}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.trackButtonWrap}
-              onPress={handleTrackOrder}
-            >
-              <Text style={[styles.trackButtonText, { color: colors.primary }]}>
-                Lacak Pesanan
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Order Items Card */}
-        <View
-          style={[
-            styles.card,
-            { borderColor: colors.border, marginTop: scale(16) },
-          ]}
-        >
-          <View style={styles.addressHeader}>
-            <Box
-              size={scale(16)}
-              color={colors.textSecondary}
-              variant="Linear"
-            />
-            <Text style={styles.addressLabel}>Pesanan</Text>
-          </View>
-
-          {order.items.map((line, idx) => (
-            <View key={idx} style={styles.itemRowWrapper}>
-              <View style={styles.itemRow}>
-                <Text style={[styles.itemQty, { color: colors.text }]}>
-                  {line.quantity}x
-                </Text>
-                <View style={styles.itemMain}>
-                  <Text style={[styles.itemName, { color: colors.text }]}>
-                    {line.item.name}
+              <View style={styles.driverRow}>
+                <View style={styles.driverInfo}>
+                  <RecordCircle
+                    size={scale(20)}
+                    color={colors.primary}
+                    variant="Bold"
+                  />
+                  <Text style={[styles.driverName, { color: colors.text }]}>
+                    Gojek
                   </Text>
-                  {line.notes?.trim() ? (
-                    <Text
-                      style={[styles.itemNote, { color: colors.textSecondary }]}
-                      numberOfLines={2}
-                    >
-                      📝 {line.notes}
-                    </Text>
-                  ) : null}
                 </View>
-                <Text style={[styles.itemPrice, { color: colors.text }]}>
-                  {formatPrice(line.subtotal)}
+                <Text style={[styles.driverPrice, { color: colors.text }]}>
+                  {formatPrice(order.deliveryFee || 0)}
                 </Text>
               </View>
-              {idx < order.items.length - 1 && (
-                <View
-                  style={[styles.dashedDivider, { borderColor: colors.border }]}
-                />
-              )}
+              <TouchableOpacity
+                style={styles.trackButtonWrap}
+                onPress={handleTrackOrder}
+              >
+                <Text
+                  style={[styles.trackButtonText, { color: colors.primary }]}
+                >
+                  Lacak Pesanan
+                </Text>
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
+          );
+
+          const renderPesananCard = (marginT: number) => (
+            <View
+              style={[
+                styles.card,
+                { borderColor: colors.border, marginTop: marginT },
+              ]}
+            >
+              <View style={styles.addressHeader}>
+                <ShoppingCart
+                  size={scale(16)}
+                  color={colors.textSecondary}
+                  variant="Linear"
+                />
+                <Text style={styles.addressLabel}>Pesanan</Text>
+              </View>
+              {order.items.map((line, idx) => (
+                <View key={idx} style={styles.itemRowWrapper}>
+                  <View style={styles.itemRow}>
+                    <Text style={[styles.itemQty, { color: colors.text }]}>
+                      {line.quantity}x
+                    </Text>
+                    <View style={styles.itemMain}>
+                      <Text style={[styles.itemName, { color: colors.text }]}>
+                        {line.item.name}
+                      </Text>
+                      {line.notes?.trim() ? (
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginTop: scale(4),
+                          }}
+                        >
+                          <DocumentText
+                            size={scale(12)}
+                            color={colors.textSecondary}
+                            variant="Bold"
+                          />
+                          <Text
+                            style={[
+                              styles.itemNote,
+                              {
+                                color: colors.textSecondary,
+                                marginLeft: scale(4),
+                                marginTop: 0,
+                              },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {line.notes}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.itemPrice, { color: colors.text }]}>
+                      {formatPrice(line.subtotal)}
+                    </Text>
+                  </View>
+                  {idx < order.items.length - 1 && (
+                    <View
+                      style={[
+                        styles.dashedDivider,
+                        { borderColor: colors.border },
+                      ]}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+          );
+
+          const renderPembayaranCard = () => (
+            <View
+              style={[
+                styles.card,
+                { borderColor: colors.border, marginTop: scale(16) },
+              ]}
+            >
+              <View style={styles.addressHeader}>
+                <Moneys
+                  size={scale(16)}
+                  color={colors.textSecondary}
+                  variant="Bold"
+                />
+                <Text style={styles.addressLabel}>Pembayaran</Text>
+              </View>
+              <View style={styles.paymentRow}>
+                <Text
+                  style={[styles.paymentLabel, { color: colors.textSecondary }]}
+                >
+                  Metode
+                </Text>
+                <Text style={[styles.paymentValue, { color: colors.text }]}>
+                  QRIS
+                </Text>
+              </View>
+              <View style={styles.paymentRow}>
+                <Text
+                  style={[styles.paymentLabel, { color: colors.textSecondary }]}
+                >
+                  Subtotal
+                </Text>
+                <Text style={[styles.paymentValue, { color: colors.text }]}>
+                  {formatPrice(order.subtotal || 0)}
+                </Text>
+              </View>
+              <View style={styles.paymentRow}>
+                <Text
+                  style={[styles.paymentLabel, { color: colors.textSecondary }]}
+                >
+                  Biaya layanan
+                </Text>
+                <Text style={[styles.paymentValue, { color: colors.text }]}>
+                  {formatPrice(order.serviceFee || 0)}
+                </Text>
+              </View>
+              <View
+                style={[styles.dashedDivider, { borderColor: colors.border }]}
+              />
+              <View style={[styles.paymentRow, { marginBottom: 0 }]}>
+                <Text
+                  style={[styles.paymentTotalLabel, { color: colors.text }]}
+                >
+                  Total Pembayaran
+                </Text>
+                <Text
+                  style={[styles.paymentTotalValue, { color: colors.text }]}
+                >
+                  {formatPrice(order.total || 0)}
+                </Text>
+              </View>
+            </View>
+          );
+
+          const renderCatatanGlobal = () => {
+            const globalNotes =
+              (order as any).notes || "Packing yang baik kak, terimakasih 🙏";
+            if (!globalNotes) return null;
+            return (
+              <View
+                style={[
+                  styles.card,
+                  { borderColor: colors.border, marginTop: scale(16) },
+                ]}
+              >
+                <View style={styles.addressHeader}>
+                  <DocumentText
+                    size={scale(16)}
+                    color={colors.textSecondary}
+                    variant="Bold"
+                  />
+                  <Text style={styles.addressLabel}>Catatan</Text>
+                </View>
+                <Text
+                  style={[
+                    styles.addressTitle,
+                    {
+                      color: colors.text,
+                      marginTop: scale(4),
+                      fontFamily: FontFamily.monasans.regular,
+                    },
+                  ]}
+                >
+                  {globalNotes}
+                </Text>
+              </View>
+            );
+          };
+
+          if (order.orderType === "delivery") {
+            return (
+              <>
+                {renderAddressCard()}
+                {renderDriverCard()}
+                {renderPesananCard(scale(16))}
+                {renderPembayaranCard()}
+                {renderCatatanGlobal()}
+              </>
+            );
+          } else {
+            return (
+              <>
+                {renderPesananCard(0)}
+                {renderPembayaranCard()}
+                {renderCatatanGlobal()}
+              </>
+            );
+          }
+        })()}
       </ScrollView>
     </View>
   );
@@ -645,6 +842,28 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: scale(15),
     fontFamily: FontFamily.monasans.regular,
+  },
+  paymentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: scale(8),
+  },
+  paymentLabel: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  paymentValue: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  paymentTotalLabel: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  paymentTotalValue: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.bold,
   },
 });
 
