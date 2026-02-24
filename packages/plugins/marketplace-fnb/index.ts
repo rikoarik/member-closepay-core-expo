@@ -21,6 +21,9 @@ export type {
 } from './models';
 export { getAvailableOrderTypes, isStoreOpen, parseFnBQRCode } from './models';
 
+// Context (required for shared cart between MerchantDetail and Checkout)
+export { FnBCartProvider, FnBCartContext } from './context/FnBCartContext';
+
 // Hooks
 export { useFnBData, useFnBCart, useFnBFavorites } from './hooks';
 

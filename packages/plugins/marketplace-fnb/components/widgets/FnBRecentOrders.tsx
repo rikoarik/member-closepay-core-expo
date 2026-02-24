@@ -7,11 +7,7 @@ import { useTheme } from '@core/theme';
 import { useNavigation } from '@react-navigation/native';
 import { getResponsiveFontSize, FontFamily, moderateVerticalScale } from '@core/config';
 import { useTranslation } from '@core/i18n';
-
-const MOCK_ORDERS = [
-  { id: '1', store: 'Warung Makan Sederhana', date: 'Hari ini' },
-  { id: '2', store: 'Kopi Kenangan', date: 'Kemarin' },
-];
+import { FNBDUMMY_RECENT_ORDERS } from '../../data/fnbDummyData';
 
 export const FnBRecentOrders: React.FC = React.memo(() => {
   const { colors } = useTheme();
@@ -30,7 +26,7 @@ export const FnBRecentOrders: React.FC = React.memo(() => {
           </Text>
         </TouchableOpacity>
       </View>
-      {MOCK_ORDERS.map((o) => (
+      {FNBDUMMY_RECENT_ORDERS.map((o) => (
         <TouchableOpacity
           key={o.id}
           style={[styles.item, { borderColor: colors.border }]}

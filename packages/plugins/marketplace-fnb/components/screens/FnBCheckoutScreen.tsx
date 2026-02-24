@@ -3,7 +3,7 @@
  * Checkout screen with order type selection based on entry point
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,23 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft2, Shop, Truck, Box } from 'iconsax-react-nativejs';
+import { ArrowLeft2, Shop, Truck, Box, Location as LocationIcon } from 'iconsax-react-nativejs';
+import Toast from 'react-native-toast-message';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { useAuth } from '@core/auth';
+import { useBalance } from '@plugins/balance';
+import { paymentService } from '@plugins/payment';
 import { useFnBData, useFnBCart } from '../../hooks';
 import { getAvailableOrderTypes } from '../../models';
 import type { OrderType, EntryPoint } from '../../models';
+import { getLastDelivery, setLastDelivery } from '../../utils/deliveryStorage';
+import { FnBLocationPickerModal } from '../shared/FnBLocationPickerModal';
 
 const formatPrice = (price: number): string => {
   return `Rp ${price.toLocaleString('id-ID')}`;
@@ -42,12 +49,21 @@ export const FnBCheckoutScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
 
-  // Get entry point from route params
-  const entryPoint: EntryPoint = (route.params as any)?.entryPoint || 'browse';
+  // Get entry point and storeId from route params
+  const params = route.params as { entryPoint?: EntryPoint; storeId?: string } | undefined;
+  const entryPoint: EntryPoint = params?.entryPoint || 'browse';
+  const storeId = params?.storeId;
 
   // Hooks
-  const { store } = useFnBData(entryPoint);
+  const { user } = useAuth();
+  const { store } = useFnBData(entryPoint, storeId);
   const { cartItems, subtotal, itemCount, clearCart, getTotal } = useFnBCart(entryPoint);
+  const { balance } = useBalance();
+
+  // Empty cart guard: show message and back button if user landed without items
+  const isCartEmpty = cartItems.length === 0;
+  const availableBalance = balance?.balance ?? 0;
+  const hasInsufficientBalance = subtotal > availableBalance;
 
   // Get available order types based on entry point
   const availableOrderTypes = useMemo(() => getAvailableOrderTypes(entryPoint), [entryPoint]);
@@ -60,6 +76,33 @@ export const FnBCheckoutScreen: React.FC = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+
+  // Pre-fill: only run once per "delivery" session so we don't overwrite user edits
+  const lastDeliveryLoadedRef = useRef(false);
+  const hasPrefilledNameRef = useRef(false);
+
+  // Pre-fill customer name from auth when delivery is selected
+  useEffect(() => {
+    if (selectedOrderType !== 'delivery' || !user?.name || hasPrefilledNameRef.current) return;
+    setCustomerName(user.name);
+    hasPrefilledNameRef.current = true;
+  }, [selectedOrderType, user?.name]);
+
+  // Load last delivery (phone + address) from storage when user selects delivery
+  useEffect(() => {
+    if (selectedOrderType !== 'delivery' || lastDeliveryLoadedRef.current) return;
+    let cancelled = false;
+    getLastDelivery().then((info) => {
+      if (cancelled || !info) return;
+      setPhoneNumber((prev) => (prev.trim() ? prev : info.phoneNumber));
+      setDeliveryAddress((prev) => (prev.trim() ? prev : info.deliveryAddress));
+      lastDeliveryLoadedRef.current = true;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOrderType]);
 
   // Order type options
   const orderTypeOptions: OrderTypeOption[] = useMemo(() => {
@@ -124,48 +167,136 @@ export const FnBCheckoutScreen: React.FC = () => {
     return true;
   }, [customerName, tableNumber, phoneNumber, deliveryAddress, selectedOrderType, store?.isOpen]);
 
-  // Handle order
+  // Handle order with balance payment
   const handleOrder = useCallback(async () => {
-    // Check if store is open
     if (!store?.isOpen) {
       Alert.alert(
-        'Toko Tutup',
+        t('fnb.storeClosed') || 'Toko Tutup',
         t('fnb.cannotOrderClosedStore') || 'Tidak dapat memesan dari toko yang sedang tutup.'
       );
       return;
     }
 
     if (!isFormValid) {
-      Alert.alert('Error', 'Mohon lengkapi semua data yang diperlukan');
+      Alert.alert(
+        t('common.error') || 'Error',
+        t('fnb.validationRequired') || 'Mohon lengkapi semua data yang diperlukan'
+      );
+      return;
+    }
+
+    if (hasInsufficientBalance) {
+      Alert.alert(
+        t('fnb.insufficientBalanceTitle') || 'Saldo tidak cukup',
+        t('fnb.insufficientBalance') || 'Saldo Anda tidak mencukupi. Silakan top up atau kurangi item pesanan.'
+      );
       return;
     }
 
     setIsSubmitting(true);
 
+    const orderId = `ORD-FNB-${Date.now()}`;
     try {
-      // Simulate API call to submit order
-      await new Promise<void>((resolve) => setTimeout(resolve, 2000));
+      const result = await paymentService.payWithBalance(total, orderId, {
+        storeId: storeId ?? store?.id,
+        storeName: store?.name,
+        entryPoint,
+        itemCount,
+      });
 
-      // Here you would normally send order to API
-      Alert.alert(
-        'Pesanan Berhasil',
-        `Pesanan Anda sedang diproses.\n\nTotal: ${formatPrice(total)}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              clearCart();
-              navigation.goBack();
-            },
-          },
-        ]
-      );
+      if (result.status === 'success') {
+        if (selectedOrderType === 'delivery' && phoneNumber.trim() && deliveryAddress.trim()) {
+          setLastDelivery({ phoneNumber: phoneNumber.trim(), deliveryAddress: deliveryAddress.trim() }).catch(() => {});
+        }
+        clearCart();
+        Toast.show({
+          type: 'success',
+          text1: t('fnb.orderSuccess') || 'Pesanan Berhasil',
+          text2: t('fnb.orderSuccessMessage') || 'Pesanan Anda sedang diproses.',
+        });
+        navigation.goBack();
+      }
     } catch (error) {
-      Alert.alert('Error', 'Gagal memproses pesanan. Silakan coba lagi.');
+      const message =
+        error instanceof Error && error.message.toLowerCase().includes('insufficient')
+          ? t('fnb.insufficientBalance') || 'Saldo tidak mencukupi. Silakan top up atau kurangi item.'
+          : t('fnb.orderFailed') || 'Gagal memproses pesanan. Silakan coba lagi.';
+      Alert.alert(t('common.error') || 'Error', message);
     } finally {
       setIsSubmitting(false);
     }
-  }, [isFormValid, total, clearCart, navigation, store?.isOpen, t]);
+  }, [
+    isFormValid,
+    total,
+    clearCart,
+    navigation,
+    store?.isOpen,
+    store?.id,
+    store?.name,
+    storeId,
+    entryPoint,
+    itemCount,
+    hasInsufficientBalance,
+    t,
+    selectedOrderType,
+    phoneNumber,
+    deliveryAddress,
+  ]);
+
+  // Open in-app map picker (Grab-style); on web show toast
+  const handlePickLocationOnMap = useCallback(() => {
+    if (Platform.OS === 'web') {
+      Toast.show({ type: 'info', text1: t('fnb.locationNotSupportedWeb') || 'Pilih lokasi tidak tersedia di web.' });
+      return;
+    }
+    setLocationPickerVisible(true);
+  }, [t]);
+
+  // Empty cart: show message and back button only
+  if (isCartEmpty) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.surface,
+              paddingTop: insets.top + moderateVerticalScale(8),
+              paddingHorizontal: horizontalPadding,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {t('fnb.checkout') || 'Checkout'}
+          </Text>
+          <View style={{ width: scale(24) }} />
+        </View>
+        <View style={[styles.emptyCartContainer, { paddingHorizontal: horizontalPadding }]}>
+          <Text style={[styles.emptyCartText, { color: colors.textSecondary }]}>
+            {t('fnb.emptyCart') || 'Keranjang kosong'}
+          </Text>
+          <Text style={[styles.emptyCartHint, { color: colors.textSecondary }]}>
+            {t('fnb.emptyCartCheckoutHint') || 'Tambahkan menu terlebih dahulu untuk checkout.'}
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyCartButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={[styles.emptyCartButtonText, { color: colors.surface }]}>
+              {t('common.back') || 'Kembali'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -276,7 +407,9 @@ export const FnBCheckoutScreen: React.FC = () => {
 
         {/* Customer Info */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Informasi Pemesan</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('fnb.customerInfo') || 'Informasi Pemesan'}
+          </Text>
 
           <Text style={[styles.inputLabel, { color: colors.text }]}>Nama Pemesan *</Text>
           <TextInput
@@ -375,6 +508,21 @@ export const FnBCheckoutScreen: React.FC = () => {
                 multiline
                 numberOfLines={3}
               />
+              <TouchableOpacity
+                style={[
+                  styles.pickLocationButton,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={handlePickLocationOnMap}
+              >
+                <LocationIcon size={scale(20)} color={colors.primary} variant="Bold" />
+                <Text style={[styles.pickLocationLabel, { color: colors.primary }]}>
+                  {t('fnb.pickLocationOnMap') || 'Pilih lokasi di peta'}
+                </Text>
+              </TouchableOpacity>
             </>
           )}
         </View>
@@ -435,6 +583,27 @@ export const FnBCheckoutScreen: React.FC = () => {
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                {t('fnb.availableBalance') || 'Saldo tersedia'}
+              </Text>
+              <Text
+                style={[
+                  styles.summaryValue,
+                  { color: hasInsufficientBalance ? colors.error : colors.text },
+                ]}
+              >
+                {formatPrice(availableBalance)}
+              </Text>
+            </View>
+            {hasInsufficientBalance && (
+              <Text style={[styles.insufficientHint, { color: colors.error }]}>
+                {t('fnb.insufficientBalance') || 'Saldo tidak mencukupi'}
+              </Text>
+            )}
+
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+            <View style={styles.summaryRow}>
               <Text style={[styles.totalLabel, { color: colors.text }]}>
                 {t('fnb.total') || 'Total'}
               </Text>
@@ -461,24 +630,40 @@ export const FnBCheckoutScreen: React.FC = () => {
           style={[
             styles.orderButton,
             {
-              backgroundColor: isFormValid && !isSubmitting ? colors.primary : colors.border,
+              backgroundColor:
+                isFormValid && !isSubmitting && !hasInsufficientBalance
+                  ? colors.primary
+                  : colors.border,
             },
           ]}
           onPress={handleOrder}
-          disabled={!isFormValid || isSubmitting}
+          disabled={!isFormValid || isSubmitting || hasInsufficientBalance}
         >
           <Text
             style={[
               styles.orderButtonText,
-              { color: isFormValid && !isSubmitting ? colors.surface : colors.textSecondary },
+              {
+                color:
+                  isFormValid && !isSubmitting && !hasInsufficientBalance
+                    ? colors.surface
+                    : colors.textSecondary,
+              },
             ]}
           >
             {isSubmitting
-              ? 'Memproses...'
+              ? t('fnb.processing') || 'Memproses...'
               : `${t('fnb.payNow') || 'Bayar Sekarang'} - ${formatPrice(total)}`}
           </Text>
         </TouchableOpacity>
       </View>
+      <FnBLocationPickerModal
+        visible={locationPickerVisible}
+        onClose={() => setLocationPickerVisible(false)}
+        onSelectAddress={(addr) => {
+          setDeliveryAddress(addr);
+          setLocationPickerVisible(false);
+        }}
+      />
     </View>
   );
 };
@@ -567,6 +752,21 @@ const styles = StyleSheet.create({
     minHeight: scale(80),
     textAlignVertical: 'top',
   },
+  pickLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(8),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(14),
+    marginTop: scale(10),
+    borderRadius: scale(10),
+    borderWidth: 1,
+  },
+  pickLocationLabel: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.medium,
+  },
   summaryCard: {
     borderRadius: scale(12),
     padding: scale(16),
@@ -608,6 +808,11 @@ const styles = StyleSheet.create({
     fontSize: scale(13),
     fontFamily: FontFamily.monasans.medium,
   },
+  insufficientHint: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.regular,
+    marginTop: scale(4),
+  },
   totalLabel: {
     fontSize: scale(15),
     fontFamily: FontFamily.monasans.bold,
@@ -644,6 +849,33 @@ const styles = StyleSheet.create({
     fontSize: scale(13),
     fontFamily: FontFamily.monasans.medium,
     textAlign: 'center',
+  },
+  emptyCartContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: moderateVerticalScale(48),
+  },
+  emptyCartText: {
+    fontSize: scale(18),
+    fontFamily: FontFamily.monasans.semiBold,
+    marginBottom: scale(8),
+    textAlign: 'center',
+  },
+  emptyCartHint: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+    marginBottom: scale(24),
+    textAlign: 'center',
+  },
+  emptyCartButton: {
+    paddingVertical: scale(14),
+    paddingHorizontal: scale(32),
+    borderRadius: scale(12),
+  },
+  emptyCartButtonText: {
+    fontSize: scale(15),
+    fontFamily: FontFamily.monasans.semiBold,
   },
 });
 

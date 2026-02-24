@@ -27,7 +27,7 @@ import {
   FontFamily,
   useDimensions,
 } from '@core/config';
-import type { QuickMenuItem } from '@core/config';
+import { getMenuLabelKey, type QuickMenuItem } from '@core/config';
 import { Call, People, Shop, DocumentText } from 'iconsax-react-nativejs';
 import {
   IconTopUpVA,
@@ -182,7 +182,7 @@ export const AllMenuSheet: React.FC<AllMenuSheetProps> = ({ visible, onClose }) 
       enablePanDownToClose
     >
       <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('home.quickAccess')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('home.quickAccessMenu')}</Text>
         <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeArea}>
           <Text style={[styles.closeText, { color: colors.primary }]}>{t('common.close')}</Text>
         </TouchableOpacity>
@@ -241,7 +241,7 @@ export const AllMenuSheet: React.FC<AllMenuSheetProps> = ({ visible, onClose }) 
                           {getMenuIconForSheet(item.icon, item.id, colors.primary)}
                         </View>
                         <Text style={[styles.gridLabel, { color: colors.text }]} numberOfLines={2}>
-                          {item.labelKey ? t(item.labelKey) : item.label}
+                          {getMenuLabelKey(item) ? t(getMenuLabelKey(item)!) : item.label}
                         </Text>
                       </TouchableOpacity>
                     );

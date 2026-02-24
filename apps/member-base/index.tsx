@@ -36,6 +36,7 @@ import { TransactionHistoryScreen } from '@plugins/balance';
 // App screens (VirtualCard, VirtualCardDetail, AddVirtualCard come from card-transaction plugin routes)
 import { ProfileScreen } from '@core/account';
 import { PlaceholderScreen } from './src/screens/PlaceholderScreen';
+import { FnBCartProvider } from '@plugins/marketplace-fnb';
 
 const Stack = createNativeStackNavigator();
 
@@ -219,7 +220,9 @@ function MemberBaseAppContent(): React.JSX.Element {
   return (
     <>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <AppNavigator />
+      <FnBCartProvider>
+        <AppNavigator />
+      </FnBCartProvider>
       <Toast config={toastConfig} />
     </>
   );

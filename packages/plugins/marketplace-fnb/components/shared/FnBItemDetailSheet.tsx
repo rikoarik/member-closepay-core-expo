@@ -93,8 +93,11 @@ export const FnBItemDetailSheet: React.FC<FnBItemDetailSheetProps> = ({
         setSelectedAddons([]);
         setNotes('');
       }
-      // Scroll to top when opening
-      scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: false });
+      // Scroll to top when opening (guard: KeyboardAwareScrollView ref may not expose scrollTo)
+      const node = scrollViewRef.current;
+      if (node && typeof node.scrollTo === 'function') {
+        node.scrollTo({ x: 0, y: 0, animated: false });
+      }
     }
     prevVisibleRef.current = visible;
   }, [visible, item, initialQuantity, initialVariant, initialAddons, initialNotes]);

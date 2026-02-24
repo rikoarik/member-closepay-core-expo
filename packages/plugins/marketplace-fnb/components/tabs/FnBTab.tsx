@@ -15,6 +15,7 @@ import {
   TextInput,
   Platform,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -36,25 +37,12 @@ import {
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { FNBDUMMY_STORE_LIST_TAB, type FnBStoreListItem } from '../../data/fnbDummyData';
 
 interface FnBTabProps {
   isActive: boolean;
   isVisible: boolean;
   scrollEnabled?: boolean;
-}
-
-// Store data interface
-interface FnBStoreItem {
-  id: string;
-  name: string;
-  description: string;
-  imageUrl?: string;
-  rating: number;
-  distance: string;
-  isOpen: boolean;
-  openTime: string;
-  closeTime: string;
-  category: string;
 }
 
 // Filter options
@@ -196,64 +184,6 @@ const StoreCardSkeleton: React.FC = () => {
   );
 };
 
-const MOCK_STORES: FnBStoreItem[] = [
-  {
-    id: 'store-001',
-    name: 'Warung Makan Sederhana',
-    description: 'Makanan rumahan autentik',
-    rating: 4.8,
-    distance: '0.5 km',
-    isOpen: true,
-    openTime: '08:00',
-    closeTime: '22:00',
-    category: 'Makanan',
-  },
-  {
-    id: 'store-002',
-    name: 'Kedai Kopi Nusantara',
-    description: 'Kopi lokal berkualitas',
-    rating: 4.6,
-    distance: '0.8 km',
-    isOpen: true,
-    openTime: '07:00',
-    closeTime: '23:00',
-    category: 'Minuman',
-  },
-  {
-    id: 'store-003',
-    name: 'Bakso Pak Kumis',
-    description: 'Bakso dan mie ayam legendaris',
-    rating: 4.9,
-    distance: '1.2 km',
-    isOpen: false,
-    openTime: '10:00',
-    closeTime: '21:00',
-    category: 'Makanan',
-  },
-  {
-    id: 'store-004',
-    name: 'Sate Klathak Bu Muri',
-    description: 'Sate kambing asli Jogja',
-    rating: 4.7,
-    distance: '1.5 km',
-    isOpen: true,
-    openTime: '16:00',
-    closeTime: '22:00',
-    category: 'Makanan',
-  },
-  {
-    id: 'store-005',
-    name: 'Es Teler 77',
-    description: 'Minuman segar khas Indonesia',
-    rating: 4.5,
-    distance: '2.0 km',
-    isOpen: true,
-    openTime: '10:00',
-    closeTime: '21:00',
-    category: 'Minuman',
-  },
-];
-
 export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabled = true }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -263,15 +193,17 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
   const insets = useSafeAreaInsets();
 
   // Cache untuk mencegah refetch saat tab switch
-  const dataCache = useRef<{ stores: FnBStoreItem[]; timestamp: number } | null>(null);
+  const dataCache = useRef<{ stores: FnBStoreListItem[]; timestamp: number } | null>(null);
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   // Local state
-  const [stores, setStores] = useState<FnBStoreItem[]>([]);
+  const [stores, setStores] = useState<FnBStoreListItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadStores = useCallback(
     async (forceRefresh = false) => {
@@ -283,6 +215,7 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
         if (isCacheValid && dataCache.current.stores.length > 0) {
           setStores(dataCache.current.stores);
           setIsInitialLoad(false);
+          setLoadError(null);
           return;
         }
       }
@@ -291,6 +224,7 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
       if (!forceRefresh && stores.length > 0) return;
 
       setIsInitialLoad(true);
+      setLoadError(null);
       try {
         // Simulate API call with realistic delay
         await new Promise<void>((resolve) =>
@@ -299,20 +233,27 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
 
         // Update cache
         dataCache.current = {
-          stores: MOCK_STORES,
+          stores: FNBDUMMY_STORE_LIST_TAB,
           timestamp: Date.now(),
         };
 
-        setStores(MOCK_STORES);
+        setStores(FNBDUMMY_STORE_LIST_TAB);
       } catch (error) {
-        // Handle error - could show error state
-        console.error('Failed to load stores:', error);
+        setLoadError(
+          t('fnb.loadStoresError') || 'Gagal memuat daftar toko. Silakan coba lagi.'
+        );
       } finally {
         setIsInitialLoad(false);
       }
     },
-    [stores.length]
+    [stores.length, t]
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadStores(true);
+    setRefreshing(false);
+  }, [loadStores]);
 
   // Load data when tab becomes active
   useEffect(() => {
@@ -363,7 +304,7 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
   }, [stores, searchQuery, activeFilter, shouldShowLoading]);
 
   const handleStorePress = useCallback(
-    (store: FnBStoreItem) => {
+    (store: FnBStoreListItem) => {
       // Navigate to FnB store menu screen
       // @ts-ignore
       navigation.navigate('FnBMerchantDetail', {
@@ -391,7 +332,7 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
   }, []);
 
   const renderStoreCard = useCallback(
-    ({ item }: { item: FnBStoreItem }) => (
+    ({ item }: { item: FnBStoreListItem }) => (
       <TouchableOpacity
         style={[styles.storeCard, { backgroundColor: colors.surface }]}
         onPress={() => handleStorePress(item)}
@@ -600,15 +541,45 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
           scrollEventThrottle={16}
           bounces={true}
           alwaysBounceVertical={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
           ItemSeparatorComponent={() => <View style={{ height: scale(8) }} />}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                {searchQuery || activeFilter !== 'all'
-                  ? t('fnb.noStoresMatchFilter') || 'Tidak ada toko yang sesuai filter'
-                  : t('fnb.noStoresFound') || 'Tidak ada toko ditemukan'}
-              </Text>
-            </View>
+            loadError ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  {loadError}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.retryButton, { backgroundColor: colors.primary }]}
+                  onPress={() => loadStores(true)}
+                >
+                  <Text style={[styles.retryButtonText, { color: colors.surface }]}>
+                    {t('common.retry') || 'Coba lagi'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : shouldShowLoading ? (
+              <View style={styles.emptyContainer}>
+                {Array.from({ length: 4 }, (_, i) => (
+                  <StoreCardSkeleton key={`skeleton-${i}`} />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  {searchQuery || activeFilter !== 'all'
+                    ? t('fnb.noStoresMatchFilter') || 'Tidak ada toko yang sesuai filter'
+                    : t('fnb.noStoresFound') || 'Tidak ada toko ditemukan'}
+                </Text>
+              </View>
+            )
           }
         />
       )}
@@ -793,6 +764,16 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontFamily: FontFamily.monasans.regular,
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: scale(16),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(24),
+    borderRadius: scale(10),
+  },
+  retryButtonText: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
   },
   skeletonIcon: {
     width: scale(36),

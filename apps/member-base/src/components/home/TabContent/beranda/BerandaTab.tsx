@@ -140,7 +140,7 @@ const BerandaTabContent: React.FC<BerandaTabProps> = React.memo(
               <View key="quick-access" style={styles.menuItem}>
                 <View style={styles.quickAccessHeader}>
                   <Text style={[styles.menuItemTitle, styles.quickAccessTitle, { color: colors.text }]}>
-                    {t('home.quickAccess')}
+                    {t('home.quickAccessMenu')}
                   </Text>
                   <TouchableOpacity
                     onPress={() => (navigation as any).navigate('QuickMenuSettings')}

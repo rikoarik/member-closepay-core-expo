@@ -59,6 +59,7 @@ import {
   saveQuickMenuSettings,
   getAllMenuItems,
   getPluginMenuItems,
+  getMenuLabelKey,
 } from '../../services/quickMenuService';
 import type { QuickMenuItem } from '../../services/quickMenuService';
 import { configService } from '../../services/configService';
@@ -999,7 +1000,7 @@ export const QuickMenuSettingsScreen: React.FC = () => {
     [colors.surface]
   );
 
-  const menuTitleText = useMemo(() => t('home.quickAccess'), [t]);
+  const menuTitleText = useMemo(() => t('home.quickAccessMenu'), [t]);
 
   const menuTitleStyle = useMemo(
     () => [
@@ -1117,7 +1118,7 @@ export const QuickMenuSettingsScreen: React.FC = () => {
                         ]}
                         numberOfLines={3}
                       >
-                        {item.labelKey ? t(item.labelKey) : item.label}
+                        {getMenuLabelKey(item) ? t(getMenuLabelKey(item)!) : item.label}
                       </Text>
                     </View>
                   );
@@ -1192,7 +1193,7 @@ export const QuickMenuSettingsScreen: React.FC = () => {
                           ]}
                           numberOfLines={3}
                         >
-                          {item.labelKey ? t(item.labelKey) : item.label}
+                          {getMenuLabelKey(item) ? t(getMenuLabelKey(item)!) : item.label}
                         </Text>
                       </View>
                     );
@@ -1349,7 +1350,7 @@ export const QuickMenuSettingsScreen: React.FC = () => {
                               ]}
                               numberOfLines={3}
                             >
-                              {item.labelKey ? t(item.labelKey) : item.label}
+                              {getMenuLabelKey(item) ? t(getMenuLabelKey(item)!) : item.label}
                             </Text>
                           </View>
                         );

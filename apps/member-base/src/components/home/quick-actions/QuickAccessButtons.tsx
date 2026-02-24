@@ -31,6 +31,7 @@ import {
   useDimensions,
   QuickAccessButtonSkeleton,
   QuickMenuItem,
+  getMenuLabelKey,
 } from '@core/config';
 import { useTheme, type ThemeColors } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -286,17 +287,6 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
       return enabledItems;
     }, [enabledItems]);
 
-    // Memoized menu label getter - menggunakan ref untuk mencegah re-render
-    const menuLabelMapRef = React.useRef<Record<string, string>>({});
-
-    const getMenuLabel = useCallback(
-      (menuId: string, fallbackLabel: string): string => {
-        const translationKey = menuLabelMapRef.current[menuId];
-        return translationKey ? t(translationKey) : fallbackLabel;
-      },
-      [t]
-    );
-
     // Convert enabled menu items ke format QuickAccessButton
     // Hanya recalculate jika enabledItems benar-benar berubah
     const previousMenuButtonsRef = React.useRef<QuickAccessButton[]>([]);
@@ -311,7 +301,7 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
       const items = stableEnabledItems.length > 0 ? stableEnabledItems : DEFAULT_MENU_ITEMS;
       const buttons: QuickAccessButton[] = items.map((item) => ({
         id: item.id,
-        label: item.labelKey ? t(item.labelKey) : getMenuLabel(item.id, item.label),
+        label: getMenuLabelKey(item) ? t(getMenuLabelKey(item)!) : item.label,
         icon: getMenuIconForQuickAccess(primaryColor, item.icon as string, item.id),
         iconBgColor: item.iconBgColor || getDefaultBgColor(colorsRef.current, item.icon as string),
         onPress: (item as unknown as QuickMenuItem).route
@@ -336,7 +326,7 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
 
       previousMenuButtonsRef.current = buttons;
       return buttons;
-    }, [stableEnabledItems, getMenuLabel, isLoading, navigation, primaryColor]);
+    }, [stableEnabledItems, t, isLoading, navigation, primaryColor]);
 
     const allMenuButton: QuickAccessButton = useMemo(
       () => ({

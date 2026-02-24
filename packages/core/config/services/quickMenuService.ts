@@ -17,6 +17,28 @@ export interface QuickMenuItem {
   labelKey?: string;
 }
 
+/** Fallback map: menu id → i18n key (home.*) agar label list selalu pakai i18n */
+export const MENU_ID_TO_LABEL_KEY: Record<string, string> = {
+  topupva: 'home.topUpVA',
+  transfermember: 'home.transferMember',
+  kartuvirtual: 'home.kartuVirtual',
+  transferbank: 'home.transferBank',
+  marketplace: 'home.marketplace',
+  fnb: 'home.fnb',
+  invoice: 'home.invoice',
+  donasizakat: 'home.donasiZakat',
+  sportcenter: 'home.sportCenter',
+};
+
+/**
+ * Returns i18n key for menu item label (untuk dipakai dengan t()).
+ * Prioritas: item.labelKey → MENU_ID_TO_LABEL_KEY[item.id] → undefined (pakai item.label).
+ */
+export function getMenuLabelKey(item: QuickMenuItem): string | undefined {
+  if (item.labelKey) return item.labelKey;
+  return MENU_ID_TO_LABEL_KEY[item.id.toLowerCase()];
+}
+
 const QUICK_MENU_STORAGE_KEY = '@quick_menu_settings';
 
 /**

@@ -7,6 +7,7 @@ export { FnBCategoryTabs } from './FnBCategoryTabs';
 export { FnBCartBar } from './FnBCartBar';
 export { FnBItemDetailSheet } from './FnBItemDetailSheet';
 export { FnBCartDetailSheet } from './FnBCartDetailSheet';
+export { FnBLocationPickerModal } from './FnBLocationPickerModal';
 export { MerchantHeader } from './MerchantHeader';
 
 // Skeleton loading components

@@ -63,6 +63,7 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
     categories,
     store,
     loading,
+    error: dataError,
     selectedCategory,
     setSelectedCategory,
     refresh,
@@ -182,8 +183,8 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
   const handleCartCheckout = useCallback(() => {
     setShowCartDetail(false);
     // @ts-ignore
-    navigation.navigate('FnBCheckout', { entryPoint });
-  }, [navigation, entryPoint]);
+    navigation.navigate('FnBCheckout', { entryPoint, storeId: params?.storeId });
+  }, [navigation, entryPoint, params?.storeId]);
 
   const toggleSearch = useCallback(() => {
     setIsSearchActive((prev) => {
@@ -369,6 +370,34 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
         />
       )}
 
+      {/* Data load error banner */}
+      {dataError && (
+        <View
+          style={[
+            styles.closedBanner,
+            {
+              backgroundColor: colors.error + '15',
+              borderTopColor: colors.error,
+              paddingBottom: scale(12),
+              marginHorizontal: horizontalPadding,
+              marginBottom: scale(8),
+            },
+          ]}
+        >
+          <Text style={[styles.closedBannerText, { color: colors.error }]}>
+            {dataError}
+          </Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={() => refresh()}
+          >
+            <Text style={[styles.retryButtonText, { color: colors.surface }]}>
+              {t('common.retry') || 'Coba lagi'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Store Closed Banner */}
       {store && !store.isOpen && (
         <View
@@ -506,6 +535,17 @@ const styles = StyleSheet.create({
     fontSize: scale(13),
     fontFamily: FontFamily.monasans.medium,
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: scale(10),
+    alignSelf: 'center',
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(20),
+    borderRadius: scale(10),
+  },
+  retryButtonText: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
   },
 });
 
