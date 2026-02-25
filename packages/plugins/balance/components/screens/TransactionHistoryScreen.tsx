@@ -24,9 +24,6 @@ import { TransactionType } from '../../models/TransactionType';
 import { BalanceMutation } from '../../models/BalanceMutation';
 import { TransactionItemSkeleton } from '../ui/TransactionItemSkeleton';
 import {
-  ArrowLeft2,
-} from 'iconsax-react-nativejs';
-import {
   scale,
   moderateScale,
   moderateVerticalScale,
@@ -35,6 +32,7 @@ import {
   getResponsiveFontSize,
   getIconSize,
   FontFamily,
+  ScreenHeader,
 } from '@core/config';
 
 const mockMutations: BalanceMutation[] = [
@@ -200,22 +198,10 @@ export const TransactionHistoryScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[
-        styles.header,
-        {
-          backgroundColor: colors.background,
-        }
-      ]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <ArrowLeft2 size={getIconSize('medium')} color={colors.text} variant="Outline" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('balance.transactionHistory')}
-        </Text>
-        <View style={styles.headerRight} />
-      </View>
+      <ScreenHeader
+        title={t('balance.transactionHistory')}
+        onBackPress={() => navigation.goBack()}
+      />
 
       {/* Month Filter Pills */}
       <View style={[styles.monthFilterContainer, { borderBottomColor: colors.border }]}>
@@ -295,29 +281,6 @@ const horizontalPadding = getHorizontalPadding();
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: horizontalPadding,
-    paddingBottom: moderateVerticalScale(12),
-  },
-  backButton: {
-    padding: moderateVerticalScale(8),
-    minWidth: minTouchTarget,
-    minHeight: minTouchTarget,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: moderateScale(18),
-    fontFamily: FontFamily.monasans.bold,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerRight: {
-    width: minTouchTarget,
   },
   listContent: {
     paddingHorizontal: horizontalPadding,

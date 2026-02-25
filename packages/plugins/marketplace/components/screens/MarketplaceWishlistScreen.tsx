@@ -16,13 +16,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft2, Heart, Trash } from 'iconsax-react-nativejs';
+import { Heart, Trash } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
   getResponsiveFontSize,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -95,31 +96,20 @@ export const MarketplaceWishlistScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: paddingH,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={goToExplore}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('marketplace.wishlist') || 'Favorit'}
-        </Text>
-        {favoritesCount > 0 ? (
-          <TouchableOpacity onPress={clearFavorites}>
-            <Trash size={scale(22)} color={colors.error} variant="Linear" />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: scale(24) }} />
-        )}
-      </View>
+      <ScreenHeader
+        title={t('marketplace.wishlist')}
+        onBackPress={goToExplore}
+        rightComponent={
+          favoritesCount > 0 ? (
+            <TouchableOpacity onPress={clearFavorites}>
+              <Trash size={scale(22)} color={colors.error} variant="Linear" />
+            </TouchableOpacity>
+          ) : undefined
+        }
+        showBorder
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -192,18 +182,6 @@ export const MarketplaceWishlistScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: moderateVerticalScale(12),
-    gap: scale(12),
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
-    fontSize: getResponsiveFontSize('large'),
-    flex: 1,
-  },
   scrollContent: {
     paddingTop: moderateVerticalScale(16),
   },

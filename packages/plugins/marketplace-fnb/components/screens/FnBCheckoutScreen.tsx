@@ -16,9 +16,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, StackActions } from '@react-navigation/native';
-import { ArrowLeft2, Shop, Truck, Box, Location as LocationIcon } from 'iconsax-react-nativejs';
+import { Shop, Truck, Box, Location as LocationIcon } from 'iconsax-react-nativejs';
 import Toast from 'react-native-toast-message';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useAuth } from '@core/auth';
@@ -295,28 +295,13 @@ export const FnBCheckoutScreen: React.FC = () => {
   if (isCartEmpty) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View
-          style={[
-            styles.header,
-            {
-              backgroundColor: colors.surface,
-              paddingTop: insets.top + moderateVerticalScale(8),
-              paddingHorizontal: horizontalPadding,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('fnb.checkout') || 'Checkout'}
-          </Text>
-          <View style={{ width: scale(24) }} />
-        </View>
+        <ScreenHeader
+          title={t('fnb.checkout') || 'Checkout'}
+          onBackPress={() => navigation.goBack()}
+          showBorder
+          style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+          paddingHorizontal={horizontalPadding}
+        />
         <View style={[styles.emptyCartContainer, { paddingHorizontal: horizontalPadding }]}>
           <Text style={[styles.emptyCartText, { color: colors.textSecondary }]}>
             {t('fnb.emptyCart') || 'Keranjang kosong'}
@@ -339,29 +324,13 @@ export const FnBCheckoutScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('fnb.checkout') || 'Checkout'}
-        </Text>
-        <View style={{ width: scale(24) }} />
-      </View>
+      <ScreenHeader
+        title={t('fnb.checkout') || 'Checkout'}
+        onBackPress={() => navigation.goBack()}
+        showBorder
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
 
       {/* Store Closed Banner */}
       {store && !store.isOpen && (
@@ -710,24 +679,6 @@ export const FnBCheckoutScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  backButton: {
-    padding: scale(4),
-  },
-  headerTitle: {
-    fontSize: scale(18),
-    fontFamily: FontFamily.monasans.bold,
   },
   content: {
     flex: 1,

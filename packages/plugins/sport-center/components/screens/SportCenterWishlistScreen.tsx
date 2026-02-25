@@ -21,6 +21,7 @@ import {
   FontFamily,
   getHorizontalPadding,
   getResponsiveFontSize,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -63,12 +64,13 @@ export const SportCenterWishlistScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingHorizontal: paddingH, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('sportCenter.wishlist') || 'Favorit'}
-        </Text>
-        <Heart size={scale(24)} color={colors.primary} variant="Bold" />
-      </View>
+      <ScreenHeader
+        title={t('sportCenter.wishlist') || 'Favorit'}
+        onBackPress={() => navigation.goBack()}
+        rightComponent={<Heart size={scale(24)} color={colors.primary} variant="Bold" />}
+        showBorder
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
          contentContainerStyle={[

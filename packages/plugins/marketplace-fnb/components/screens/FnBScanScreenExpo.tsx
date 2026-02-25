@@ -17,8 +17,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { ArrowLeft2, Flash, Gallery, ScanBarcode } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { Flash, Gallery, ScanBarcode } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { parseFnBQRCode } from '../../models';
@@ -189,43 +189,33 @@ export const FnBScanScreenExpo: React.FC = () => {
           </View>
         </View>
       </View>
-      <View
-        style={[
-          styles.header,
-          {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-            zIndex: 20,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft2 size={scale(24)} color="#FFFFFF" variant="Linear" />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <ScanBarcode size={scale(24)} color="#FFFFFF" variant="Bold" />
-          <Text style={styles.headerTitle}>{t('fnb.scanStore') || 'Scan Toko FnB'}</Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPress={() => setFlashOn((v) => !v)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Flash
-            size={scale(24)}
-            color={flashOn ? '#FFD700' : '#FFFFFF'}
-            variant={flashOn ? 'Bold' : 'Linear'}
-          />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('fnb.scanStore') || 'Scan Toko FnB'}
+        onBackPress={() => navigation.goBack()}
+        textColor="#FFFFFF"
+        rightComponent={
+          <TouchableOpacity
+            onPress={() => setFlashOn((v) => !v)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ width: scale(44), height: scale(44), borderRadius: scale(22), backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+          >
+            <Flash
+              size={scale(24)}
+              color={flashOn ? '#FFD700' : '#FFFFFF'}
+              variant={flashOn ? 'Bold' : 'Linear'}
+            />
+          </TouchableOpacity>
+        }
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          paddingTop: insets.top + moderateVerticalScale(8),
+          zIndex: 20,
+        }}
+        paddingHorizontal={horizontalPadding}
+      />
     </View>
   );
 };
@@ -242,21 +232,6 @@ const styles = StyleSheet.create({
     flex: 1.3,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'space-between',
-  },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerButton: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(22),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerCenter: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: scale(18),
-    fontFamily: FontFamily?.monasans?.bold ?? 'System',
-    marginLeft: scale(8),
   },
   corner: {
     position: 'absolute',

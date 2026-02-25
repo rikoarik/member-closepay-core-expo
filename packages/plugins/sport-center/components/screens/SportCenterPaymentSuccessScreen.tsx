@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft2, TickCircle, DocumentDownload, Refresh } from 'iconsax-react-nativejs';
+import { TickCircle, DocumentDownload, Refresh } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
-import { scale, getHorizontalPadding, FontFamily, moderateVerticalScale } from '@core/config';
+import { scale, getHorizontalPadding, FontFamily, moderateVerticalScale, ScreenHeader } from '@core/config';
 import { useTranslation } from '@core/i18n';
 
 const fontRegular = FontFamily?.monasans?.regular ?? 'System';
@@ -62,17 +62,11 @@ export const SportCenterPaymentSuccessScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: '#F8FAFC' }]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: colors.surface }]}
-          onPress={() => navigation.goBack()}
-        >
-          <ArrowLeft2 size={scale(20)} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>E-Ticket Pembayaran</Text>
-        <View style={{ width: scale(40) }} />
-      </View>
+      <ScreenHeader
+        title={t('sportCenter.eTicket') || 'E-Ticket Pembayaran'}
+        onBackPress={() => navigation.goBack()}
+        style={{ paddingTop: Math.max(insets.top, 16) }}
+      />
 
       <ScrollView
         contentContainerStyle={[

@@ -14,9 +14,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft2, Send2, Call, Add } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { Send2, Call, Add } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
+import { useTranslation } from '@core/i18n';
 import { getCustomChatTemplates, addCustomChatTemplate, removeCustomChatTemplate } from '../../utils/chatTemplateStorage';
 
 type Message = {
@@ -52,6 +53,7 @@ const INITIAL_MESSAGES: Message[] = [
 
 export const FnBChatDriverScreen: React.FC = () => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
@@ -102,12 +104,12 @@ export const FnBChatDriverScreen: React.FC = () => {
   const handleLongPressTemplate = (template: string) => {
     if (!customSet.has(template)) return;
     Alert.alert(
-      'Hapus template',
-      `Hapus "${template}" dari daftar template?`,
+      t('fnb.deleteTemplateTitle'),
+      t('fnb.deleteTemplateMessage', { template }),
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Hapus',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await removeCustomChatTemplate(template);
@@ -172,23 +174,17 @@ export const FnBChatDriverScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: '#F8F9FA' }]} // Sedikit abu untuk bg chat
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* HEADER */}
-      <View style={[styles.header, { backgroundColor: colors.surface, paddingTop: insets.top + moderateVerticalScale(8) }]}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        
-        <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Budi Santoso</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>B 1234 XYZ • Gojek</Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerBtn}>
+      <ScreenHeader
+        title="Budi Santoso"
+        onBackPress={handleBack}
+        rightComponent={
+          <TouchableOpacity onPress={() => {}} style={{ padding: scale(8) }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Call size={scale(22)} color={colors.text} variant="Outline" />
           </TouchableOpacity>
-        </View>
-      </View>
+        }
+        showBorder
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+      />
 
       {/* CHAT AREA */}
       <FlatList
@@ -244,10 +240,10 @@ export const FnBChatDriverScreen: React.FC = () => {
           onPress={() => setAddModalVisible(false)}
         >
           <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Tambah template chat</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('fnb.addChatTemplate')}</Text>
             <TextInput
               style={[styles.modalInput, { color: colors.text, borderColor: colors.border }]}
-              placeholder="Contoh: Jangan pedas"
+              placeholder={t('fnb.chatTemplatePlaceholder')}
               placeholderTextColor={colors.textSecondary}
               value={newTemplateText}
               onChangeText={setNewTemplateText}
@@ -259,14 +255,14 @@ export const FnBChatDriverScreen: React.FC = () => {
                 style={[styles.modalBtn, styles.modalBtnCancel, { borderColor: colors.border }]}
                 onPress={() => setAddModalVisible(false)}
               >
-                <Text style={[styles.modalBtnText, { color: colors.text }]}>Batal</Text>
+                <Text style={[styles.modalBtnText, { color: colors.text }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave, { backgroundColor: colors.primary }]}
                 onPress={handleSaveNewTemplate}
                 disabled={!newTemplateText.trim()}
               >
-                <Text style={[styles.modalBtnText, { color: colors.surface }]}>Simpan</Text>
+                <Text style={[styles.modalBtnText, { color: colors.surface }]}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -278,7 +274,7 @@ export const FnBChatDriverScreen: React.FC = () => {
         <View style={[styles.inputWrap, { backgroundColor: '#F0F2F5' }]}>
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder="Tulis pesan..."
+            placeholder={t('fnb.writeMessage')}
             placeholderTextColor={colors.textSecondary}
             value={inputText}
             onChangeText={setInputText}
@@ -301,44 +297,6 @@ export const FnBChatDriverScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: scale(16),
-    paddingBottom: moderateVerticalScale(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 10,
-  },
-  backButton: {
-    padding: scale(8),
-    marginLeft: -scale(8),
-  },
-  headerTitleWrap: {
-    flex: 1,
-    marginLeft: scale(8),
-  },
-  headerTitle: {
-    fontSize: scale(16),
-    fontFamily: FontFamily.monasans.bold,
-  },
-  headerSubtitle: {
-    fontSize: scale(12),
-    fontFamily: FontFamily.monasans.medium,
-    marginTop: 2,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerBtn: {
-    padding: scale(8),
   },
   chatList: {
     paddingHorizontal: scale(16),

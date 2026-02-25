@@ -9,17 +9,16 @@ import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft2 } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useAuth } from '@core/auth';
 import {
   getHorizontalPadding,
-  getMinTouchTarget,
   FontFamily,
   getResponsiveFontSize,
   scale,
   moderateVerticalScale,
+  ScreenHeader,
 } from '@core/config';
 import { PinDotsInput } from '../PinDotsInput';
 import type { SetPinAction } from '../SetPinOptionsSheet';
@@ -98,7 +97,6 @@ export const SetPinFlowScreen: React.FC = () => {
   }, [otp]);
 
   const paddingH = getHorizontalPadding();
-  const minTouch = getMinTouchTarget();
   const titleKey = ACTION_TITLE_KEYS[action ?? 'change'];
   const isDeactivate = action === 'deactivate';
   const isChange = action === 'change';
@@ -108,15 +106,7 @@ export const SetPinFlowScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { paddingHorizontal: paddingH }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Outline" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          {t(titleKey)}
-        </Text>
-        <View style={{ width: minTouch }} />
-      </View>
+      <ScreenHeader title={t(titleKey)} onBackPress={handleBack} paddingHorizontal={paddingH} />
 
       <ScrollView
         style={styles.scroll}
@@ -229,24 +219,6 @@ export const SetPinFlowScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: moderateVerticalScale(12),
-  },
-  backBtn: {
-    minWidth: getMinTouchTarget(),
-    minHeight: getMinTouchTarget(),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: getResponsiveFontSize('large'),
-    fontFamily: FontFamily.monasans.bold,
-    flex: 1,
-    textAlign: 'center',
-  },
   scroll: { flex: 1 },
   content: {
     flexGrow: 1,

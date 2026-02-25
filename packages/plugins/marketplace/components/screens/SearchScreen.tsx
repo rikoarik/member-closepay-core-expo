@@ -7,13 +7,14 @@ import React, { useRef, useEffect, useMemo } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Keyboard, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft2, SearchNormal, CloseCircle, Calendar, Chart, Trash } from 'iconsax-react-nativejs';
+import { SearchNormal, CloseCircle, Calendar, Chart, Trash } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   getResponsiveFontSize,
   FontFamily,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -93,48 +94,35 @@ export const SearchScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <View style={styles.searchRow}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.background || colors.surface }]}>
-            <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-            <TextInput
-              ref={searchInputRef}
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('marketplace.searchPlaceholder') || 'Cari produk...'}
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              multiline={false}
-              numberOfLines={1}
-              // @ts-ignore
-              ellipsizeMode="tail"
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-              onSubmitEditing={handleSearch}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
-              </TouchableOpacity>
-            )}
-          </View>
+      <ScreenHeader
+        title={t('common.search')}
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
+      <View style={[styles.searchRow, { paddingHorizontal: horizontalPadding, paddingTop: moderateVerticalScale(8), paddingBottom: moderateVerticalScale(12) }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: colors.background || colors.surface }]}>
+          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
+          <TextInput
+            ref={searchInputRef}
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('marketplace.searchPlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            multiline={false}
+            numberOfLines={1}
+            // @ts-ignore
+            ellipsizeMode="tail"
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -209,22 +197,10 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  header: {
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(8),
-    marginTop: moderateVerticalScale(8),
-  },
-  backButton: {
-    padding: scale(4),
   },
   searchInputContainer: {
     flex: 1,

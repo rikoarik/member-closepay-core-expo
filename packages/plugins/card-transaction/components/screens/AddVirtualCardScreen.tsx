@@ -20,11 +20,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft2, Wifi } from 'iconsax-react-nativejs';
+import { Wifi } from 'iconsax-react-nativejs';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
-import { scale, moderateScale, moderateVerticalScale, SvgLinearGradientView } from '@core/config';
+import { scale, moderateScale, moderateVerticalScale, SvgLinearGradientView, ScreenHeader } from '@core/config';
 
 const { width: W } = Dimensions.get('window');
 const CARD_PREVIEW_W = W * 0.82;
@@ -164,12 +164,11 @@ export function AddVirtualCardScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.flex}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Outline" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('home.createVirtualCard')}</Text>
-        </View>
+        <ScreenHeader
+          title={t('home.createVirtualCard')}
+          onBackPress={() => navigation.goBack()}
+          showBorder
+        />
 
         <KeyboardAwareScrollView
           style={styles.scroll}
@@ -375,19 +374,6 @@ export function AddVirtualCardScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backBtn: {
-    paddingVertical: scale(8),
-    paddingRight: scale(12),
-    marginLeft: -scale(4),
-  },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { padding: PAD, paddingBottom: moderateVerticalScale(40) },
 

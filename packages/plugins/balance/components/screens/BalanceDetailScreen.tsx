@@ -25,7 +25,6 @@ import { TransactionType } from '../../models/TransactionType';
 import { TransactionItemSkeleton } from '../ui/TransactionItemSkeleton';
 import { BalanceCard } from '../ui/BalanceCard';
 import {
-  ArrowLeft2,
   Wallet3,
   ArrowCircleRight2,
   Card,
@@ -44,6 +43,7 @@ import {
   getIconSize,
   FontFamily,
   useConfig,
+  ScreenHeader,
 } from '@core/config';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -618,15 +618,10 @@ export const BalanceDetailScreen = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <ArrowLeft2 size={scale(20)} color={colors.text} variant="Outline" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('balance.balance') || 'Saldo'}
-          </Text>
-          <View style={styles.headerRight} />
-        </View>
+        <ScreenHeader
+          title={t('balance.balance') || 'Saldo'}
+          onBackPress={() => navigation.goBack()}
+        />
 
         {/* Main Content - Balance Cards */}
         <ScrollView
@@ -808,15 +803,6 @@ export const BalanceDetailScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: horizontalPadding,
-    paddingVertical: moderateVerticalScale(12),
-  },
-  backButton: { padding: scale(4), marginRight: scale(8) },
-  headerTitle: { fontSize: getResponsiveFontSize('xlarge'), fontFamily: FontFamily.monasans.bold },
-  headerRight: { flex: 1 },
   content: { flex: 1,
     paddingVertical: moderateVerticalScale(16),
    },

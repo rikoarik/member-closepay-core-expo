@@ -29,6 +29,7 @@ import { MarketplaceCategoryTabs } from '../shared/MarketplaceCategoryTabs';
 import { useMarketplaceData, Store, getCategories } from '../../hooks/useMarketplaceData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const ALL_CATEGORIES_VALUE = 'all';
 
 type StoreDetailRouteParams = {
   StoreDetail: {
@@ -46,8 +47,15 @@ export const StoreDetailScreen: React.FC = () => {
 
   const store = route.params?.store;
   const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
-  const categories = useMemo(() => getCategories(), []);
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES_VALUE);
+  const rawCategories = useMemo(() => getCategories(), []);
+  const categoryOptions = useMemo(
+    () => [
+      { value: ALL_CATEGORIES_VALUE, label: t('marketplace.allCategories') },
+      ...rawCategories.filter((c) => c !== 'Semua').map((c) => ({ value: c, label: c })),
+    ],
+    [t, rawCategories]
+  );
 
   // Fetch all products and filter by store name
   // In a real app, we would fetch products by store ID from API
@@ -57,7 +65,7 @@ export const StoreDetailScreen: React.FC = () => {
     if (!store || !allProducts) return [];
     let products = allProducts.filter((p) => p.storeName === store.name);
 
-    if (selectedCategory !== 'Semua') {
+    if (selectedCategory !== ALL_CATEGORIES_VALUE) {
       products = products.filter((p) => p.category === selectedCategory);
     }
 
@@ -194,7 +202,7 @@ export const StoreDetailScreen: React.FC = () => {
       </View>
 
       <MarketplaceCategoryTabs
-        categories={categories}
+        categories={categoryOptions}
         selectedCategory={selectedCategory}
         onSelectCategory={handleCategorySelect}
       />

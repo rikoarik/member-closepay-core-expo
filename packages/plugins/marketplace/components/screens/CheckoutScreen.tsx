@@ -19,8 +19,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackActions } from '@react-navigation/native';
-import { ArrowLeft2, Location, Wallet3, TickCircle } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { Location, Wallet3, TickCircle } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { paymentService } from '@plugins/payment';
@@ -44,15 +44,17 @@ const formatPrice = (price: number): string => {
 
 const SHIPPING_FEE = 15000;
 
-const PAYMENT_METHODS = [
-  { id: 'cod', name: 'Cash on Delivery (COD)', icon: '💵' },
-  { id: 'transfer', name: 'Transfer Bank', icon: '🏦' },
-  { id: 'ewallet', name: 'E-Wallet', icon: '📱' },
-];
-
 export const CheckoutScreen: React.FC = () => {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const paymentMethods = useMemo(
+    () => [
+      { id: 'cod', name: t('marketplace.paymentCod'), icon: '💵' },
+      { id: 'transfer', name: t('marketplace.paymentTransfer'), icon: '🏦' },
+      { id: 'ewallet', name: t('marketplace.paymentEwallet'), icon: '📱' },
+    ],
+    [t]
+  );
   const navigation = useNavigation();
   const route = useRoute<RouteProp<CheckoutRouteParams, 'Checkout'>>();
   const insets = useSafeAreaInsets();
@@ -105,17 +107,11 @@ export const CheckoutScreen: React.FC = () => {
 
   const handlePlaceOrder = useCallback(async () => {
     if (!hasItems) {
-      Alert.alert(
-        t('common.error') || 'Error',
-        t('marketplace.selectItemToCheckout') || 'Pilih minimal satu produk.'
-      );
+      Alert.alert(t('common.error'), t('marketplace.selectItemToCheckout'));
       return;
     }
     if (!address.trim()) {
-      Alert.alert(
-        t('common.error') || 'Error',
-        t('marketplace.enterAddress') || 'Masukkan alamat pengiriman.'
-      );
+      Alert.alert(t('common.error'), t('marketplace.enterAddress'));
       return;
     }
 
@@ -125,7 +121,7 @@ export const CheckoutScreen: React.FC = () => {
 
     try {
       await paymentService.payWithBalance(total, orderId, {
-        storeName: 'Marketplace',
+        storeName: t('marketplace.storeName'),
         itemCount: orderItems.length,
       });
 
@@ -176,9 +172,9 @@ export const CheckoutScreen: React.FC = () => {
     } catch (err) {
       const msg =
         err instanceof Error && err.message.toLowerCase().includes('insufficient')
-          ? t('marketplace.insufficientBalance') || 'Saldo tidak mencukupi.'
-          : t('marketplace.orderFailed') || 'Gagal memproses pesanan.';
-      Alert.alert(t('common.error') || 'Error', msg);
+          ? t('marketplace.insufficientBalance')
+          : t('marketplace.orderFailed');
+      Alert.alert(t('common.error'), msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -206,10 +202,10 @@ export const CheckoutScreen: React.FC = () => {
         ]}
       >
         <Text style={{ color: colors.text }}>
-          {t('marketplace.productNotFound') || 'Produk tidak ditemukan'}
+          {t('marketplace.productNotFound')}
         </Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 20 }}>
-          <Text style={{ color: colors.primary }}>{t('common.back') || 'Kembali'}</Text>
+          <Text style={{ color: colors.primary }}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -217,31 +213,12 @@ export const CheckoutScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBack}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('marketplace.checkout')}
-        </Text>
-
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader
+        title={t('marketplace.checkout')}
+        onBackPress={handleBack}
+        style={{ paddingTop: insets.top + moderateVerticalScale(8), backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -359,7 +336,7 @@ export const CheckoutScreen: React.FC = () => {
             </Text>
           </View>
 
-          {PAYMENT_METHODS.map((method) => (
+          {paymentMethods.map((method) => (
             <TouchableOpacity
               key={method.id}
               style={[
@@ -393,7 +370,7 @@ export const CheckoutScreen: React.FC = () => {
         {/* Cicilan option */}
         <View style={[styles.installmentRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.installmentLabel, { color: colors.text }]}>
-            {t('marketplace.payWithInstallment') || 'Bayar dengan cicilan (2x)'}
+            {t('marketplace.payWithInstallment')}
           </Text>
           <Switch
             value={allowInstallment}
@@ -448,28 +425,6 @@ export const CheckoutScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  backButton: {
-    padding: scale(4),
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: scale(20),
-    fontFamily: FontFamily.monasans.bold,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: scale(32),
   },
   scrollView: {
     flex: 1,

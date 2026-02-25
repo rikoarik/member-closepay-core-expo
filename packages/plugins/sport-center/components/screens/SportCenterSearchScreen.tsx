@@ -14,13 +14,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft2, SearchNormal, CloseCircle, Calendar, Chart } from 'iconsax-react-nativejs';
+import { SearchNormal, CloseCircle, Calendar, Chart } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   getResponsiveFontSize,
   FontFamily,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -73,41 +74,32 @@ export const SportCenterSearchScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <View style={styles.searchRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.background }]}>
-            <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-            <TextInput
-              ref={searchInputRef}
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('sportCenter.searchPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-              onSubmitEditing={handleSearch}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
-              </TouchableOpacity>
-            )}
-          </View>
+      <ScreenHeader
+        title={t('sportCenter.searchPlaceholder') || 'Cari'}
+        onBackPress={() => navigation.goBack()}
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
+      <View style={[styles.searchRow, { paddingHorizontal: horizontalPadding, paddingVertical: scale(8), backgroundColor: colors.surface }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: colors.background }]}>
+          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
+          <TextInput
+            ref={searchInputRef}
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('sportCenter.searchPlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

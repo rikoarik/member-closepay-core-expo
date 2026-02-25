@@ -8,10 +8,15 @@ import {
 } from '@core/config';
 import { useTheme } from '@core/theme';
 
+export interface CategoryOption {
+    value: string;
+    label: string;
+}
+
 interface MarketplaceCategoryTabsProps {
-    categories: string[];
+    categories: CategoryOption[];
     selectedCategory: string;
-    onSelectCategory: (category: string) => void;
+    onSelectCategory: (value: string) => void;
 }
 
 export const MarketplaceCategoryTabs: React.FC<MarketplaceCategoryTabsProps> = ({
@@ -33,10 +38,10 @@ export const MarketplaceCategoryTabs: React.FC<MarketplaceCategoryTabsProps> = (
                 ]}
             >
                 {categories.map((category) => {
-                    const isSelected = selectedCategory === category;
+                    const isSelected = selectedCategory === category.value;
                     return (
                         <TouchableOpacity
-                            key={category}
+                            key={category.value}
                             style={[
                                 styles.tab,
                                 isSelected && { backgroundColor: colors.primary },
@@ -46,7 +51,7 @@ export const MarketplaceCategoryTabs: React.FC<MarketplaceCategoryTabsProps> = (
                                     borderColor: colors.border
                                 }
                             ]}
-                            onPress={() => onSelectCategory(category)}
+                            onPress={() => onSelectCategory(category.value)}
                             activeOpacity={0.7}
                         >
                             <Text
@@ -56,7 +61,7 @@ export const MarketplaceCategoryTabs: React.FC<MarketplaceCategoryTabsProps> = (
                                     isSelected && styles.tabTextSelected,
                                 ]}
                             >
-                                {category}
+                                {category.label}
                             </Text>
                         </TouchableOpacity>
                     );

@@ -6,8 +6,8 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft2, SearchNormal, CloseCircle } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { SearchNormal, CloseCircle } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useSportCenterData } from '../../hooks';
@@ -49,39 +49,30 @@ export const SportCenterSearchResultsScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <View style={styles.searchRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <View style={[styles.searchInputContainer, { backgroundColor: colors.background }]}>
-            <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('sportCenter.searchPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
-              value={searchText}
-              onChangeText={setSearchText}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-                <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
-              </TouchableOpacity>
-            )}
-          </View>
+      <ScreenHeader
+        title={t('sportCenter.searchResults') || 'Hasil Pencarian'}
+        onBackPress={() => navigation.goBack()}
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
+      <View style={[styles.searchRow, { paddingHorizontal: horizontalPadding, paddingVertical: scale(8), backgroundColor: colors.surface }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: colors.background }]}>
+          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('sportCenter.searchPlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            value={searchText}
+            onChangeText={setSearchText}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
+              <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

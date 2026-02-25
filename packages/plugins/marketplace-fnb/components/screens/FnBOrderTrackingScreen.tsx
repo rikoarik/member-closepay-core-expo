@@ -14,15 +14,17 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import { ArrowLeft2, Call, MessageText, TruckFast } from "iconsax-react-nativejs";
+import { Call, MessageText, TruckFast } from "iconsax-react-nativejs";
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
   useDraggableBottomSheet,
+  ScreenHeader,
 } from "@core/config";
 import { useTheme } from "@core/theme";
+import { useTranslation } from "@core/i18n";
 import { useFnBActiveOrder } from "../../context/FnBActiveOrderContext";
 
 // Default region (Indonesia - Jakarta area); bisa diganti dari API tracking nanti
@@ -149,6 +151,7 @@ async function fetchRoutePolyline(
 
 export const FnBOrderTrackingScreen: React.FC = () => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
@@ -161,7 +164,7 @@ export const FnBOrderTrackingScreen: React.FC = () => {
   const handleCallDriver = async () => {
     const driverPhone = activeOrder?.driver?.phoneNumber;
     if (!driverPhone?.trim()) {
-      Alert.alert("Info", "Nomor driver belum tersedia.");
+      Alert.alert(t("fnb.info"), t("fnb.driverPhoneNotAvailable"));
       return;
     }
     const url = `tel:${driverPhone.trim()}`;
@@ -169,7 +172,7 @@ export const FnBOrderTrackingScreen: React.FC = () => {
     if (canOpen) {
       await Linking.openURL(url);
     } else {
-      Alert.alert("Error", "Tidak dapat membuka aplikasi telepon");
+      Alert.alert(t("common.error"), t("fnb.cannotOpenPhone"));
     }
   };
 
@@ -199,13 +202,13 @@ export const FnBOrderTrackingScreen: React.FC = () => {
           },
         ]}
       >
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title={t("fnb.trackOrder")}
+          onBackPress={handleBack}
+          style={{ paddingTop: insets.top + moderateVerticalScale(8) }}
+        />
         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-          Pesanan tidak ditemukan.
+          {t("fnb.orderNotFound")}
         </Text>
       </View>
     );
@@ -269,19 +272,19 @@ export const FnBOrderTrackingScreen: React.FC = () => {
             />
             <Marker
               coordinate={MERCHANT_COORDS}
-              title={activeOrder?.storeName || "Merchant"}
+              title={activeOrder?.storeName || t("fnb.merchantName")}
               pinColor={colors.primary}
             />
             {/* Marker posisi motor/driver (live dari backend atau placeholder) */}
             <Marker
               coordinate={driverCoords}
-              title="Posisi motor"
+              title={t("fnb.markerDriverPosition")}
               description={driverName}
               pinColor="#F59E0B"
             />
             <Marker
               coordinate={DESTINATION_COORDS}
-              title="Lokasi kamu"
+              title={t("fnb.markerYourLocation")}
               description={activeOrder?.deliveryAddress}
             />
           </MapView>
@@ -297,16 +300,14 @@ export const FnBOrderTrackingScreen: React.FC = () => {
             paddingHorizontal: horizontalPadding,
           },
         ]}
+        pointerEvents="box-none"
       >
-        <TouchableOpacity
-          style={[
-            styles.backButtonFloating,
-            { backgroundColor: colors.surface },
-          ]}
-          onPress={handleBack}
-        >
-          <ArrowLeft2 size={scale(20)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
+        <ScreenHeader
+          title={t("fnb.trackOrder")}
+          onBackPress={handleBack}
+          style={{ backgroundColor: colors.surface, borderRadius: scale(12), marginHorizontal: horizontalPadding }}
+          paddingHorizontal={horizontalPadding}
+        />
       </View>
 
       {/* BOTTOM SHEET: inline pakai useDraggableBottomSheet dari @core/config (bukan Modal) supaya map bisa digeser/zoom */}
@@ -483,18 +484,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  backButtonFloating: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
   mapContainer: {
     flex: 1,
   },
@@ -662,14 +651,5 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.monasans.medium,
     textAlign: "center",
     marginTop: scale(40),
-  },
-  header: {
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-  },
-  backButton: {
-    width: scale(40),
-    height: scale(40),
-    justifyContent: "center",
   },
 });

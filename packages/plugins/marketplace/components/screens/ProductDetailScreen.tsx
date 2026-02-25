@@ -19,7 +19,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   Heart,
   ShoppingCart,
   Star1,
@@ -28,7 +27,7 @@ import {
   Minus,
   Bag2,
 } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
@@ -193,67 +192,42 @@ export const ProductDetailScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-        onLayout={() => {
-          // Try to get cart icon position relative to header
-          // This is an approximation since measureInWindow is async and may vary
-        }}
-      >
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={handleBack}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-
-        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-          {t('marketplace.productDetail')}
-        </Text>
-
-        {product && (
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => toggleFavorite(product)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Heart
-              size={scale(24)}
-              color={isFavorite(product.id) ? (colors.error ?? '#E53935') : colors.text}
-              variant={isFavorite(product.id) ? 'Bold' : 'Linear'}
-            />
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          ref={cartIconRef}
-          style={styles.headerButton}
-          onPress={handleCartPress}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          onLayout={(event) => {
-            // Capture approximate end position from layout event
-            // For more precision we would use measureInWindow in a ref callback
-            const { x, y, width, height } = event.nativeEvent.layout;
-            // Since this is inside header which has padding, adjust manually or assume top right
-          }}
-        >
-          <ShoppingCart size={scale(24)} color={colors.text} variant="Linear" />
-          {itemCount > 0 && (
-            <View style={[styles.cartBadge, { backgroundColor: colors.error }]}>
-              <Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('marketplace.productDetail')}
+        onBackPress={handleBack}
+        rightComponent={
+          <View style={styles.headerRightRow}>
+            {product && (
+              <TouchableOpacity
+                onPress={() => toggleFavorite(product)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.headerButton}
+              >
+                <Heart
+                  size={scale(24)}
+                  color={isFavorite(product.id) ? (colors.error ?? '#E53935') : colors.text}
+                  variant={isFavorite(product.id) ? 'Bold' : 'Linear'}
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              ref={cartIconRef}
+              onPress={handleCartPress}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.headerButton}
+            >
+              <ShoppingCart size={scale(24)} color={colors.text} variant="Linear" />
+              {itemCount > 0 && (
+                <View style={[styles.cartBadge, { backgroundColor: colors.error }]}>
+                  <Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        }
+        style={{ paddingTop: insets.top + moderateVerticalScale(8), backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -388,8 +362,7 @@ export const ProductDetailScreen: React.FC = () => {
               {t('marketplace.description')}
             </Text>
             <Text style={[styles.descriptionText, { color: colors.textSecondary }]}>
-              {product.description ||
-                'Produk berkualitas tinggi dengan harga terjangkau. Cocok untuk kebutuhan sehari-hari Anda.'}
+              {product.description || t('marketplace.descriptionDefault')}
             </Text>
           </View>
 
@@ -518,27 +491,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerRightRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 10,
+    gap: scale(8),
   },
   headerButton: {
     padding: scale(4),
     position: 'relative',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: scale(18),
-    fontFamily: FontFamily.monasans.semiBold,
-    textAlign: 'center',
-    marginHorizontal: scale(12),
   },
   cartBadge: {
     position: 'absolute',

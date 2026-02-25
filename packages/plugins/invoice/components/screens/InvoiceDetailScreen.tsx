@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft2, DocumentDownload, Wallet, Printer, Send2 } from 'iconsax-react-nativejs';
+import { DocumentDownload, Wallet, Printer, Send2 } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
 import { scale, FontFamily, ScreenHeader } from '@core/config';
 import { useTranslation } from '@core/i18n';
@@ -95,24 +95,18 @@ export const InvoiceDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header with Actions */}
-      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('invoice.detailTitle')}</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity>
-            <Send2 size={scale(20)} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Printer size={scale(20)} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <DocumentDownload size={scale(20)} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title={t('invoice.detailTitle')}
+        onBackPress={() => navigation.goBack()}
+        rightComponent={
+          <View style={styles.headerActions}>
+            <TouchableOpacity><Send2 size={scale(20)} color={colors.text} /></TouchableOpacity>
+            <TouchableOpacity><Printer size={scale(20)} color={colors.text} /></TouchableOpacity>
+            <TouchableOpacity><DocumentDownload size={scale(20)} color={colors.text} /></TouchableOpacity>
+          </View>
+        }
+        showBorder
+      />
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + scale(100) }]}
@@ -315,30 +309,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-    height: scale(56),
-    borderBottomWidth: 1,
-    zIndex: 10,
-  },
-  backButton: {
-    width: scale(40),
-    height: scale(40),
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  headerTitle: {
-    fontFamily: fontBold,
-    fontSize: scale(16),
-    flex: 1,
-  },
-  headerRightPlaceholder: {
-    width: scale(40),
-  },
-
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,7 +7,6 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft2 } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
@@ -15,6 +14,7 @@ import {
   FontFamily,
   getResponsiveFontSize,
   getMinTouchTarget,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -108,18 +108,11 @@ export const SportCenterBookingScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
-      <View style={[styles.header, { paddingHorizontal: paddingH }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('sportCenter.confirmBooking')}
-        </Text>
-      </View>
+      <ScreenHeader
+        title={t('sportCenter.confirmBooking')}
+        onBackPress={() => navigation.goBack()}
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
         style={styles.scrollView}

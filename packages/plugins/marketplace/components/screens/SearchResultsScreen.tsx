@@ -19,7 +19,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   Filter,
   SearchNormal,
   CloseCircle,
@@ -34,6 +33,7 @@ import {
   FontFamily,
   useDimensions,
   UI_CONSTANTS,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -288,85 +288,70 @@ export const SearchResultsScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <View style={styles.searchRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <View
-            style={[
-              styles.searchInputContainer,
-              { backgroundColor: colors.background || colors.surface },
-            ]}
-          >
-            <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-            <TextInput
-              ref={searchInputRef}
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={
-                t('marketplace.searchPlaceholder') || 'Cari produk, brand, dan lainnya...'
-              }
-              placeholderTextColor={colors.textSecondary}
-              value={searchText}
-              onChangeText={setSearchText}
-              returnKeyType="search"
-              onSubmitEditing={() => {
-                if (searchText.trim()) {
-                  trackSearch(searchText.trim());
-                  // @ts-ignore
-                  navigation.push(
-                    'MarketplaceSearchResults' as never,
-                    { query: searchText.trim() } as never
-                  );
-                }
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-                <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
-              </TouchableOpacity>
-            )}
+      <ScreenHeader
+        title={t('marketplace.searchResults')}
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+        rightComponent={
+          <View style={styles.headerRightRow}>
+            <TouchableOpacity
+              onPress={() => (navigation as any).navigate('Cart')}
+              style={styles.cartButton}
+            >
+              <ShoppingCart size={scale(24)} color={colors.text} variant="Linear" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleOpenFilter}
+              style={[
+                styles.filterButton,
+                {
+                  backgroundColor: hasActiveFilters ? colors.primary : colors.surface,
+                  borderColor: hasActiveFilters ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <Filter
+                size={scale(20)}
+                color={hasActiveFilters ? colors.surface : colors.text}
+                variant="Linear"
+              />
+              {hasActiveFilters && (
+                <View style={[styles.filterBadge, { backgroundColor: colors.error || '#FF3B30' }]} />
+              )}
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={() => {
-              // @ts-ignore
-              navigation.navigate('Cart' as never);
+        }
+      />
+      <View style={[styles.searchRow, { paddingHorizontal: horizontalPadding, paddingVertical: moderateVerticalScale(8), backgroundColor: colors.surface }]}>
+        <View
+          style={[
+            styles.searchInputContainer,
+            { backgroundColor: colors.background || colors.surface },
+          ]}
+        >
+          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
+          <TextInput
+            ref={searchInputRef}
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('marketplace.searchPlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            value={searchText}
+            onChangeText={setSearchText}
+            returnKeyType="search"
+            onSubmitEditing={() => {
+              if (searchText.trim()) {
+                trackSearch(searchText.trim());
+                (navigation as any).push('MarketplaceSearchResults', { query: searchText.trim() });
+              }
             }}
-            style={styles.cartButton}
-          >
-            <ShoppingCart size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleOpenFilter}
-            style={[
-              styles.filterButton,
-              {
-                backgroundColor: hasActiveFilters ? colors.primary : colors.surface,
-                borderColor: hasActiveFilters ? colors.primary : colors.border,
-              },
-            ]}
-          >
-            <Filter
-              size={scale(20)}
-              color={hasActiveFilters ? colors.surface : colors.text}
-              variant="Linear"
-            />
-            {hasActiveFilters && (
-              <View style={[styles.filterBadge, { backgroundColor: colors.error || '#FF3B30' }]} />
-            )}
-          </TouchableOpacity>
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
+              <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -411,7 +396,7 @@ export const SearchResultsScreen: React.FC = () => {
           <Text style={[styles.countText, { color: colors.textSecondary }]}>
             {t('marketplace.found') || 'Ditemukan'}{' '}
             {activeTab === 'product' ? filteredProducts.length : filteredStores.length}{' '}
-            {activeTab === 'product' ? t('marketplace.products') || 'produk' : 'toko'}
+            {activeTab === 'product' ? t('marketplace.products') : t('marketplace.stores')}
           </Text>
         </View>
       )}
@@ -707,22 +692,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(8),
-    marginTop: moderateVerticalScale(8),
-  },
-  backButton: {
-    padding: scale(4),
   },
   searchInputContainer: {
     flex: 1,

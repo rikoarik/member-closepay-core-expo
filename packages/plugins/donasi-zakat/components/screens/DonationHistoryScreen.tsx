@@ -11,7 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   Filter,
   TickCircle,
   DocumentDownload,
@@ -29,6 +28,7 @@ import {
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -65,28 +65,18 @@ export const DonationHistoryScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + scale(12),
-            paddingHorizontal: horizontalPadding,
-            backgroundColor: colors.surface,
-            borderBottomColor: colors.borderLight,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('donasiZakat.kindnessHistory')}
-        </Text>
-        <TouchableOpacity style={styles.headerButton}>
-          <Filter size={scale(24)} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title={t('donasiZakat.kindnessHistory')}
+        onBackPress={() => navigation.goBack()}
+        rightComponent={
+          <TouchableOpacity style={styles.headerButton}>
+            <Filter size={scale(24)} color={colors.textSecondary} />
+          </TouchableOpacity>
+        }
+        showBorder
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Summary Card */}
@@ -216,19 +206,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: scale(12),
-    borderBottomWidth: 1,
-  },
   headerButton: {
     padding: scale(8),
-  },
-  headerTitle: {
-    fontSize: scale(18),
-    fontFamily: FontFamily.monasans.bold,
   },
   scrollContent: {
     paddingHorizontal: getHorizontalPadding(),

@@ -13,7 +13,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   Heart,
   Share,
   Clock,
@@ -29,6 +28,7 @@ import {
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -116,20 +116,22 @@ export const CampaignDetailScreen = () => {
         <View style={styles.heroOverlay} />
       </Animated.View>
 
-      {/* Navbar (Fixed/Sticky) */}
-      <View style={[styles.navbar, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-          <ArrowLeft2 size={scale(24)} color="#FFF" />
-        </TouchableOpacity>
-        <View style={styles.navActions}>
-          <TouchableOpacity style={styles.navButton}>
-            <Heart size={scale(24)} color="#FFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navButton}>
-            <Send2 size={scale(24)} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title=""
+        onBackPress={() => navigation.goBack()}
+        textColor="#FFF"
+        rightComponent={
+          <View style={styles.navActions}>
+            <TouchableOpacity style={styles.navButton}>
+              <Heart size={scale(24)} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navButton}>
+              <Send2 size={scale(24)} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        }
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top, backgroundColor: 'transparent', zIndex: 10 }}
+      />
 
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}

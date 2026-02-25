@@ -8,6 +8,7 @@ import {
   getHorizontalPadding,
   FontFamily,
   getResponsiveFontSize,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -79,16 +80,13 @@ export const SportCenterMyBookingsScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SafeAreaView edges={['top']}>
-        <View
-          style={[styles.header, { paddingHorizontal: paddingH, borderBottomColor: colors.border }]}
-        >
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('sportCenter.myBookings') || 'Riwayat Booking'}
-          </Text>
-          <Calendar size={scale(24)} color={colors.primary} variant="Bold" />
-        </View>
-      </SafeAreaView>
+      <ScreenHeader
+        title={t('sportCenter.myBookings') || 'Riwayat Booking'}
+        onBackPress={() => navigation.goBack()}
+        rightComponent={<Calendar size={scale(24)} color={colors.primary} variant="Bold" />}
+        showBorder
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
         style={styles.scrollView}

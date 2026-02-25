@@ -149,27 +149,6 @@ export const FnBOrderFloatingWidget: React.FC = () => {
   const statusText = useMemo(() => {
     if (!activeOrder) return "";
     const translated = t(STATUS_KEYS[activeOrder.status]);
-
-    // If the translation returns the key itself or is missing, fallback to explicit Delivery text
-    if (!translated || translated === STATUS_KEYS[activeOrder.status]) {
-      switch (activeOrder.status) {
-        case "pending":
-          return "Menunggu Konfirmasi";
-        case "confirmed":
-          return "Order Diterima";
-        case "preparing":
-          return "Dalam Pengiriman";
-        case "ready":
-          return "Pesanan Tiba";
-        case "completed":
-          return "Order Selesai";
-        case "cancelled":
-          return "Dibatalkan";
-        default:
-          return activeOrder.status;
-      }
-    }
-
     return translated || activeOrder.status;
   }, [activeOrder, t]);
 

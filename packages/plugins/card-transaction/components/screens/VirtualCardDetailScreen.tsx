@@ -17,7 +17,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   Edit2,
   MoneyRecive,
   MoneySend,
@@ -40,6 +39,7 @@ import {
   FontFamily,
   SvgLinearGradientView,
   BottomSheet,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -458,16 +458,11 @@ export const VirtualCardDetailScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Outline" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('home.virtualCardDetail')}
-        </Text>
-        <View style={styles.headerRight} />
-      </View>
+      <ScreenHeader
+        title={t('home.virtualCardDetail')}
+        onBackPress={handleBack}
+        style={{ backgroundColor: colors.background }}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -708,26 +703,6 @@ export const VirtualCardDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: getHorizontalPadding(),
-    paddingVertical: moderateVerticalScale(12),
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  backButton: {
-    padding: scale(8),
-    marginLeft: -scale(8),
-  },
-  headerTitle: {
-    fontSize: getResponsiveFontSize('large'),
-    fontFamily: FontFamily.monasans.bold,
-    flex: 1,
-  },
-  headerRight: {
-    width: scale(40),
   },
   scrollView: {
     flex: 1,

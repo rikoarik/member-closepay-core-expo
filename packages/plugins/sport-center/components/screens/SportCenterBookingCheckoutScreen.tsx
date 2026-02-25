@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft2, Calendar, Clock, Game, Box1, Lock, ArrowRight2 } from 'iconsax-react-nativejs';
+import { Calendar, Clock, Game, Box1, Lock, ArrowRight2 } from 'iconsax-react-nativejs';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import {
   scale,
@@ -20,6 +20,7 @@ import {
   getHorizontalPadding,
   FontFamily,
   getMinTouchTarget,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -82,23 +83,12 @@ export const SportCenterBookingCheckoutScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: '#F6F8F7' }]}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: Math.max(insets.top, 12),
-            backgroundColor: 'rgba(255,255,255,0.8)',
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Booking Checkout</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader
+        title={t('sportCenter.bookingCheckout') || 'Booking Checkout'}
+        onBackPress={() => navigation.goBack()}
+        style={{ paddingTop: Math.max(insets.top, 12), backgroundColor: 'rgba(255,255,255,0.8)' }}
+        showBorder
+      />
 
       <KeyboardAwareScrollView
         contentContainerStyle={[

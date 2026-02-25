@@ -15,7 +15,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
-  ArrowLeft2,
   DirectInbox,
   Clock,
   TickCircle,
@@ -120,10 +119,10 @@ export const FnBOrderStatusScreen: React.FC = () => {
   if (!order) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScreenHeader title="Detail Pesanan" />
+        <ScreenHeader title={t('fnb.orderDetail')} />
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Pesanan tidak ditemukan.
+            {t('fnb.orderNotFound')}
           </Text>
         </View>
       </View>
@@ -139,15 +138,11 @@ export const FnBOrderStatusScreen: React.FC = () => {
           { paddingTop: insets.top + moderateVerticalScale(8) },
         ]}
       >
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Detail Pesanan
-          </Text>
-          <View style={{ width: scale(40) }} />
-        </View>
+        <ScreenHeader
+          title={t('fnb.orderDetail')}
+          onBackPress={handleBack}
+          paddingHorizontal={horizontalPadding}
+        />
 
         {/* STEPPER */}
         <View style={styles.stepperContainer}>
@@ -192,7 +187,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     : styles.stepperLabelInactive,
                 ]}
               >
-                Order Diterima
+                {t('fnb.orderReceived')}
               </Text>
             </View>
 
@@ -229,8 +224,8 @@ export const FnBOrderStatusScreen: React.FC = () => {
                 ]}
               >
                 {order.orderType === "delivery"
-                  ? "Dalam Pengiriman"
-                  : "Dalam Proses"}
+                  ? t('fnb.inDelivery')
+                  : t('fnb.inProcess')}
               </Text>
             </View>
 
@@ -266,7 +261,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     : styles.stepperLabelInactive,
                 ]}
               >
-                Order Selesai
+                {t('fnb.orderCompleted')}
               </Text>
             </View>
           </View>
@@ -307,10 +302,10 @@ export const FnBOrderStatusScreen: React.FC = () => {
               )}
               <Text style={styles.chipText}>
                 {order.orderType === "delivery"
-                  ? "Delivery"
+                  ? t('fnb.delivery')
                   : order.orderType === "take-away"
-                    ? "Take Away"
-                    : "Dine In"}
+                    ? t('fnb.takeAway')
+                    : t('fnb.dineIn')}
               </Text>
             </View>
             <View style={styles.chipName}>
@@ -322,7 +317,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     variant="Bold"
                   />
                   <Text style={styles.chipText}>
-                    Meja NO {order.tableNumber || "-"}
+                    {t('fnb.tableNo')} {order.tableNumber || "-"}
                   </Text>
                 </>
               ) : (
@@ -333,7 +328,9 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     variant="Bold"
                   />
                   <Text style={styles.chipText}>
-                    Atas Nama {order.customerName || "Cust"}
+                    {t('fnb.orderUnderName', {
+                      name: order.customerName || t('fnb.guestCustomer'),
+                    })}
                   </Text>
                 </>
               )}
@@ -342,7 +339,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
         </View>
 
         <Text style={[styles.foodReadyText, { color: colors.primary }]}>
-          Food already on {estimatedReady}
+          {t('fnb.foodReadyAt', { time: estimatedReady })}
         </Text>
 
         {/* Modular Cards Rendered Based on Order Type */}
@@ -356,10 +353,10 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     color={colors.textSecondary}
                     variant="Bold"
                   />
-                  <Text style={styles.addressLabel}>Pengirim</Text>
+                  <Text style={styles.addressLabel}>{t('fnb.sender')}</Text>
                 </View>
                 <Text style={[styles.addressTitle, { color: colors.text }]}>
-                  {order.storeName || "Merchant Name"}
+                  {order.storeName || t('fnb.merchantName')}
                 </Text>
               </View>
               <View style={[styles.addressSection, { marginTop: scale(16) }]}>
@@ -369,7 +366,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     color={colors.textSecondary}
                     variant="Bold"
                   />
-                  <Text style={styles.addressLabel}>Penerima</Text>
+                  <Text style={styles.addressLabel}>{t('fnb.recipient')}</Text>
                 </View>
                 <Text style={[styles.addressTitle, { color: colors.text }]}>
                   {order.customerName} - {order.phoneNumber || "08XXX"}
@@ -380,7 +377,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  {order.deliveryAddress || "Alamat tidak tersedia"}
+                  {order.deliveryAddress || t('fnb.addressNotAvailable')}
                 </Text>
               </View>
             </View>
@@ -399,7 +396,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                   color={colors.textSecondary}
                   variant="Bold"
                 />
-                <Text style={styles.addressLabel}>Pengiriman</Text>
+                <Text style={styles.addressLabel}>{t('fnb.deliverySection')}</Text>
               </View>
               <View style={styles.driverRow}>
                 <View style={styles.driverInfo}>
@@ -423,7 +420,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                 <Text
                   style={[styles.trackButtonText, { color: colors.primary }]}
                 >
-                  Lacak Pesanan
+                  {t('fnb.trackOrder')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -442,7 +439,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                   color={colors.textSecondary}
                   variant="Linear"
                 />
-                <Text style={styles.addressLabel}>Pesanan</Text>
+                <Text style={styles.addressLabel}>{t('fnb.orderLabel')}</Text>
               </View>
               {order.items.map((line, idx) => (
                 <View key={idx} style={styles.itemRowWrapper}>
@@ -513,13 +510,13 @@ export const FnBOrderStatusScreen: React.FC = () => {
                   color={colors.textSecondary}
                   variant="Bold"
                 />
-                <Text style={styles.addressLabel}>Pembayaran</Text>
+                <Text style={styles.addressLabel}>{t('fnb.payment')}</Text>
               </View>
               <View style={styles.paymentRow}>
                 <Text
                   style={[styles.paymentLabel, { color: colors.textSecondary }]}
                 >
-                  Metode
+                  {t('fnb.paymentMethod')}
                 </Text>
                 <Text style={[styles.paymentValue, { color: colors.text }]}>
                   QRIS
@@ -529,7 +526,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                 <Text
                   style={[styles.paymentLabel, { color: colors.textSecondary }]}
                 >
-                  Subtotal
+                  {t('fnb.subtotal')}
                 </Text>
                 <Text style={[styles.paymentValue, { color: colors.text }]}>
                   {formatPrice(order.subtotal || 0)}
@@ -539,7 +536,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                 <Text
                   style={[styles.paymentLabel, { color: colors.textSecondary }]}
                 >
-                  Biaya layanan
+                  {t('fnb.serviceFeeLabel')}
                 </Text>
                 <Text style={[styles.paymentValue, { color: colors.text }]}>
                   {formatPrice(order.serviceFee || 0)}
@@ -552,7 +549,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                 <Text
                   style={[styles.paymentTotalLabel, { color: colors.text }]}
                 >
-                  Total Pembayaran
+                  {t('fnb.totalPayment')}
                 </Text>
                 <Text
                   style={[styles.paymentTotalValue, { color: colors.text }]}
@@ -565,7 +562,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
 
           const renderCatatanGlobal = () => {
             const globalNotes =
-              (order as any).notes || "Packing yang baik kak, terimakasih 🙏";
+              (order as any).notes || t('fnb.defaultOrderNotes');
             if (!globalNotes) return null;
             return (
               <View
@@ -580,7 +577,7 @@ export const FnBOrderStatusScreen: React.FC = () => {
                     color={colors.textSecondary}
                     variant="Bold"
                   />
-                  <Text style={styles.addressLabel}>Catatan</Text>
+                  <Text style={styles.addressLabel}>{t('fnb.note')}</Text>
                 </View>
                 <Text
                   style={[
@@ -632,17 +629,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#EEEEEE",
     paddingBottom: scale(24),
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: scale(16),
-  },
-  backButton: { padding: scale(8), marginLeft: -scale(8) },
-  headerTitle: {
-    fontSize: scale(20),
-    fontFamily: FontFamily.monasans.semiBold,
   },
   stepperContainer: {
     marginTop: scale(24),

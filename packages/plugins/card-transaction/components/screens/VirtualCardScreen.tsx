@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft2, Eye, EyeSlash, Wifi } from 'iconsax-react-nativejs';
+import { Eye, EyeSlash, Wifi } from 'iconsax-react-nativejs';
 import {
   scale as scaleSize,
   moderateScale,
@@ -27,6 +27,7 @@ import {
   SvgLinearGradientView,
   scale,
   useDimensions,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -238,16 +239,12 @@ export const VirtualCardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ArrowLeft2 size={scaleSize(24)} color={colors.text} variant="Outline" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('home.virtualCard')}
-        </Text>
-        <View style={styles.headerRight} />
-      </View>
+      <ScreenHeader
+        title={t('home.virtualCard')}
+        onBackPress={handleBack}
+        showBorder
+        style={{ backgroundColor: colors.background }}
+      />
 
       {/* Card List */}
       {MOCK_CARDS.length === 0 ? (
@@ -324,25 +321,6 @@ export const VirtualCardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: getHorizontalPadding(),
-    paddingVertical: moderateVerticalScale(12),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: scaleSize(8),
-    marginLeft: -scaleSize(8),
-  },
-  headerTitle: {
-    fontSize: getResponsiveFontSize('large'),
-    fontFamily: FontFamily.monasans.bold,
-    flex: 1,
-  },
-  headerRight: {
-    width: scaleSize(40),
   },
   content: {
     flex: 1,

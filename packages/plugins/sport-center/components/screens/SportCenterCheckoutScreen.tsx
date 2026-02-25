@@ -8,7 +8,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-nativ
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
-import { ArrowLeft2, TickCircle } from 'iconsax-react-nativejs';
+import { TickCircle } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
@@ -16,6 +16,7 @@ import {
   FontFamily,
   getResponsiveFontSize,
   getMinTouchTarget,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -120,18 +121,11 @@ export const SportCenterCheckoutScreen: React.FC = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
-      <View style={[styles.header, { paddingHorizontal: paddingH }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('sportCenter.checkout')}
-        </Text>
-      </View>
+      <ScreenHeader
+        title={t('sportCenter.checkout')}
+        onBackPress={() => navigation.goBack()}
+        paddingHorizontal={paddingH}
+      />
 
       <KeyboardAwareScrollView
         style={styles.scrollView}

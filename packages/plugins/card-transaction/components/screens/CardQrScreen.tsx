@@ -13,16 +13,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft2, Scanner, Profile, Card } from 'iconsax-react-nativejs';
+import { Scanner, Profile, Card } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import {
   getHorizontalPadding,
-  getMinTouchTarget,
   FontFamily,
   getResponsiveFontSize,
   scale,
   moderateVerticalScale,
+  ScreenHeader,
 } from '@core/config';
 
 const QR_SIZE = 200;
@@ -66,18 +66,11 @@ export const CardQrScreen: React.FC = () => {
 
   const handleBack = () => navigation.goBack();
   const paddingH = getHorizontalPadding();
-  const minTouch = getMinTouchTarget();
 
   if (!card) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-        <View style={[styles.header, { paddingHorizontal: paddingH }]}>
-          <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Outline" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('home.qrCard') || 'QR Kartu'}</Text>
-          <View style={{ width: minTouch }} />
-        </View>
+        <ScreenHeader title={t('home.qrCard') || 'QR Kartu'} onBackPress={handleBack} paddingHorizontal={paddingH} />
         <View style={styles.empty}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('common.error')}</Text>
         </View>
@@ -87,13 +80,7 @@ export const CardQrScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={[styles.header, { paddingHorizontal: paddingH }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Outline" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('home.qrCard') || 'QR Kartu'}</Text>
-        <View style={{ width: minTouch }} />
-      </View>
+      <ScreenHeader title={t('home.qrCard') || 'QR Kartu'} onBackPress={handleBack} paddingHorizontal={paddingH} />
 
       <ScrollView
         style={styles.scroll}
@@ -174,22 +161,6 @@ export const CardQrScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: moderateVerticalScale(12),
-  },
-  backBtn: {
-    minWidth: getMinTouchTarget(),
-    minHeight: getMinTouchTarget(),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: getResponsiveFontSize('large'),
-    fontFamily: FontFamily.monasans.bold,
-  },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: getResponsiveFontSize('medium'), fontFamily: FontFamily.monasans.regular },
   scroll: { flex: 1 },

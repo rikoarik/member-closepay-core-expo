@@ -20,7 +20,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   SearchNormal,
   ArrowDown2,
   Heart,
@@ -30,7 +29,7 @@ import {
   TruckFast,
   ScanBarcode,
 } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import type { EntryPoint } from '../../models';
@@ -277,47 +276,28 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header with Location */}
       <View
         style={[
           styles.header,
           {
             backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
+            paddingTop: insets.top,
             paddingBottom: moderateVerticalScale(8),
             paddingHorizontal: horizontalPadding,
           },
         ]}
       >
-        <View style={styles.locationRow}>
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.locationContainer}>
-            <View style={styles.locationLabelRow}>
-              <Text style={[styles.locationLabel, { color: colors.textSecondary }]}>
-                Diantar ke
-              </Text>
-              <ArrowDown2 size={scale(12)} color={colors.primary} variant="Linear" />
-            </View>
-            <View style={styles.addressRow}>
-              <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={1}>
-                Rumah (Jl. Mawar No. 12)
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton} onPress={handleFavoritesPress}>
+        <ScreenHeader
+          title={t('fnb.title') || 'Pesan Makanan'}
+          onBackPress={handleBack}
+          rightComponent={
+            <TouchableOpacity onPress={handleFavoritesPress} style={styles.iconButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Heart size={scale(24)} color={colors.text} variant="Linear" />
             </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Search Bar */}
+          }
+          style={{ paddingTop: 0, paddingVertical: 0 }}
+          paddingHorizontal={0}
+        />
         <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
           <SearchNormal size={scale(20)} color={colors.textSecondary} />
           <TextInput
@@ -440,36 +420,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     zIndex: 10,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: moderateVerticalScale(12),
-  },
-  backButton: {
-    marginRight: scale(12),
-  },
-  locationContainer: {
-    flex: 1,
-  },
-  locationLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationLabel: {
-    fontSize: scale(10),
-    fontFamily: FontFamily.monasans.regular,
-  },
-  addressRow: {
-    marginTop: scale(2),
-  },
-  addressText: {
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.bold,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   iconButton: {
     padding: scale(4),

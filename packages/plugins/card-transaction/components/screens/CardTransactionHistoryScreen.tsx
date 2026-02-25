@@ -6,16 +6,16 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft2, ReceiptItem } from 'iconsax-react-nativejs';
+import { ReceiptItem } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import {
   moderateVerticalScale,
   getHorizontalPadding,
-  getMinTouchTarget,
   FontFamily,
   getResponsiveFontSize,
   scale,
+  ScreenHeader,
 } from '@core/config';
 
 type FilterType = 'all' | 'success' | 'pending' | 'failed';
@@ -80,20 +80,15 @@ export const CardTransactionHistoryScreen: React.FC = () => {
     return status;
   };
 
-  const minTouch = getMinTouchTarget();
   const paddingH = getHorizontalPadding();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top'] as const}>
-      <View style={[styles.header, { paddingHorizontal: paddingH }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Outline" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('home.transactionHistory') || 'Riwayat Transaksi'}
-        </Text>
-        <View style={{ width: minTouch }} />
-      </View>
+      <ScreenHeader
+        title={t('home.transactionHistory') || 'Riwayat Transaksi'}
+        onBackPress={handleBack}
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -209,22 +204,6 @@ export const CardTransactionHistoryScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: moderateVerticalScale(12),
-  },
-  backBtn: {
-    minWidth: getMinTouchTarget(),
-    minHeight: getMinTouchTarget(),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: getResponsiveFontSize('large'),
-    fontFamily: FontFamily.monasans.bold,
-  },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: moderateVerticalScale(32) },
   cardContext: {

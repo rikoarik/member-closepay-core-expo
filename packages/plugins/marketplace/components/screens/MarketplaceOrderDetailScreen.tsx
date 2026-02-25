@@ -14,13 +14,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft2, Location, Wallet3, DocumentText } from 'iconsax-react-nativejs';
+import { Location, Wallet3, DocumentText } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
   getResponsiveFontSize,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -134,25 +135,13 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: paddingH,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('marketplace.orderDetail') || 'Detail Pesanan'}
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader
+        title={t('marketplace.orderDetail')}
+        onBackPress={handleBack}
+        showBorder
+        style={{ paddingTop: insets.top + moderateVerticalScale(8), backgroundColor: colors.surface }}
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -285,20 +274,6 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: moderateVerticalScale(12),
-    borderBottomWidth: 1,
-  },
-  backButton: { padding: scale(4) },
-  headerTitle: {
-    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
-    fontSize: getResponsiveFontSize('large'),
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSpacer: { width: scale(32) },
   scroll: { flex: 1 },
   scrollContent: { paddingTop: moderateVerticalScale(16), gap: moderateVerticalScale(16) },
   card: {

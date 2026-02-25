@@ -1,0 +1,30 @@
+---
+description: Screen header wajib pakai ScreenHeader dari core; hindari custom header kecuali layout sangat khusus
+globs: "**/*Screen*.tsx,**/screens/**/*.tsx"
+alwaysApply: false
+---
+
+# Screen Header
+
+## Wajib pakai ScreenHeader
+
+- Semua screen yang punya bar navigasi atas (back + title) **wajib** pakai komponen `ScreenHeader` dari `@core/config`.
+- Import: `import { ScreenHeader } from '@core/config';`
+- Jangan buat custom header (View + TouchableOpacity back + Text title) kecuali layout tidak bisa diwakili ScreenHeader.
+
+## Penggunaan
+
+- **title**: Teks dari i18n, e.g. `title={t('namespace.key')}`.
+- **onBackPress**: Opsional; bila tidak diisi, pakai `navigation.goBack()`.
+- **rightComponent**: Opsional; untuk aksi kanan (icon cart, search, favorit, dll).
+- **style**: Untuk safe area atau background, e.g. `style={{ paddingTop: insets.top, backgroundColor: colors.surface }}`.
+- **showBorder**: Opsional; border bawah.
+- **paddingHorizontal**: Opsional; default dari `getHorizontalPadding()`.
+
+## Safe area
+
+- Screen full-screen: beri `style={{ paddingTop: insets.top }}` dari `useSafeAreaInsets()`.
+
+## Pengecualian
+
+- Custom header hanya boleh jika layout tidak bisa diwakili ScreenHeader (mis. floating overlay, dua bar berbeda, center content bukan title).

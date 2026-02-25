@@ -17,13 +17,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft2, Wallet } from 'iconsax-react-nativejs';
+import { Wallet } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
   getResponsiveFontSize,
+  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -116,7 +117,7 @@ export const MarketplaceCicilanScreen: React.FC = () => {
       setPayingId(installment.id);
       try {
         await paymentService.payWithBalance(installment.amount, installment.id, {
-          storeName: 'Marketplace Cicilan',
+          storeName: t('marketplace.storeNameCicilan'),
           reference: orderNumber,
         });
         await updateOrderInstallment(orderId, installment.id, {
@@ -126,9 +127,9 @@ export const MarketplaceCicilanScreen: React.FC = () => {
       } catch (err) {
         const msg =
           err instanceof Error && err.message.toLowerCase().includes('insufficient')
-            ? t('marketplace.insufficientBalance') || 'Saldo tidak mencukupi.'
-            : t('marketplace.paymentFailed') || 'Gagal membayar cicilan.';
-        Alert.alert(t('common.error') || 'Error', msg);
+            ? t('marketplace.insufficientBalance')
+            : t('marketplace.paymentFailed');
+        Alert.alert(t('common.error'), msg);
       } finally {
         setPayingId(null);
       }
@@ -138,24 +139,13 @@ export const MarketplaceCicilanScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: paddingH,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={goToExplore}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {t('marketplace.cicilan') || 'Cicilan'}
-        </Text>
-      </View>
+      <ScreenHeader
+        title={t('marketplace.cicilan')}
+        onBackPress={goToExplore}
+        showBorder
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={paddingH}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -174,7 +164,7 @@ export const MarketplaceCicilanScreen: React.FC = () => {
           <View style={styles.emptyContainer}>
             <Wallet size={scale(48)} color={colors.textSecondary} variant="Bulk" />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {t('marketplace.emptyCicilan') || 'Belum ada cicilan'}
+              {t('marketplace.emptyCicilan')}
             </Text>
           </View>
         ) : (
@@ -199,8 +189,8 @@ export const MarketplaceCicilanScreen: React.FC = () => {
                   ]}
                 >
                   {installment.status === 'paid'
-                    ? t('marketplace.installmentPaid') || 'Lunas'
-                    : t('marketplace.installmentUnpaid') || 'Belum bayar'}
+                    ? t('marketplace.installmentPaid')
+                    : t('marketplace.installmentUnpaid')}
                 </Text>
               </View>
               <Text style={[styles.dueLabel, { color: colors.text }]}>
@@ -219,7 +209,7 @@ export const MarketplaceCicilanScreen: React.FC = () => {
                     <ActivityIndicator size="small" color="#FFF" />
                   ) : (
                     <Text style={styles.payButtonText}>
-                      {t('marketplace.payInstallment') || 'Bayar cicilan'}
+                      {t('marketplace.payInstallment')}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -234,18 +224,6 @@ export const MarketplaceCicilanScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: moderateVerticalScale(12),
-    gap: scale(12),
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
-    fontSize: getResponsiveFontSize('large'),
-    flex: 1,
-  },
   scrollContent: {
     paddingTop: moderateVerticalScale(16),
   },

@@ -16,8 +16,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft2, SearchNormal, CloseCircle } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { SearchNormal, CloseCircle } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useFnBData, useFnBCart, useFnBFavorites } from '../../hooks';
@@ -224,60 +224,10 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header - Fixed Navigation Bar */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-            zIndex: 10,
-          },
-        ]}
-      >
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-
-          {isSearchActive ? (
-            <View
-              style={[
-                styles.searchInputContainer,
-                { backgroundColor: colors.background, borderColor: colors.border },
-              ]}
-            >
-              <SearchNormal size={scale(18)} color={colors.textSecondary} variant="Linear" />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder={t('fnb.searchMenu') || 'Cari menu...'}
-                placeholderTextColor={colors.textSecondary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={clearSearch}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <CloseCircle size={scale(18)} color={colors.error} variant="Linear" />
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={styles.headerTitleContainer}>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>
-                {store?.name || t('fnb.title') || 'Pesan Makanan'}
-              </Text>
-            </View>
-          )}
-
+      <ScreenHeader
+        title={store?.name || t('fnb.title') || 'Pesan Makanan'}
+        onBackPress={() => navigation.goBack()}
+        rightComponent={
           <TouchableOpacity
             style={[
               styles.searchButton,
@@ -292,8 +242,47 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
               <SearchNormal size={scale(24)} color={colors.text} variant="Linear" />
             )}
           </TouchableOpacity>
+        }
+        showBorder
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
+      {isSearchActive && (
+        <View
+          style={[
+            styles.searchInputRow,
+            {
+              backgroundColor: colors.surface,
+              paddingHorizontal: horizontalPadding,
+              paddingBottom: moderateVerticalScale(8),
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.searchInputContainer,
+              { backgroundColor: colors.background, borderColor: colors.border },
+            ]}
+          >
+            <SearchNormal size={scale(18)} color={colors.textSecondary} variant="Linear" />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder={t('fnb.searchMenu') || 'Cari menu...'}
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <CloseCircle size={scale(18)} color={colors.error} variant="Linear" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Menu Grid */}
       <FlatList
@@ -450,28 +439,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: moderateVerticalScale(8),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  headerTop: {
+  searchInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  backButton: {
-    padding: scale(4),
-    marginRight: scale(8),
-  },
-  headerTitleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: scale(18),
-    fontFamily: FontFamily.monasans.bold,
   },
   searchButton: {
     width: scale(40),
@@ -480,10 +450,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: scale(8),
-  },
-  searchButtonText: {
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.bold,
   },
   searchInputContainer: {
     flex: 1,

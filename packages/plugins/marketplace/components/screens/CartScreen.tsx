@@ -19,7 +19,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
-  ArrowLeft2,
   Add,
   Minus,
   Trash,
@@ -29,7 +28,7 @@ import {
   ArrowUp2,
   ArrowRight2,
 } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useMarketplaceCart, CartItem } from '../../hooks/useMarketplaceCart';
@@ -167,58 +166,25 @@ export const CartScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top + moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </TouchableOpacity>
-
-          <View style={styles.headerTitleContainer}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              {t('marketplace.cart')}
-            </Text>
-            {itemCount > 0 && (
-              <View style={[styles.countBadge, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.countText, { color: colors.surface }]}>{itemCount}</Text>
-              </View>
-            )}
-          </View>
-
-          {selectedCount > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleRemoveSelected}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text
-                style={{
-                  color: colors.error,
-                  fontFamily: FontFamily.monasans.medium,
-                  fontSize: scale(14),
-                }}
-              >
+      <ScreenHeader
+        title={t('marketplace.cart')}
+        onBackPress={handleBack}
+        rightComponent={
+          selectedCount > 0 ? (
+            <TouchableOpacity onPress={handleRemoveSelected} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={{ color: colors.error, fontFamily: FontFamily.monasans.medium, fontSize: scale(14) }}>
                 {t('common.delete')}
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Select All Row - REMOVED from Header */}
-      </View>
+          ) : itemCount > 0 ? (
+            <View style={[styles.countBadge, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.countText, { color: colors.surface }]}>{itemCount}</Text>
+            </View>
+          ) : undefined
+        }
+        style={{ paddingTop: insets.top + moderateVerticalScale(8), backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
 
       {/* Cart Items */}
       <FlatList
@@ -478,18 +444,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   selectAllRow: {
     marginTop: moderateVerticalScale(12),
     flexDirection: 'row',
@@ -500,19 +454,6 @@ const styles = StyleSheet.create({
     fontSize: scale(14),
     fontFamily: FontFamily.monasans.medium,
   },
-  backButton: {
-    padding: scale(4),
-    marginRight: scale(12),
-  },
-  headerTitleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: scale(20),
-    fontFamily: FontFamily.monasans.bold,
-  },
   countBadge: {
     marginLeft: scale(8),
     paddingHorizontal: scale(10),
@@ -522,9 +463,6 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: scale(12),
     fontFamily: FontFamily.monasans.bold,
-  },
-  clearButton: {
-    padding: scale(8),
   },
   listContent: {
     paddingTop: moderateVerticalScale(16),

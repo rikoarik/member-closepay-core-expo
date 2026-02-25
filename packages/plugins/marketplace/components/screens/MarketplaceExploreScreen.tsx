@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { SearchNormal, ShoppingCart, ArrowLeft2 } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { SearchNormal, ShoppingCart } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { ProductCard, Product } from '../shared/ProductCard';
@@ -30,6 +30,7 @@ import { useMarketplaceWishlist } from '../../hooks/useMarketplaceWishlist';
 import { useTabBar } from '../navigation/TabBarContext';
 
 const PAGE_SIZE = 20;
+const ALL_CATEGORIES_VALUE = 'all';
 
 export const MarketplaceExploreScreen: React.FC = () => {
   const { colors } = useTheme();
@@ -44,7 +45,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadedBatches, setLoadedBatches] = useState<number>(2);
-  const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES_VALUE);
 
   const { toggleTabBar } = useTabBar();
   const { isFavorite, toggleFavorite } = useMarketplaceWishlist();
@@ -58,24 +59,31 @@ export const MarketplaceExploreScreen: React.FC = () => {
     true
   );
   const stores = React.useMemo(() => getAllStores().slice(0, 3), []);
-  const categories = React.useMemo(() => getCategories(), []);
+  const rawCategories = React.useMemo(() => getCategories(), []);
+  const categoryOptions = React.useMemo(
+    () => [
+      { value: ALL_CATEGORIES_VALUE, label: t('marketplace.allCategories') },
+      ...rawCategories.filter((c) => c !== 'Semua').map((c) => ({ value: c, label: c })),
+    ],
+    [t, rawCategories]
+  );
 
   const bestSellerProducts = React.useMemo(() => {
     return [...allProducts].sort((a, b) => (b.sold || 0) - (a.sold || 0)).slice(0, 6);
   }, [allProducts]);
 
   const filteredProducts = React.useMemo(() => {
-    let products = allProducts;
-    if (selectedCategory !== 'Semua') {
-      products = products.filter((p) => p.category === selectedCategory);
-    }
+    const products =
+      selectedCategory === ALL_CATEGORIES_VALUE
+        ? allProducts
+        : allProducts.filter((p) => p.category === selectedCategory);
     const endIndex = currentPage * PAGE_SIZE;
     return products.slice(0, endIndex);
   }, [allProducts, selectedCategory, currentPage]);
 
   const hasMore =
     filteredProducts.length <
-    (selectedCategory === 'Semua'
+    (selectedCategory === ALL_CATEGORIES_VALUE
       ? allProducts.length
       : allProducts.filter((p) => p.category === selectedCategory).length);
 
@@ -189,12 +197,12 @@ export const MarketplaceExploreScreen: React.FC = () => {
   const renderHeader = () => (
     <View>
       <MarketplaceCategoryTabs
-        categories={categories}
+        categories={categoryOptions}
         selectedCategory={selectedCategory}
         onSelectCategory={handleCategorySelect}
       />
 
-      {selectedCategory === 'Semua' && bestSellerProducts.length > 0 && (
+      {selectedCategory === ALL_CATEGORIES_VALUE && bestSellerProducts.length > 0 && (
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { paddingHorizontal: horizontalPadding }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -224,7 +232,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
         </View>
       )}
 
-      {selectedCategory === 'Semua' && stores.length > 0 && (
+      {selectedCategory === ALL_CATEGORIES_VALUE && stores.length > 0 && (
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { paddingHorizontal: horizontalPadding }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -253,7 +261,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
         ]}
       >
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {selectedCategory === 'Semua'
+          {selectedCategory === ALL_CATEGORIES_VALUE
             ? t('marketplace.recommendations')
             : t('marketplace.productsForCategory', { category: selectedCategory })}
         </Text>
@@ -263,56 +271,34 @@ export const MarketplaceExploreScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.searchBar, { backgroundColor: colors.background || colors.surface }]}
-          activeOpacity={0.7}
-          onPress={() => {
-            // @ts-ignore
-            navigation.navigate('MarketplaceSearch');
-          }}
-        >
-          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-          <Text numberOfLines={1} style={[styles.searchInput, { color: colors.textSecondary }]}>
-            {t('marketplace.searchPlaceholder') || 'Cari produk...'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.cartButton,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
-          onPress={handleCartPress}
-        >
-          <ShoppingCart size={scale(20)} color={colors.text} variant="Linear" />
-          {itemCount > 0 && (
-            <View
-              style={[
-                styles.badgeContainer,
-                { backgroundColor: colors.error, borderColor: colors.surface },
-              ]}
+      <ScreenHeader
+        title={t('marketplace.explore')}
+        rightComponent={
+          <View style={styles.headerRightRow}>
+            <TouchableOpacity
+              onPress={() => (navigation as any).navigate('MarketplaceSearch')}
+              style={[styles.cartButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
-              <Text style={[styles.badgeText, { color: colors.surface }]}>
-                {itemCount > 99 ? '99+' : itemCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+              <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.cartButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={handleCartPress}
+            >
+              <ShoppingCart size={scale(20)} color={colors.text} variant="Linear" />
+              {itemCount > 0 && (
+                <View style={[styles.badgeContainer, { backgroundColor: colors.error, borderColor: colors.surface }]}>
+                  <Text style={[styles.badgeText, { color: colors.surface }]}>
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        }
+        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        paddingHorizontal={horizontalPadding}
+      />
 
       <FlatList
         key="marketplace-grid-2"
@@ -360,31 +346,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: moderateVerticalScale(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  headerRightRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(12),
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: scale(12),
-    height: scale(44),
-    borderRadius: scale(22),
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: scale(8),
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.regular,
-    paddingVertical: 0,
+    gap: scale(8),
   },
   section: {
     marginVertical: moderateVerticalScale(12),
