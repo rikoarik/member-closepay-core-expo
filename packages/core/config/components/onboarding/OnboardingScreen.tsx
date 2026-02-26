@@ -3,23 +3,17 @@
  * Screen untuk first-time user experience dengan permission requests
  * Responsive untuk semua device termasuk EDC
  */
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  ScrollView,
   Dimensions,
+  Animated,
   Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
 import { useTheme } from '../../../theme';
 import { useTranslation } from '../../../i18n';
 import { moderateVerticalScale, moderateScale } from '../../utils/responsive';
@@ -30,7 +24,7 @@ import {
 import { PhoneMockup } from '../phone-mockup';
 import { styles } from './styles';
 import type { OnboardingStep } from './types';
-import { ONBOARDING_STEPS, TOTAL_STEPS } from './constants';
+import { ONBOARDING_STEPS } from './constants';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -54,14 +48,14 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   // Di web pakai lebar viewport mobile agar layout tidak terpotong (Dimensions.get = lebar browser penuh)
   const windowWidth = Dimensions.get('window').width;
   const screenWidth = Platform.OS === 'web' ? Math.min(windowWidth, 414) : windowWidth;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const phoneImageScrollRef = useRef<ScrollView>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const currentPageIndexRef = useRef(0);
-  const pageOffset = useSharedValue(0);
-  const gestureStartPage = useSharedValue(0);
-
-  useEffect(() => {
-    currentPageIndexRef.current = currentPageIndex;
-  }, [currentPageIndex]);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const isNavigatingRef = useRef(false); // Track programmatic navigation to prevent scroll conflicts
+  // Animasi teks saat pindah step (fade + slide up) supaya tidak monoton
+  const textEntrance = useRef(new Animated.Value(1)).current;
+  const isFirstStepMount = useRef(true);
 
   const getStepIndex = (step: OnboardingStep): number => {
     return ONBOARDING_STEPS.indexOf(step);
@@ -96,7 +90,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         }
       }
 
-      // After permission dialog closes, the button will automatically change 
+      // After permission dialog closes, the button will automatically change
       // to "Selanjutnya" because hasUserRespondedToPermission will return true
     } catch (error) {
       console.error('Error requesting permission:', error);
@@ -124,12 +118,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     return false;
   };
 
-  const TRANSITION_DURATION = 400;
-  const transitionConfig = {
-    duration: TRANSITION_DURATION,
-    easing: Easing.out(Easing.cubic),
-  };
-
   const handleNext = async () => {
     const currentIndex = getStepIndex(currentStep);
 
@@ -137,86 +125,110 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     const canProceed = hasUserRespondedToPermission(currentStep);
 
     if (!canProceed) {
+      // User hasn't responded to permission yet, don't proceed
       return;
     }
 
+    // Move to next step or complete
     if (currentIndex < ONBOARDING_STEPS.length - 1) {
       const nextIndex = currentIndex + 1;
       const nextStep = ONBOARDING_STEPS[nextIndex];
 
-      pageOffset.value = withTiming(nextIndex, transitionConfig, (finished) => {
-        if (finished) {
-          runOnJS(setCurrentStep)(nextStep);
-          runOnJS(setCurrentPageIndex)(nextIndex);
-        }
+      // Set navigating flag to prevent handleScrollEnd from reverting
+      isNavigatingRef.current = true;
+
+      setCurrentStep(nextStep);
+      setCurrentPageIndex(nextIndex);
+      const scrollXPos = nextIndex * screenWidth;
+
+      // Smooth scroll animation - sync both scroll views
+      scrollViewRef.current?.scrollTo({
+        x: scrollXPos,
+        animated: true,
       });
+      phoneImageScrollRef.current?.scrollTo({
+        x: scrollXPos,
+        animated: true,
+      });
+
+      // Reset flag after scroll animation completes
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 500);
     } else {
+      // Complete onboarding
       onComplete();
     }
   };
 
-  const onSwipeEnd = useCallback(
-    (targetIndex: number) => {
-      const current = currentPageIndexRef.current;
-      const step = getStepFromIndex(current);
-      const isSwipeForward = targetIndex > current;
-      const canGoForward =
-        !isSwipeForward || hasUserRespondedToPermission(step);
-      const clamped = Math.max(
-        0,
-        Math.min(
-          TOTAL_STEPS - 1,
-          canGoForward ? targetIndex : current
-        )
-      );
+  const handleScrollEnd = async (event: any) => {
+    // Ignore scroll events triggered by programmatic navigation
+    if (isNavigatingRef.current) {
+      return;
+    }
 
-      pageOffset.value = withTiming(clamped, transitionConfig, (finished) => {
-        if (finished) {
-          runOnJS(setCurrentStep)(getStepFromIndex(clamped));
-          runOnJS(setCurrentPageIndex)(clamped);
-        }
-      });
-    },
-    []
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / screenWidth);
+
+    if (index !== currentPageIndex) {
+      // Check if user can swipe to next step
+      // Can only swipe forward if current step permission is granted (or doesn't need permission)
+      const isSwipeForward = index > currentPageIndex;
+
+      if (isSwipeForward && !hasUserRespondedToPermission(currentStep)) {
+        // Prevent swipe forward - scroll back to current position
+        const scrollXPos = currentPageIndex * screenWidth;
+        scrollViewRef.current?.scrollTo({
+          x: scrollXPos,
+          animated: true,
+        });
+        phoneImageScrollRef.current?.scrollTo({
+          x: scrollXPos,
+          animated: true,
+        });
+        return;
+      }
+
+      // Allow swipe backward or forward (if permission granted)
+      setCurrentPageIndex(index);
+      const newStep = getStepFromIndex(index);
+      setCurrentStep(newStep);
+    }
+  };
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    {
+      useNativeDriver: false,
+      listener: (event: any) => {
+        const offsetX = event.nativeEvent.contentOffset.x;
+        // Sync phone image scroll with text scroll
+        phoneImageScrollRef.current?.scrollTo({
+          x: offsetX,
+          animated: false,
+        });
+      },
+    }
   );
 
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .onStart(() => {
-      gestureStartPage.value = pageOffset.value;
-    })
-    .onUpdate((e) => {
-      const next =
-        gestureStartPage.value - e.translationX / screenWidth;
-      pageOffset.value = Math.max(
-        0,
-        Math.min(TOTAL_STEPS - 1, next)
-      );
-    })
-    .onEnd(() => {
-      const target = Math.round(pageOffset.value);
-      runOnJS(onSwipeEnd)(target);
-    });
-
-  const phoneAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -pageOffset.value * screenWidth }],
-  }));
-
-  const contentAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -pageOffset.value * screenWidth }],
-  }));
-
   const handleSkip = () => {
+    // Skip current step and move to next
     const currentIndex = getStepIndex(currentStep);
     if (currentIndex < ONBOARDING_STEPS.length - 1) {
       const nextIndex = currentIndex + 1;
       const nextStep = ONBOARDING_STEPS[nextIndex];
-      pageOffset.value = withTiming(nextIndex, transitionConfig, (finished) => {
-        if (finished) {
-          runOnJS(setCurrentStep)(nextStep);
-          runOnJS(setCurrentPageIndex)(nextIndex);
-        }
-      });
+      setCurrentStep(nextStep);
+      const scrollXPos = nextIndex * screenWidth;
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: scrollXPos,
+          animated: true,
+        });
+        phoneImageScrollRef.current?.scrollTo({
+          x: scrollXPos,
+          animated: true,
+        });
+      }, 100);
     } else {
       onComplete();
     }
@@ -378,6 +390,37 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     );
   };
 
+  // Initialize scroll position on mount
+  React.useEffect(() => {
+    const initialIndex = getStepIndex(currentStep);
+    setCurrentPageIndex(initialIndex);
+    const scrollXPos = initialIndex * screenWidth;
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        x: scrollXPos,
+        animated: false,
+      });
+      phoneImageScrollRef.current?.scrollTo({
+        x: scrollXPos,
+        animated: false,
+      });
+    }, 100);
+  }, [currentStep, screenWidth]);
+
+  // Animasi teks (fade + slide up) setiap kali step berubah pas klik Selanjutnya / swipe
+  useEffect(() => {
+    if (isFirstStepMount.current) {
+      isFirstStepMount.current = false;
+      return;
+    }
+    textEntrance.setValue(0);
+    Animated.timing(textEntrance, {
+      toValue: 1,
+      duration: 320,
+      useNativeDriver: true,
+    }).start();
+  }, [currentPageIndex]);
+
   // Don't auto-request permission on step change
   // Permission will be requested when user clicks "Aktifkan" button
 
@@ -385,17 +428,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Phone Image - Animated pager */}
+      {/* Phone Image - Scrollable with Text */}
       <View style={styles.phoneImageContainer}>
-        <Animated.View
-          style={[
-            styles.phoneImageScrollView,
-            {
-              flexDirection: 'row',
-              width: screenWidth * ONBOARDING_STEPS.length,
-            },
-            phoneAnimatedStyle,
-          ]}
+        <ScrollView
+          ref={phoneImageScrollRef}
+          horizontal
+          pagingEnabled
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          style={styles.phoneImageScrollView}
+          contentContainerStyle={styles.phoneImageScrollViewContent}
+          scrollEventThrottle={16}
+          decelerationRate="fast"
+          bounces={false}
         >
           {ONBOARDING_STEPS.map((step) => (
             <View key={step} style={[styles.phoneImagePage, { width: screenWidth }]}>
@@ -410,7 +455,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
               />
             </View>
           ))}
-        </Animated.View>
+        </ScrollView>
       </View>
 
       {/* Card Container with Button Below */}
@@ -448,27 +493,46 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
             })}
           </View>
 
-          {/* Text Content - Animated pager with swipe */}
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              style={[
-                styles.textScrollView,
-                {
-                  flexDirection: 'row',
-                  width: screenWidth * ONBOARDING_STEPS.length,
-                },
-                contentAnimatedStyle,
-              ]}
-            >
-              {ONBOARDING_STEPS.map((step) => (
+          {/* Text Content - Scrollable */}
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={true}
+            showsHorizontalScrollIndicator={false}
+            style={styles.textScrollView}
+            contentContainerStyle={styles.textScrollViewContent}
+            onMomentumScrollEnd={handleScrollEnd}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            bounces={false}
+          >
+            {ONBOARDING_STEPS.map((step, index) => {
+              const stepToRender = index === currentPageIndex ? currentStep : step;
+              const isActivePage = index === currentPageIndex;
+              const textAnimatedStyle = isActivePage
+                ? {
+                    opacity: textEntrance,
+                    transform: [
+                      {
+                        translateY: textEntrance.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [14, 0],
+                        }),
+                      },
+                    ],
+                  }
+                : undefined;
+              return (
                 <View key={step} style={[styles.textPage, { width: screenWidth }]}>
-                  <View style={styles.textPageContent}>
-                    {renderStepContent(step)}
-                  </View>
+                  <Animated.View style={[styles.textPageContent, textAnimatedStyle]}>
+                    {renderStepContent(stepToRender)}
+                  </Animated.View>
                 </View>
-              ))}
-            </Animated.View>
-          </GestureDetector>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {/* Bottom button - Below Card */}
@@ -513,4 +577,3 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     </SafeAreaView>
   );
 };
-
