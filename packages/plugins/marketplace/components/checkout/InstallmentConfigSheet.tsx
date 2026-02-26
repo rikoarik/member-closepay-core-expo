@@ -184,7 +184,7 @@ export const InstallmentConfigSheet: React.FC<InstallmentConfigSheetProps> = ({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      snapPoints={[90]}
+      snapPoints={[100]}
       initialSnapPoint={0}
       panOnlyOnHandle
     >
@@ -334,7 +334,7 @@ export const InstallmentConfigSheet: React.FC<InstallmentConfigSheetProps> = ({
               )}
             </ScrollView>
 
-            <View style={[styles.footer, { borderTopColor: colors.border }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom, borderTopColor: colors.border }]}>
               <TouchableOpacity
                 style={[
                   styles.applyButton,
