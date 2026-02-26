@@ -89,8 +89,10 @@ const STATIC_COMPONENT_LOADERS: Record<string, Record<string, () => Promise<any>
     SearchResultsScreen: () => import('../../../plugins/marketplace/components/screens/SearchResultsScreen'),
     CartScreen: () => import('../../../plugins/marketplace/components/screens/CartScreen'),
     ProductDetailScreen: () => import('../../../plugins/marketplace/components/screens/ProductDetailScreen'),
+    ProductReviewsScreen: () => import('../../../plugins/marketplace/components/screens/ProductReviewsScreen'),
     StoreDetailScreen: () => import('../../../plugins/marketplace/components/screens/StoreDetailScreen'),
     CheckoutScreen: () => import('../../../plugins/marketplace/components/screens/CheckoutScreen'),
+    PaymentMethodSelectionScreen: () => import('../../../plugins/marketplace/components/screens/PaymentMethodSelectionScreen'),
     MarketplaceOrderDetailScreen: () => import('../../../plugins/marketplace/components/screens/MarketplaceOrderDetailScreen'),
     AddressListScreen: () => import('../../../plugins/marketplace/components/screens/AddressListScreen'),
     AddressFormScreen: () => import('../../../plugins/marketplace/components/screens/AddressFormScreen'),
@@ -277,4 +279,3 @@ export function getPluginComponentLoaders(
 
   return loaders;
 }
-

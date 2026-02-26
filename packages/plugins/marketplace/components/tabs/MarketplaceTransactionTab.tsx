@@ -48,7 +48,7 @@ export const MarketplaceTransactionTab: React.FC<MarketplaceTransactionTabProps>
         pointerEvents={isActive ? 'auto' : 'none'}
       >
         <View style={{ padding: getHorizontalPadding() }}>
-          <Text style={[styles.header, { color: colors.text }]}>Transaksi Belanja</Text>
+          <Text style={[styles.header, { color: colors.text }]}>{t('marketplace.orderHistory')}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {transactions.map((tx) => (

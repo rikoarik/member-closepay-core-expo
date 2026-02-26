@@ -228,7 +228,7 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              Subtotal
+              {t('marketplace.subtotal')}
             </Text>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {formatPrice(order.subtotal)}
@@ -236,7 +236,7 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
           </View>
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              Ongkos kirim
+              {t('marketplace.shippingFee')}
             </Text>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {formatPrice(order.shippingFee)}

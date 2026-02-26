@@ -3,7 +3,7 @@
  * Handles checkout: single product (Buy Now) or cart (selected items)
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,22 +19,20 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackActions } from '@react-navigation/native';
-import { Wallet3, TickCircle, Truck, TicketDiscount, Card, ArrowDown2, ArrowUp2 } from 'iconsax-react-nativejs';
+import { Wallet3, TickCircle, Truck, TicketDiscount, Bank, Card, ArrowDown2, ArrowUp2 } from 'iconsax-react-nativejs';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader, BottomSheet } from '@core/config';
-import { PaymentMethodSheet } from '../checkout/PaymentMethodSheet';
-import { InstallmentConfigSheet } from '../checkout/InstallmentConfigSheet';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { useBalance } from '@core/config/plugins/contracts';
 import { paymentService } from '@plugins/payment';
+import { DEFAULT_INSTALLMENT_CONFIG } from '../../services/installmentApiService';
 import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
 import { useMarketplaceOrders } from '../../context/MarketplaceOrderContext';
 import { useAddressBook } from '../../hooks/useAddressBook';
 import { AddressSection } from '../checkout/AddressSection';
 import type { Product } from '../shared/ProductCard';
 import type { MarketplaceOrder, MarketplaceOrderItem, MarketplacePaymentMethod } from '../../models/MarketplaceOrder';
-import type { MarketplaceInstallment } from '../../models/MarketplaceInstallment';
-import type { InstallmentSelection } from '../../models/MarketplaceInstallment';
+import type { MarketplaceInstallment, InstallmentSelection } from '../../models/MarketplaceInstallment';
 
 type CheckoutRouteParams = {
   Checkout: {
@@ -45,7 +43,12 @@ type CheckoutRouteParams = {
   };
 };
 
-type CheckoutPaymentOptionId = MarketplacePaymentMethod | 'installment';
+type PaymentMethodOption = 'balance' | 'va' | 'installment';
+
+type VABankSelection = {
+  code: string;
+  name: string;
+};
 
 const formatPrice = (price: number): string => {
   return `Rp ${price.toLocaleString('id-ID')}`;
@@ -66,25 +69,22 @@ export const CheckoutScreen: React.FC = () => {
   const paymentMethods = useMemo(
     () => [
       {
-        id: 'balance' as const satisfies CheckoutPaymentOptionId,
+        id: 'balance' as const,
         paymentMethod: 'balance' as const,
-        useInstallment: false,
         name: t('marketplace.paymentBalance'),
         description: t('marketplace.paymentBalanceDesc') || 'Bayar instan dari saldo akun',
         Icon: Wallet3,
       },
       {
-        id: 'co_link' as const satisfies CheckoutPaymentOptionId,
-        paymentMethod: 'co_link' as const,
-        useInstallment: false,
-        name: t('marketplace.paymentCoLink'),
-        description: t('marketplace.paymentCoLinkDesc') || 'Lanjut bayar lewat checkout link',
-        Icon: Card,
+        id: 'va' as const,
+        paymentMethod: 'va' as const,
+        name: t('marketplace.paymentVa'),
+        description: t('marketplace.paymentVaDescription'),
+        Icon: Bank,
       },
       {
-        id: 'installment' as const satisfies CheckoutPaymentOptionId,
+        id: 'installment' as const,
         paymentMethod: 'co_link' as const,
-        useInstallment: true,
         name: t('marketplace.bayarCicilan'),
         description: t('marketplace.paymentInstallmentDesc') || 'Atur DP & jumlah cicilan, bayar via checkout link',
         Icon: Card,
@@ -137,15 +137,13 @@ export const CheckoutScreen: React.FC = () => {
 
   const [selectedShippingId, setSelectedShippingId] = useState<string>(SHIPPING_OPTIONS[0].id);
   const [shippingSheetVisible, setShippingSheetVisible] = useState(false);
-  const [paymentSheetVisible, setPaymentSheetVisible] = useState(false);
   const [shippingInsurance, setShippingInsurance] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [voucherApplied, setVoucherApplied] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<MarketplacePaymentMethod>('balance');
-  const [useInstallment, setUseInstallment] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethodOption>('balance');
+  const [selectedVABank, setSelectedVABank] = useState<VABankSelection | null>(null);
   const [installmentSelection, setInstallmentSelection] = useState<InstallmentSelection | null>(null);
-  const [showInstallmentSheet, setShowInstallmentSheet] = useState(false);
   const [showFooterBreakdown, setShowFooterBreakdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -155,15 +153,44 @@ export const CheckoutScreen: React.FC = () => {
   );
   const insuranceFee = shippingInsurance ? INSURANCE_FEE : 0;
   const amountBeforeInstallment = subtotal + shippingFee - voucherDiscount + insuranceFee;
-  const total = useInstallment && installmentSelection ? installmentSelection.totalPayment : amountBeforeInstallment;
+  const defaultInstallmentSelection = useMemo<InstallmentSelection | null>(() => {
+    if (amountBeforeInstallment <= 0) return null;
+    const defaultMode = DEFAULT_INSTALLMENT_CONFIG.modes?.[0];
+    const minDpPercent = defaultMode?.minDpPercent ?? DEFAULT_INSTALLMENT_CONFIG.minDpPercent ?? 20;
+    const count = DEFAULT_INSTALLMENT_CONFIG.hasTenor
+      ? (DEFAULT_INSTALLMENT_CONFIG.tenorOptions?.[0] ?? 3)
+      : (DEFAULT_INSTALLMENT_CONFIG.installmentStep ?? 2);
+    if (count <= 0) return null;
+    const downPayment = Math.ceil((amountBeforeInstallment * minDpPercent) / 100);
+    const remaining = Math.max(0, amountBeforeInstallment - downPayment);
+    const interestRatePerMonth = defaultMode?.interestRatePerMonth ?? DEFAULT_INSTALLMENT_CONFIG.interestRatePerMonth ?? 0;
+    const totalInterest = remaining * interestRatePerMonth * count;
+    const monthlyAmount = Math.ceil((remaining + totalInterest) / count);
+    const totalPayment = downPayment + remaining + totalInterest;
+    return {
+      modeId: defaultMode?.id ?? DEFAULT_INSTALLMENT_CONFIG.defaultModeId,
+      downPayment,
+      installmentCount: count,
+      monthlyAmount,
+      totalInterest,
+      totalPayment,
+      interestRatePerMonth,
+    };
+  }, [amountBeforeInstallment]);
+  const previewInstallmentSelection = installmentSelection ?? defaultInstallmentSelection;
+  const total =
+    selectedPayment === 'installment' && installmentSelection
+      ? installmentSelection.totalPayment
+      : amountBeforeInstallment;
   const availableBalance = balance?.balance ?? 0;
-  const effectivePaymentMethod: MarketplacePaymentMethod = useInstallment ? 'co_link' : selectedPayment;
+  const effectivePaymentMethod: MarketplacePaymentMethod =
+    selectedPayment === 'installment' ? 'co_link' : selectedPayment;
   const isBalanceMethod = effectivePaymentMethod === 'balance';
   const hasEnoughBalanceForOrder = availableBalance >= total;
-  const canPlaceOrder =
-    (!useInstallment || !!installmentSelection) &&
-    (!isBalanceMethod || useInstallment || hasEnoughBalanceForOrder);
-  const selectedPaymentOptionId: CheckoutPaymentOptionId = useInstallment ? 'installment' : selectedPayment;
+  const hasSelectedVaBank = selectedPayment !== 'va' || !!selectedVABank;
+  const hasInstallmentConfig = selectedPayment !== 'installment' || !!installmentSelection;
+  const canPlaceOrder = hasSelectedVaBank && hasInstallmentConfig && (!isBalanceMethod || hasEnoughBalanceForOrder);
+  const selectedPaymentOptionId = selectedPayment;
   const selectedPaymentOption =
     paymentMethods.find((m) => m.id === selectedPaymentOptionId) ?? paymentMethods[0];
   const SelectedPaymentIcon = selectedPaymentOption.Icon;
@@ -171,7 +198,13 @@ export const CheckoutScreen: React.FC = () => {
   const selectedPaymentDescription =
     selectedPaymentOption.id === 'balance'
       ? `${selectedPaymentOption.description} · ${balanceInfoText}`
-      : selectedPaymentOption.description;
+      : selectedPaymentOption.id === 'installment'
+        ? installmentSelection
+          ? 'DP dibayar sekarang, sisanya ditagih bertahap via checkout link.'
+          : `${selectedPaymentOption.description} · Atur cicilan dulu`
+        : selectedVABank
+          ? 'Bayar via virtual account setelah pesanan dibuat.'
+          : `${selectedPaymentOption.description} · Pilih bank dulu`;
 
   const orderItemsByStore = useMemo(() => {
     const map = new Map<string, MarketplaceOrderItem[]>();
@@ -188,12 +221,6 @@ export const CheckoutScreen: React.FC = () => {
     ? [selectedAddress.recipientName, selectedAddress.fullAddress, selectedAddress.district, selectedAddress.city].filter(Boolean).join(', ')
     : '';
 
-  useEffect(() => {
-    if (useInstallment && selectedPayment !== 'co_link') {
-      setSelectedPayment('co_link');
-    }
-  }, [useInstallment, selectedPayment]);
-
   const handleBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
@@ -201,6 +228,46 @@ export const CheckoutScreen: React.FC = () => {
   const handleAddressPress = useCallback(() => {
     (navigation as any).navigate('AddressList', { forCheckout: true });
   }, [navigation]);
+
+  const handlePaymentMethodPress = useCallback(() => {
+    (navigation as any).navigate('MarketplacePaymentMethod', {
+      selectedPaymentMethod: selectedPayment,
+      selectedVABankCode: selectedVABank?.code,
+      availableBalance,
+      totalAmount: amountBeforeInstallment,
+      installmentPreview: previewInstallmentSelection
+        ? {
+            downPayment: previewInstallmentSelection.downPayment,
+            installmentCount: previewInstallmentSelection.installmentCount,
+            monthlyAmount: previewInstallmentSelection.monthlyAmount,
+            totalPayment: previewInstallmentSelection.totalPayment,
+          }
+        : undefined,
+      onSelect: (selection: {
+        paymentMethod: PaymentMethodOption;
+        vaBankCode?: string;
+        vaBankName?: string;
+        installmentSelection?: InstallmentSelection | null;
+      }) => {
+        setSelectedPayment(selection.paymentMethod);
+        if (selection.paymentMethod === 'va' && selection.vaBankCode && selection.vaBankName) {
+          setSelectedVABank({ code: selection.vaBankCode, name: selection.vaBankName });
+        } else {
+          setSelectedVABank(null);
+        }
+        if (selection.paymentMethod === 'installment') {
+          setInstallmentSelection(selection.installmentSelection ?? null);
+        }
+      },
+    });
+  }, [
+    navigation,
+    selectedPayment,
+    selectedVABank?.code,
+    availableBalance,
+    amountBeforeInstallment,
+    previewInstallmentSelection,
+  ]);
 
   const handleApplyVoucher = useCallback(() => {
     const code = voucherCode.trim().toUpperCase();
@@ -212,7 +279,7 @@ export const CheckoutScreen: React.FC = () => {
     } else {
       setVoucherDiscount(0);
       setVoucherApplied(false);
-      Alert.alert(t('common.error') || 'Error', 'Kode voucher tidak valid atau sudah kadaluarsa.');
+      Alert.alert(t('common.error'), t('marketplace.voucherInvalidOrExpired'));
     }
   }, [voucherCode, subtotal, t]);
 
@@ -256,12 +323,16 @@ export const CheckoutScreen: React.FC = () => {
       Alert.alert(t('common.error'), t('marketplace.enterAddress'));
       return;
     }
-    if (useInstallment && !installmentSelection) {
+    if (effectivePaymentMethod === 'balance' && availableBalance < total) {
+      Alert.alert(t('common.error'), t('marketplace.insufficientBalance'));
+      return;
+    }
+    if (selectedPayment === 'installment' && !installmentSelection) {
       Alert.alert(t('common.error'), t('marketplace.aturCicilanDulu'));
       return;
     }
-    if (effectivePaymentMethod === 'balance' && availableBalance < total) {
-      Alert.alert(t('common.error'), t('marketplace.insufficientBalance'));
+    if (effectivePaymentMethod === 'va' && !selectedVABank) {
+      Alert.alert(t('common.error'), t('marketplace.selectVaFirst'));
       return;
     }
 
@@ -277,16 +348,16 @@ export const CheckoutScreen: React.FC = () => {
         });
       }
       const checkoutLink =
-        effectivePaymentMethod === 'co_link'
-          ? useInstallment
+        effectivePaymentMethod === 'va'
+          ? `https://mock-payment.example.com/va?tx=${encodeURIComponent(orderId)}&bank=${encodeURIComponent(selectedVABank?.code ?? '')}`
+          : effectivePaymentMethod === 'co_link'
             ? `https://mock-payment.example.com/dp?tx=${encodeURIComponent(orderId)}`
-            : `https://mock-payment.example.com/checkout?tx=${encodeURIComponent(orderId)}`
           : undefined;
-
-      const withInstallment = useInstallment && !!installmentSelection;
-      const installments: MarketplaceInstallment[] | undefined = withInstallment
-        ? buildInstallmentSchedule(orderId, installmentSelection!)
-        : undefined;
+      const withInstallment = selectedPayment === 'installment' && !!installmentSelection;
+      const installments: MarketplaceInstallment[] | undefined =
+        withInstallment && installmentSelection
+          ? buildInstallmentSchedule(orderId, installmentSelection)
+          : undefined;
 
       const initialStatus =
         effectivePaymentMethod === 'balance' ? 'dipesan' : 'belum_dibayar';
@@ -305,8 +376,8 @@ export const CheckoutScreen: React.FC = () => {
         createdAt: new Date().toISOString(),
         allowInstallment: withInstallment,
         installments,
-        ...(checkoutLink && { checkoutLink }),
         ...(withInstallment && installmentSelection && { installmentSelection }),
+        ...(checkoutLink && { checkoutLink }),
         ...(voucherApplied && voucherDiscount > 0 && { voucherCode: voucherCode.trim(), voucherDiscount }),
         ...(shippingInsurance && { shippingInsuranceFee: INSURANCE_FEE }),
       };
@@ -340,7 +411,8 @@ export const CheckoutScreen: React.FC = () => {
     total,
     availableBalance,
     effectivePaymentMethod,
-    useInstallment,
+    selectedVABank,
+    selectedPayment,
     installmentSelection,
     buildInstallmentSchedule,
     isCartMode,
@@ -587,10 +659,10 @@ export const CheckoutScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Payment Method — tap buka bottom sheet (Saldo / Checkout Link / Cicilan) */}
+        {/* Payment Method — buka halaman terpisah (Saldo / VA / Cicilan) */}
         <TouchableOpacity
           style={[styles.section, styles.shippingSummaryRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => setPaymentSheetVisible(true)}
+          onPress={handlePaymentMethodPress}
           activeOpacity={0.8}
         >
           <View style={styles.shippingSummaryLeft}>
@@ -603,17 +675,90 @@ export const CheckoutScreen: React.FC = () => {
             <View style={styles.shippingSummaryContent}>
               <Text style={[styles.shippingSummaryName, { color: colors.text }]}>
                 {selectedPaymentOption.name}
-                {useInstallment && installmentSelection
-                  ? ` · DP ${formatPrice(installmentSelection.downPayment)} | ${installmentSelection.installmentCount}x @ ${formatPrice(installmentSelection.monthlyAmount)}`
-                  : ''}
+                {selectedPayment === 'va' && selectedVABank ? ` · ${selectedVABank.name}` : ''}
               </Text>
               <Text style={[styles.shippingSummaryMeta, { color: colors.textSecondary }]}>
                 {selectedPaymentDescription}
               </Text>
-              {useInstallment && installmentSelection && (
-                <Text style={[styles.shippingSummaryFee, { color: colors.primary }]}>
-                  {formatPrice(installmentSelection.totalPayment)}
-                </Text>
+              {selectedPayment === 'va' && selectedVABank && (
+                <View
+                  style={[
+                    styles.vaSummaryCard,
+                    { borderColor: colors.border, backgroundColor: colors.background },
+                  ]}
+                >
+                  <View style={styles.vaSummaryHeader}>
+                    <Text style={[styles.vaSummaryTitle, { color: colors.text }]}>{t('marketplace.vaSummary')}</Text>
+                    <View style={[styles.vaBadge, { backgroundColor: colors.primaryLight }]}>
+                      <Text style={[styles.vaBadgeText, { color: colors.primary }]}>VA</Text>
+                    </View>
+                  </View>
+                  <View style={styles.vaSummaryRow}>
+                    <Text style={[styles.vaSummaryLabel, { color: colors.textSecondary }]}>{t('marketplace.bank')}</Text>
+                    <Text style={[styles.vaSummaryValue, { color: colors.text }]}>
+                      {selectedVABank.name}
+                    </Text>
+                  </View>
+                  <View style={styles.vaSummaryRow}>
+                    <Text style={[styles.vaSummaryLabel, { color: colors.textSecondary }]}>{t('marketplace.bankCode')}</Text>
+                    <Text style={[styles.vaSummaryValue, { color: colors.text }]}>
+                      {selectedVABank.code.toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={[styles.vaSummaryRow, styles.vaSummaryTotalRow, { borderTopColor: colors.border }]}>
+                    <Text style={[styles.vaSummaryTotalLabel, { color: colors.text }]}>{t('marketplace.totalDue')}</Text>
+                    <Text style={[styles.vaSummaryTotalValue, { color: colors.primary }]}>
+                      {formatPrice(total)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              {selectedPayment === 'installment' && installmentSelection && (
+                <View
+                  style={[
+                    styles.installmentSummaryCard,
+                    { borderColor: colors.border, backgroundColor: colors.background },
+                  ]}
+                >
+                  <View style={styles.installmentSummaryHeader}>
+                    <Text style={[styles.installmentSummaryTitle, { color: colors.text }]}>
+                      Ringkasan Cicilan
+                    </Text>
+                    <View style={[styles.installmentCountBadge, { backgroundColor: colors.primaryLight }]}>
+                      <Text style={[styles.installmentCountBadgeText, { color: colors.primary }]}>
+                        {installmentSelection.installmentCount}x
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.installmentSummaryRow}>
+                    <Text style={[styles.installmentSummaryLabel, { color: colors.textSecondary }]}>DP</Text>
+                    <Text style={[styles.installmentSummaryValue, { color: colors.text }]}>
+                      {formatPrice(installmentSelection.downPayment)}
+                    </Text>
+                  </View>
+                  <View style={styles.installmentSummaryRow}>
+                    <Text style={[styles.installmentSummaryLabel, { color: colors.textSecondary }]}>
+                      Per Cicilan
+                    </Text>
+                    <Text style={[styles.installmentSummaryValue, { color: colors.text }]}>
+                      {formatPrice(installmentSelection.monthlyAmount)}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.installmentSummaryRow,
+                      styles.installmentSummaryTotalRow,
+                      { borderTopColor: colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.installmentSummaryTotalLabel, { color: colors.text }]}>
+                      Total Pembayaran
+                    </Text>
+                    <Text style={[styles.installmentSummaryTotalValue, { color: colors.primary }]}>
+                      {formatPrice(installmentSelection.totalPayment)}
+                    </Text>
+                  </View>
+                </View>
               )}
             </View>
           </View>
@@ -622,90 +767,6 @@ export const CheckoutScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        {/* Modal: Metode Pembayaran (Saldo / Checkout Link / Cicilan) */}
-        <PaymentMethodSheet
-          visible={paymentSheetVisible}
-          onClose={() => setPaymentSheetVisible(false)}
-          expandForInstallment={false}
-        >
-          <View style={[styles.sheetContent, { paddingHorizontal: horizontalPadding }]}>
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>
-              {t('marketplace.paymentMethod')}
-            </Text>
-            {paymentMethods.map((method) => {
-              const selected = selectedPaymentOptionId === method.id;
-              const MethodIcon = method.Icon;
-              return (
-                <TouchableOpacity
-                  key={method.id}
-                  style={[
-                    styles.sheetOption,
-                    {
-                      borderColor: selected ? colors.primary : colors.border,
-                      backgroundColor: selected ? colors.primaryLight : colors.background,
-                    },
-                  ]}
-                  onPress={() => {
-                    if (method.useInstallment) {
-                      setSelectedPayment(method.paymentMethod);
-                      setUseInstallment(true);
-                      setPaymentSheetVisible(false);
-                      setShowInstallmentSheet(true);
-                      return;
-                    }
-                    setSelectedPayment(method.paymentMethod);
-                    setUseInstallment(false);
-                    setPaymentSheetVisible(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={[
-                      styles.paymentIconBadge,
-                      { backgroundColor: selected ? colors.primaryLight : colors.surface, borderColor: colors.border },
-                    ]}
-                  >
-                    <MethodIcon
-                      size={scale(18)}
-                      color={selected ? colors.primary : colors.textSecondary}
-                      variant={selected ? 'Bold' : 'Linear'}
-                    />
-                  </View>
-                  <View style={styles.paymentLabelGroup}>
-                    <Text
-                      style={[
-                        styles.sheetOptionName,
-                        { color: selected ? colors.primary : colors.text },
-                      ]}
-                    >
-                      {method.name}
-                    </Text>
-                    <Text style={[styles.paymentMethodDescription, { color: colors.textSecondary }]}>
-                      {method.id === 'balance' ? `${method.description} · ${balanceInfoText}` : method.description}
-                    </Text>
-                  </View>
-                  {selected && <TickCircle size={scale(20)} color={colors.primary} variant="Bold" />}
-                </TouchableOpacity>
-              );
-            })}
-
-            <TouchableOpacity
-              style={[styles.sheetCancelButton, { backgroundColor: colors.background, borderColor: colors.border }]}
-              onPress={() => setPaymentSheetVisible(false)}
-            >
-              <Text style={[styles.sheetCancelText, { color: colors.text }]}>{t('common.close') || 'Tutup'}</Text>
-            </TouchableOpacity>
-          </View>
-        </PaymentMethodSheet>
-
-        {/* Bottom Sheet: Config Cicilan (DP, tenor/count, preview) */}
-        <InstallmentConfigSheet
-          visible={showInstallmentSheet}
-          onClose={() => setShowInstallmentSheet(false)}
-          totalAmount={amountBeforeInstallment}
-          initialSelection={installmentSelection}
-          onApply={setInstallmentSelection}
-        />
       </ScrollView>
 
       {/* Bottom Bar */}
@@ -737,7 +798,7 @@ export const CheckoutScreen: React.FC = () => {
         {showFooterBreakdown && (
           <View style={styles.footerBreakdown}>
             <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Subtotal</Text>
+              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('marketplace.subtotal')}</Text>
               <Text style={[styles.summaryValue, { color: colors.text }]}>
                 {formatPrice(subtotal)}
               </Text>
@@ -859,6 +920,115 @@ const styles = StyleSheet.create({
   },
   shippingSummaryMeta: { fontSize: scale(12), fontFamily: FontFamily.monasans.regular, marginTop: scale(2) },
   shippingSummaryFee: { fontSize: scale(14), fontFamily: FontFamily.monasans.semiBold, marginTop: scale(2) },
+  vaSummaryCard: {
+    marginTop: scale(10),
+    borderRadius: scale(10),
+    borderWidth: 1,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(10),
+  },
+  vaSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(8),
+  },
+  vaSummaryTitle: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  vaBadge: {
+    borderRadius: scale(999),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
+  },
+  vaBadgeText: {
+    fontSize: scale(11),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  vaSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(4),
+  },
+  vaSummaryLabel: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  vaSummaryValue: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.semiBold,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: scale(8),
+  },
+  vaSummaryTotalRow: {
+    marginTop: scale(6),
+    paddingTop: scale(8),
+    borderTopWidth: 1,
+  },
+  vaSummaryTotalLabel: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  vaSummaryTotalValue: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  installmentSummaryCard: {
+    marginTop: scale(10),
+    borderRadius: scale(10),
+    borderWidth: 1,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(10),
+  },
+  installmentSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(8),
+  },
+  installmentSummaryTitle: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  installmentCountBadge: {
+    borderRadius: scale(999),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
+  },
+  installmentCountBadgeText: {
+    fontSize: scale(11),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  installmentSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(4),
+  },
+  installmentSummaryLabel: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  installmentSummaryValue: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  installmentSummaryTotalRow: {
+    marginTop: scale(6),
+    paddingTop: scale(8),
+    borderTopWidth: 1,
+  },
+  installmentSummaryTotalLabel: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  installmentSummaryTotalValue: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.bold,
+  },
   sheetContent: { paddingBottom: scale(24) },
   sheetTitle: {
     fontSize: scale(18),

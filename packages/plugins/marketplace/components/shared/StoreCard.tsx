@@ -28,22 +28,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({ store, onPress }) => {
           <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
             {store.name}
           </Text>
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: store.isOpen ? colors.success + '20' : colors.error + '20',
-              },
-            ]}
-          >
-            <Text
-              style={[styles.statusText, { color: store.isOpen ? colors.success : colors.error }]}
-            >
-              {store.isOpen
-                ? t('marketplace.storeOpen') || 'Buka'
-                : t('marketplace.storeClosed') || 'Tutup'}
-            </Text>
-          </View>
+          
         </View>
 
         <View style={styles.row}>

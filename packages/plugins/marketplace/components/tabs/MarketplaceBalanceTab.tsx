@@ -31,22 +31,22 @@ export const MarketplaceBalanceTab: React.FC<MarketplaceBalanceTabProps> = React
         pointerEvents={isActive ? 'auto' : 'none'}
       >
         <View style={{ padding: getHorizontalPadding() }}>
-          <Text style={[styles.header, { color: colors.text }]}>Saldo Mitra</Text>
+          <Text style={[styles.header, { color: colors.text }]}>{t('marketplace.partnerBalance')}</Text>
 
           <View style={[styles.balanceCard, { backgroundColor: colors.primary }]}>
-            <Text style={styles.balanceLabel}>Saldo Tersedia</Text>
+            <Text style={styles.balanceLabel}>{t('marketplace.availableBalance')}</Text>
             <Text style={styles.balanceAmount}>Rp 2.500.000</Text>
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.actionButton}>
                 <Text style={styles.actionText}>+ Top Up</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionText}>↗ Transfer</Text>
+                <Text style={styles.actionText}>↗ {t('marketplace.transferAction')}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Riwayat Saldo</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('marketplace.balanceHistory')}</Text>
           <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
             <Text style={{ fontSize: 40, marginBottom: 10 }}>🧾</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>

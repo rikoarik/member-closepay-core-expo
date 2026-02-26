@@ -224,14 +224,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(12),
-    height: scale(44),
-    borderRadius: scale(22),
+    height: scale(40),
+    borderRadius: scale(20),
   },
   searchInput: {
     flex: 1,
     marginLeft: scale(8),
     fontFamily: FontFamily.monasans.regular,
-    fontSize: getResponsiveFontSize('medium'),
+    fontSize: getResponsiveFontSize('small'),
   },
   clearButton: {
     padding: scale(4),

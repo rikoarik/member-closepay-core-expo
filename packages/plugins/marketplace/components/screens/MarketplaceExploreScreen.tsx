@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { SearchNormal, ShoppingCart } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader, getResponsiveFontSize } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { ProductCard, Product } from '../shared/ProductCard';
@@ -271,15 +271,24 @@ export const MarketplaceExploreScreen: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
-        title={t('marketplace.explore')}
+        title=""
+        centerComponent={
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={[
+              styles.headerSearchBar,
+              { backgroundColor: colors.surface },
+            ]}
+            onPress={() => (navigation as any).navigate('MarketplaceSearch')}
+          >
+            <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
+            <Text style={[styles.headerSearchPlaceholder, { color: colors.textSecondary }]}>
+              {t('marketplace.searchPlaceholder')}
+            </Text>
+          </TouchableOpacity>
+        }
         rightComponent={
           <View style={styles.headerRightRow}>
-            <TouchableOpacity
-              onPress={() => (navigation as any).navigate('MarketplaceSearch')}
-              style={[styles.cartButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.cartButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={handleCartPress}
@@ -295,7 +304,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         }
-        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
+        style={{ paddingTop: insets.top, paddingBottom: moderateVerticalScale(12), backgroundColor: colors.surface }}
         paddingHorizontal={horizontalPadding}
       />
 
@@ -342,6 +351,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(8),
+  },
+  headerSearchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(8),
+    width: '90%',
+    height: scale(38),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: scale(12),
+    marginLeft: scale(12),
+  },
+  headerSearchPlaceholder: {
+    marginLeft: scale(8),
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: getResponsiveFontSize('small'),
   },
   section: {
     marginVertical: moderateVerticalScale(12),

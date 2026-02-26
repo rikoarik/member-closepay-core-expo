@@ -21,8 +21,10 @@
       "SearchResultsScreen": "SearchResultsScreen",
       "CartScreen": "CartScreen",
       "ProductDetailScreen": "ProductDetailScreen",
+      "ProductReviewsScreen": "ProductReviewsScreen",
       "StoreDetailScreen": "StoreDetailScreen",
       "CheckoutScreen": "CheckoutScreen",
+      "PaymentMethodSelectionScreen": "PaymentMethodSelectionScreen",
       "MarketplaceOrderDetailScreen": "MarketplaceOrderDetailScreen",
       "AddressListScreen": "AddressListScreen",
       "AddressFormScreen": "AddressFormScreen",
@@ -111,6 +113,18 @@
       }
     },
     {
+      "name": "ProductReviews",
+      "path": "/marketplace/product/reviews",
+      "component": "ProductReviewsScreen",
+      "permissions": [
+        "marketplace:view"
+      ],
+      "meta": {
+        "title": "Semua Ulasan",
+        "showInMenu": false
+      }
+    },
+    {
       "name": "Checkout",
       "path": "/marketplace/checkout",
       "component": "CheckoutScreen",
@@ -119,6 +133,18 @@
       ],
       "meta": {
         "title": "Checkout",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "MarketplacePaymentMethod",
+      "path": "/marketplace/checkout/payment-method",
+      "component": "PaymentMethodSelectionScreen",
+      "permissions": [
+        "marketplace:order"
+      ],
+      "meta": {
+        "title": "Metode Pembayaran",
         "showInMenu": false
       }
     },

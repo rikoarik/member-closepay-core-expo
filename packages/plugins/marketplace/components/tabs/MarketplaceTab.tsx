@@ -229,7 +229,7 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
             navigation.navigate('Search' as never);
           }}
         >
-          <SearchNormal size={scale(22)} color={colors.primary} variant="Linear" />
+          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
           <Text style={[styles.searchPlaceholder, { color: colors.textSecondary }]}>
             {t('marketplace.searchPlaceholder')}
           </Text>
@@ -475,21 +475,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   searchContainer: {
-    paddingTop: moderateVerticalScale(8),
-    paddingBottom: moderateVerticalScale(8),
+    paddingTop: moderateVerticalScale(6),
+    paddingBottom: moderateVerticalScale(6),
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(16),
-    height: scale(48),
-    borderRadius: scale(24),
+    paddingHorizontal: scale(12),
+    height: scale(40),
+    borderRadius: scale(20),
   },
   searchPlaceholder: {
     flex: 1,
-    marginLeft: scale(12),
+    marginLeft: scale(8),
     fontFamily: FontFamily.monasans.regular,
-    fontSize: getResponsiveFontSize('medium'),
+    fontSize: getResponsiveFontSize('small'),
   },
   categoryContainer: {
     paddingBottom: moderateVerticalScale(8),

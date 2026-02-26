@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { ArrowLeft2, Location, Star1, SearchNormal, Copy } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, getResponsiveFontSize } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { Clipboard } from '@core/native';
@@ -96,7 +96,7 @@ export const StoreDetailScreen: React.FC = () => {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('Error', 'WhatsApp not installed');
+        Alert.alert(t('common.error'), t('marketplace.whatsAppNotInstalled'));
       }
     }
   };
@@ -104,7 +104,7 @@ export const StoreDetailScreen: React.FC = () => {
   const handleCopyPhoneNumber = () => {
     if (store?.phoneNumber) {
       Clipboard.setString(store.phoneNumber);
-      Alert.alert('Success', t('marketplace.phoneNumberCopied'));
+      Alert.alert(t('common.success'), t('marketplace.phoneNumberCopied'));
     }
   };
 
@@ -182,17 +182,17 @@ export const StoreDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: horizontalPadding, marginTop: moderateVerticalScale(16) }}>
+      <View style={[styles.searchContainer, { paddingHorizontal: horizontalPadding }]}>
         <View
           style={[
-            styles.searchBar,
-            { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            styles.searchInputContainer,
+            { backgroundColor: colors.surface },
           ]}
         >
           <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('marketplace.searchPlaceholder') || 'Cari produk...'}
+            placeholder={t('marketplace.searchPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             value={searchText}
             onChangeText={setSearchText}
@@ -404,18 +404,21 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.monasans.regular,
     textAlign: 'center',
   },
-  searchBar: {
+  searchContainer: {
+    marginTop: moderateVerticalScale(16),
+    marginBottom: moderateVerticalScale(8),
+  },
+  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(12),
-    height: scale(44),
-    borderRadius: scale(22),
-    marginBottom: moderateVerticalScale(12),
+    height: scale(40),
+    borderRadius: scale(20),
   },
   searchInput: {
     flex: 1,
     marginLeft: scale(8),
-    fontSize: scale(14),
+    fontSize: getResponsiveFontSize('small'),
     fontFamily: FontFamily.monasans.regular,
     paddingVertical: 0,
   },

@@ -90,6 +90,10 @@ const generateProductBatch = (startIndex: number, count: number): Product[] => {
       price,
       originalPrice,
       imageUrl: `https://picsum.photos/id/${1000 + (i % 50)}/400/400`,
+      images: Array.from({ length: 5 }, (_, imgIndex) => {
+        const imageId = 1000 + ((i + imgIndex) % 50);
+        return `https://picsum.photos/id/${imageId}/800/800`;
+      }),
       rating: parseFloat(rating.toFixed(1)),
       sold,
       category,

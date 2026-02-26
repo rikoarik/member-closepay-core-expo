@@ -18,6 +18,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   imageUrl?: string;
+  images?: string[];
   rating?: number;
   sold?: number;
   category?: string;

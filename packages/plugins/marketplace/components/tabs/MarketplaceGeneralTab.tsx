@@ -92,11 +92,11 @@ export const MarketplaceGeneralTab: React.FC<MarketplaceGeneralTabProps> = React
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={{ padding: getHorizontalPadding() }}>
             <View style={[styles.promoBanner, { backgroundColor: colors.primary }]}>
-              <Text style={styles.promoText}>Diskon s/d 50%!</Text>
-              <Text style={styles.promoSubtext}>Spesial Hari Ini</Text>
+              <Text style={styles.promoText}>{t('marketplace.promoDiscountUpTo')}</Text>
+              <Text style={styles.promoSubtext}>{t('marketplace.promoSpecialToday')}</Text>
             </View>
 
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Kategori</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('marketplace.sectionCategory')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
               {categories.map((cat) => (
                 <View key={cat.id} style={styles.catItem}>

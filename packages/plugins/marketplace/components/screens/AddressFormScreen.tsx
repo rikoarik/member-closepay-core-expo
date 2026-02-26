@@ -185,7 +185,7 @@ export const AddressFormScreen: React.FC = () => {
       }
       navigation.goBack();
     } catch {
-      Alert.alert(t("common.error"), "Gagal menyimpan alamat.");
+      Alert.alert(t("common.error"), t("marketplace.saveAddressFailed"));
     } finally {
       setSaving(false);
     }

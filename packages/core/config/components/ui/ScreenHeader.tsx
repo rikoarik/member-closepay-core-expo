@@ -30,6 +30,12 @@ export interface ScreenHeaderProps {
   onBackPress?: () => void;
 
   /**
+   * Custom center component (optional)
+   * Jika diisi, menggantikan title dan mengisi area tengah full width
+   */
+  centerComponent?: React.ReactNode;
+
+  /**
    * Custom right component (optional)
    * Bisa digunakan untuk menambahkan action button di kanan
    */
@@ -67,6 +73,7 @@ export interface ScreenHeaderProps {
 
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   title,
+  centerComponent,
   onBackPress,
   rightComponent,
   showBorder = false,
@@ -115,17 +122,22 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         />
       </TouchableOpacity>
 
-      <Text
-        style={[
-          styles.title,
-          {
-            color: effectiveTextColor,
-          },
-        ]}
-
-      >
-        {title}
-      </Text>
+      {centerComponent ? (
+        <View style={styles.title}>
+          {centerComponent}
+        </View>
+      ) : (
+        <Text
+          style={[
+            styles.title,
+            {
+              color: effectiveTextColor,
+            },
+          ]}
+        >
+          {title}
+        </Text>
+      )}
 
       {
         rightComponent ? (

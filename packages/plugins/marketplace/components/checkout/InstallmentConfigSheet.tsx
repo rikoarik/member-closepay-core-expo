@@ -184,7 +184,7 @@ export const InstallmentConfigSheet: React.FC<InstallmentConfigSheetProps> = ({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      snapPoints={[100]}
+      snapPoints={[95]}
       initialSnapPoint={0}
       panOnlyOnHandle
     >
@@ -228,7 +228,7 @@ export const InstallmentConfigSheet: React.FC<InstallmentConfigSheetProps> = ({
               </Text>
               {isZeroDpMode ? (
                 <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                  {t('marketplace.installmentNoDpHint') || 'Mode ini tidak memerlukan DP'}
+                  {t('marketplace.installmentNoDpHint')}
                 </Text>
               ) : (
                 <Text style={[styles.hint, { color: colors.textSecondary }]}>
@@ -254,7 +254,7 @@ export const InstallmentConfigSheet: React.FC<InstallmentConfigSheetProps> = ({
               />
 
               <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                {t('marketplace.jumlahCicilan') || 'Jumlah Cicilan'}
+                {t('marketplace.jumlahCicilan')}
               </Text>
               <View style={styles.chipRow}>
                 {countOptions.map((opt) => (
@@ -340,7 +340,7 @@ export const InstallmentConfigSheet: React.FC<InstallmentConfigSheetProps> = ({
                   styles.applyButton,
                   {
                     backgroundColor: isValid ? colors.primary : colors.border,
-                    marginBottom: insets.bottom + scale(8),
+                  
                   },
                 ]}
                 onPress={handleApply}
