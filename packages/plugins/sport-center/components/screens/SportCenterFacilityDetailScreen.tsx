@@ -3,7 +3,7 @@
  * Detail fasilitas dengan desain baru (Hero Image, Custom Tabs, Facilities, Sticky Footer)
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -249,6 +249,13 @@ export const SportCenterFacilityDetailScreen: React.FC = () => {
   const startPrice = facility.pricePerSlot || 150000;
   const totalPrice = totalSlots > 0 ? startPrice * totalSlots : startPrice;
 
+  const renderHeroItem = useCallback(
+    ({ item }: { item: string }) => (
+      <Image source={{ uri: item }} style={styles.heroImage} resizeMode="cover" />
+    ),
+    []
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Standard Screen Header */}
@@ -292,9 +299,7 @@ export const SportCenterFacilityDetailScreen: React.FC = () => {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(_, index) => `img-${index}`}
             onMomentumScrollEnd={handleScroll}
-            renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={styles.heroImage} resizeMode="cover" />
-            )}
+            renderItem={renderHeroItem}
             getItemLayout={(_, index) => ({
               length: SCREEN_WIDTH,
               offset: SCREEN_WIDTH * index,

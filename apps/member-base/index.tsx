@@ -86,24 +86,26 @@ function MemberBaseAppContent(): React.JSX.Element {
 
   // Initialize app on mount
   useEffect(() => {
+    let cancelled = false;
     const initializeApp = async () => {
       try {
         configService.setConfig(appConfig);
+        if (!cancelled) setConfigLoaded(true);
 
-        setConfigLoaded(true);
-
-        // Initialize plugins based on config
         await initializePlugins();
-        setPluginsInitialized(true);
+        if (!cancelled) setPluginsInitialized(true);
       } catch (error) {
         logger.error('Failed to initialize app', error);
-        // Continue with default config
-        setConfigLoaded(true);
-        setPluginsInitialized(true);
+        if (!cancelled) {
+          setConfigLoaded(true);
+          setPluginsInitialized(true);
+        }
       }
     };
-
     initializeApp();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Handle app state changes - refresh config saat app menjadi active

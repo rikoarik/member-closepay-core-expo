@@ -65,12 +65,13 @@ export const useMarketplaceCart = (): UseMarketplaceCartReturn => {
 
     // Initial load from storage
     useEffect(() => {
+        let cancelled = false;
         const initCart = async () => {
             if (!isInitialized) {
-                isInitialized = true; // Mark as initialized to prevent double loading
+                isInitialized = true;
                 try {
                     const stored = await AsyncStorage.getItem(CART_STORAGE_KEY);
-                    if (stored) {
+                    if (stored && !cancelled) {
                         memoryCart = JSON.parse(stored);
                         broadcast();
                     }
@@ -79,8 +80,10 @@ export const useMarketplaceCart = (): UseMarketplaceCartReturn => {
                 }
             }
         };
-
         initCart();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     // Subscribe to global state changes

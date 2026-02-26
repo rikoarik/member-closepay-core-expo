@@ -130,19 +130,22 @@ export const AuthNavigator: React.FC<AuthNavigatorProps> = ({ appScreens }) => {
 
   // Check onboarding status
   useEffect(() => {
+    let cancelled = false;
     const checkOnboarding = async () => {
       try {
         const completed = await onboardingService.isOnboardingCompleted();
-        setIsOnboardingCompleted(completed);
+        if (!cancelled) setIsOnboardingCompleted(completed);
       } catch (error) {
         console.error('Error checking onboarding:', error);
-        setIsOnboardingCompleted(false);
+        if (!cancelled) setIsOnboardingCompleted(false);
       } finally {
-        setIsCheckingOnboarding(false);
+        if (!cancelled) setIsCheckingOnboarding(false);
       }
     };
-
     checkOnboarding();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load plugin routes dynamically

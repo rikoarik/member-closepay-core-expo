@@ -137,27 +137,29 @@ export function createAppNavigator({
 
     // Check onboarding status
     useEffect(() => {
+      let cancelled = false;
       const checkOnboarding = async () => {
         try {
           const completed = await onboardingService.isOnboardingCompleted();
-          setIsOnboardingCompleted(completed);
+          if (!cancelled) setIsOnboardingCompleted(completed);
         } catch (error) {
           logger.error('Error checking onboarding', error);
-          setIsOnboardingCompleted(false);
+          if (!cancelled) setIsOnboardingCompleted(false);
         } finally {
-          setIsCheckingOnboarding(false);
+          if (!cancelled) setIsCheckingOnboarding(false);
         }
       };
-
       checkOnboarding();
+      return () => {
+        cancelled = true;
+      };
     }, []);
 
     // Load tenant config and plugin routes
     useEffect(() => {
+      let cancelled = false;
       const loadNavigation = async () => {
         try {
-          // Resolve tenant from current app config so loaded config is used (e.g. tki-ftp),
-          // not the app folder name (e.g. member-base) passed to createAppNavigator
           const effectiveTenantId = getCurrentTenantId() ?? tenantId;
           const tenantConfig = getTenantConfig(effectiveTenantId);
 
@@ -165,20 +167,16 @@ export function createAppNavigator({
             logger.warn(`Tenant config not found for tenantId: ${effectiveTenantId}`);
           }
 
-          // Wait for plugin registry to be initialized
           if (!PluginRegistry.isInitialized()) {
             logger.warn('PluginRegistry not initialized yet');
-            setIsLoading(false);
+            if (!cancelled) setIsLoading(false);
             return;
           }
 
-          // Get enabled plugins from tenant config or registry
-          const enabledPluginIds = tenantConfig?.enabledFeatures || 
+          const enabledPluginIds = tenantConfig?.enabledFeatures ||
             PluginRegistry.getEnabledPlugins().map((p) => p.id);
 
           const routes: React.ReactElement[] = [];
-
-          // Load routes from enabled plugins
           const enabledPlugins = PluginRegistry.getEnabledPlugins();
           for (const plugin of enabledPlugins) {
             if (!plugin?.routes) continue;
@@ -199,9 +197,9 @@ export function createAppNavigator({
                     key={route.name}
                     name={route.name}
                     component={LazyComponent}
-                    options={{ 
+                    options={{
                       title: route.meta?.title,
-                      headerShown: false, // Hide header by default for plugin screens
+                      headerShown: false,
                     }}
                   />
                 );
@@ -217,15 +215,17 @@ export function createAppNavigator({
             }
           }
 
-          setPluginRoutes(routes);
+          if (!cancelled) setPluginRoutes(routes);
         } catch (error) {
           logger.error('Error loading navigation', error);
         } finally {
-          setIsLoading(false);
+          if (!cancelled) setIsLoading(false);
         }
       };
-
       loadNavigation();
+      return () => {
+        cancelled = true;
+      };
     }, []);
 
     const handleOnboardingComplete = async () => {

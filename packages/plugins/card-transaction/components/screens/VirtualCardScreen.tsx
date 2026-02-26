@@ -2,7 +2,7 @@
  * VirtualCardScreen Component
  * Main screen untuk menampilkan list semua virtual cards
  */
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, memo } from 'react';
 import {
   View,
   FlatList,
@@ -98,7 +98,7 @@ function NfcIcon() {
 }
 
 // --- Single card (pattern: header | middle chip/nfc | footer number + holder + logo) ---
-function CardItem({
+const CardItem = memo(function CardItem({
   item,
   index,
   scrollX,
@@ -188,7 +188,7 @@ function CardItem({
       </Animated.View>
     </TouchableOpacity>
   );
-}
+});
 
 export const VirtualCardScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -210,7 +210,7 @@ export const VirtualCardScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  const handleCardPress = (card: VirtualCardData) => {
+  const handleCardPress = useCallback((card: VirtualCardData) => {
     (navigation as any).navigate('VirtualCardDetail', {
       card: {
         id: card.id,
@@ -221,7 +221,7 @@ export const VirtualCardScreen: React.FC = () => {
         hasTransactionPin: card.hasTransactionPin,
       },
     });
-  };
+  }, [navigation]);
 
   const handleAddCard = () => {
     (navigation as any).navigate('AddVirtualCard');
@@ -235,6 +235,21 @@ export const VirtualCardScreen: React.FC = () => {
       setActiveIndex(Math.min(Math.max(0, index), MOCK_CARDS.length - 1));
     },
     [scrollX, snap]
+  );
+
+  const renderCardItem = useCallback(
+    ({ item, index }: { item: VirtualCardData; index: number }) => (
+      <CardItem
+        item={item}
+        index={index}
+        scrollX={scrollX}
+        onPress={() => handleCardPress(item)}
+        cardW={cardW}
+        cardH={cardH}
+        snap={snap}
+      />
+    ),
+    [scrollX, cardW, cardH, snap, handleCardPress]
   );
 
   return (
@@ -266,17 +281,7 @@ export const VirtualCardScreen: React.FC = () => {
           <FlatList
             data={MOCK_CARDS}
             keyExtractor={(c) => c.id}
-            renderItem={({ item, index }) => (
-              <CardItem
-                item={item}
-                index={index}
-                scrollX={scrollX}
-                onPress={() => handleCardPress(item)}
-                cardW={cardW}
-                cardH={cardH}
-                snap={snap}
-              />
-            )}
+            renderItem={renderCardItem}
             horizontal
             showsHorizontalScrollIndicator={false}
             snapToInterval={snap}

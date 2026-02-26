@@ -36,42 +36,49 @@ export const useFnBData = (initialEntryPoint: EntryPoint = 'browse', storeId?: s
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [entryPoint, setEntryPoint] = useState<EntryPoint>(initialEntryPoint);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-
+    const fetchData = useCallback(async (): Promise<{
+        storeItems: FnBItem[];
+        categories: FnBCategory[];
+        storeWithStatus: FnBStore;
+    } | null> => {
         try {
-            // Simulate API call
             await new Promise<void>((resolve) => setTimeout(resolve, 800));
 
-            // Get store by ID or use default
             const targetStoreId = storeId || DEFAULT_STORE_ID;
             const storeData = FNBDUMMY_STORES[targetStoreId] || FNBDUMMY_STORES[DEFAULT_STORE_ID];
-
-            // Get items for this store
             const storeItems =
               FNBDUMMY_STORE_ITEMS[targetStoreId] || FNBDUMMY_STORE_ITEMS[DEFAULT_STORE_ID];
-            setItems(storeItems);
-
-            setCategories(FNBDUMMY_CATEGORIES);
-
-            // Calculate isOpen dynamically based on operating hours
             const storeWithStatus = {
                 ...storeData,
                 isOpen: isStoreOpen(storeData),
             };
-            setStore(storeWithStatus);
-        } catch (err) {
-            setError(
-              err instanceof Error ? err.message : 'Gagal memuat data menu. Silakan coba lagi.'
-            );
-        } finally {
-            setLoading(false);
+            return { storeItems, categories: FNBDUMMY_CATEGORIES, storeWithStatus };
+        } catch {
+            return null;
         }
     }, [storeId]);
 
     useEffect(() => {
-        fetchData();
+        let cancelled = false;
+        setLoading(true);
+        setError(null);
+        fetchData()
+            .then((data) => {
+                if (cancelled) return;
+                if (data) {
+                    setItems(data.storeItems);
+                    setCategories(data.categories);
+                    setStore(data.storeWithStatus);
+                } else {
+                    setError('Gagal memuat data menu. Silakan coba lagi.');
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
     }, [fetchData]);
 
     const filteredItems = useMemo(() => {
@@ -82,7 +89,20 @@ export const useFnBData = (initialEntryPoint: EntryPoint = 'browse', storeId?: s
     }, [items, selectedCategory]);
 
     const refresh = useCallback(async () => {
-        await fetchData();
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await fetchData();
+            if (data) {
+                setItems(data.storeItems);
+                setCategories(data.categories);
+                setStore(data.storeWithStatus);
+            } else {
+                setError('Gagal memuat data menu. Silakan coba lagi.');
+            }
+        } finally {
+            setLoading(false);
+        }
     }, [fetchData]);
 
     return {

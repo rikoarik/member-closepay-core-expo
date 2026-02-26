@@ -154,6 +154,151 @@ export const CartScreen: React.FC = () => {
     }));
   }, [cartItems]);
 
+  type CartGroup = { title: string; data: CartItem[] };
+  const renderCartGroup = useCallback(
+    ({ item: group }: { item: CartGroup }) => {
+      const isStoreSelected = group.data.every((item) => item.selected);
+
+      return (
+        <View
+          style={[
+            styles.storeCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <View style={[styles.storeHeader]}>
+            <TouchableOpacity
+              style={styles.checkbox}
+              onPress={() => toggleStoreSelection(group.title)}
+            >
+              <TickCircle
+                size={scale(20)}
+                color={isStoreSelected ? colors.primary : colors.textSecondary}
+                variant={isStoreSelected ? 'Bold' : 'Linear'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.storeInfoContainer}
+              onPress={() => handleStorePress(group.title)}
+            >
+              <Text style={[styles.storeName, { color: colors.text }]}>{group.title}</Text>
+              <ArrowRight2 size={scale(16)} color={colors.textSecondary} variant="Linear" />
+            </TouchableOpacity>
+          </View>
+
+          {group.data.map((item, index) => (
+            <View
+              key={item.cartId}
+              style={[
+                styles.itemRow,
+                index !== group.data.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.itemCheckbox}
+                onPress={() => toggleSelection(item.cartId)}
+              >
+                <TickCircle
+                  size={scale(20)}
+                  color={item.selected ? colors.primary : colors.textSecondary}
+                  variant={item.selected ? 'Bold' : 'Linear'}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.itemContentContainer}
+                onPress={() => handleProductPress(item.product)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.imageContainer}>
+                  {item.product.imageUrl ? (
+                    <Image
+                      source={{ uri: item.product.imageUrl }}
+                      style={styles.itemImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.imagePlaceholder,
+                        { backgroundColor: colors.primaryLight },
+                      ]}
+                    >
+                      <Text style={styles.placeholderEmoji}>📦</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.itemInfo}>
+                  <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={2}>
+                    {item.product.name}
+                  </Text>
+                  <Text style={[styles.itemPrice, { color: colors.primary }]}>
+                    {formatPrice(item.product.price)}
+                  </Text>
+
+                  <View style={styles.quantityContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.quantityButton,
+                        {
+                          backgroundColor:
+                            item.quantity === 1 ? colors.error + '15' : colors.primaryLight,
+                        },
+                      ]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        item.quantity === 1
+                          ? removeItem(item.cartId)
+                          : updateQuantity(item.cartId, item.quantity - 1);
+                      }}
+                    >
+                      {item.quantity === 1 ? (
+                        <Trash size={scale(14)} color={colors.error} variant="Linear" />
+                      ) : (
+                        <Minus size={scale(14)} color={colors.primary} variant="Linear" />
+                      )}
+                    </TouchableOpacity>
+
+                    <Text style={[styles.quantityText, { color: colors.text }]}>
+                      {item.quantity}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={[styles.quantityButton, { backgroundColor: colors.primary }]}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        updateQuantity(item.cartId, item.quantity + 1);
+                        if (!item.selected) {
+                          toggleSelection(item.cartId);
+                        }
+                      }}
+                    >
+                      <Add size={scale(14)} color="#FFFFFF" variant="Linear" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      );
+    },
+    [
+      colors,
+      toggleStoreSelection,
+      handleStorePress,
+      handleProductPress,
+      removeItem,
+      updateQuantity,
+      toggleSelection,
+    ]
+  );
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <ShoppingCart size={scale(64)} color={colors.textSecondary} variant="Linear" />
@@ -189,144 +334,7 @@ export const CartScreen: React.FC = () => {
       {/* Cart Items */}
       <FlatList
         data={groupedItems}
-        renderItem={({ item: group }) => {
-          const isStoreSelected = group.data.every((item) => item.selected);
-
-          return (
-            <View
-              style={[
-                styles.storeCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              {/* Store Header */}
-              <View style={[styles.storeHeader]}>
-                <TouchableOpacity
-                  style={styles.checkbox}
-                  onPress={() => toggleStoreSelection(group.title)}
-                >
-                  <TickCircle
-                    size={scale(20)}
-                    color={isStoreSelected ? colors.primary : colors.textSecondary}
-                    variant={isStoreSelected ? 'Bold' : 'Linear'}
-                  />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.storeInfoContainer}
-                  onPress={() => handleStorePress(group.title)}
-                >
-                  <Text style={[styles.storeName, { color: colors.text }]}>{group.title}</Text>
-                  <ArrowRight2 size={scale(16)} color={colors.textSecondary} variant="Linear" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Store Items */}
-              {group.data.map((item, index) => (
-                <View
-                  key={item.cartId}
-                  style={[
-                    styles.itemRow,
-                    index !== group.data.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.border,
-                    },
-                  ]}
-                >
-                  {/* Checkbox */}
-                  <TouchableOpacity
-                    style={styles.itemCheckbox}
-                    onPress={() => toggleSelection(item.cartId)}
-                  >
-                    <TickCircle
-                      size={scale(20)}
-                      color={item.selected ? colors.primary : colors.textSecondary}
-                      variant={item.selected ? 'Bold' : 'Linear'}
-                    />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.itemContentContainer}
-                    onPress={() => handleProductPress(item.product)}
-                    activeOpacity={0.7}
-                  >
-                    {/* Image */}
-                    <View style={styles.imageContainer}>
-                      {item.product.imageUrl ? (
-                        <Image
-                          source={{ uri: item.product.imageUrl }}
-                          style={styles.itemImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View
-                          style={[
-                            styles.imagePlaceholder,
-                            { backgroundColor: colors.primaryLight },
-                          ]}
-                        >
-                          <Text style={styles.placeholderEmoji}>📦</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Info */}
-                    <View style={styles.itemInfo}>
-                      <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={2}>
-                        {item.product.name}
-                      </Text>
-                      <Text style={[styles.itemPrice, { color: colors.primary }]}>
-                        {formatPrice(item.product.price)}
-                      </Text>
-
-                      {/* Quantity Controls - Moved Here */}
-                      <View style={styles.quantityContainer}>
-                        <TouchableOpacity
-                          style={[
-                            styles.quantityButton,
-                            {
-                              backgroundColor:
-                                item.quantity === 1 ? colors.error + '15' : colors.primaryLight,
-                            },
-                          ]}
-                          onPress={(e) => {
-                            e.stopPropagation(); // Prevent navigating to product detail
-                            item.quantity === 1
-                              ? removeItem(item.cartId)
-                              : updateQuantity(item.cartId, item.quantity - 1);
-                          }}
-                        >
-                          {item.quantity === 1 ? (
-                            <Trash size={scale(14)} color={colors.error} variant="Linear" />
-                          ) : (
-                            <Minus size={scale(14)} color={colors.primary} variant="Linear" />
-                          )}
-                        </TouchableOpacity>
-
-                        <Text style={[styles.quantityText, { color: colors.text }]}>
-                          {item.quantity}
-                        </Text>
-
-                        <TouchableOpacity
-                          style={[styles.quantityButton, { backgroundColor: colors.primary }]}
-                          onPress={(e) => {
-                            e.stopPropagation(); // Prevent navigating to product detail
-                            updateQuantity(item.cartId, item.quantity + 1);
-                            if (!item.selected) {
-                              toggleSelection(item.cartId);
-                            }
-                          }}
-                        >
-                          <Add size={scale(14)} color="#FFFFFF" variant="Linear" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          );
-        }}
+        renderItem={renderCartGroup}
         keyExtractor={(item) => item.title}
         contentContainerStyle={[
           styles.listContent,

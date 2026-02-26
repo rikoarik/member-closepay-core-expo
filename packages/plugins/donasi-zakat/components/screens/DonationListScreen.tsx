@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -148,6 +148,31 @@ export const DonationListScreen = () => {
     </TouchableOpacity>
   );
 
+  const renderCategoryItem = useCallback(
+    ({ item }: { item: { id: string; label: string } }) => (
+      <TouchableOpacity
+        onPress={() => setSelectedCategory(item.id)}
+        style={[
+          styles.categoryChip,
+          {
+            backgroundColor: selectedCategory === item.id ? colors.primary : colors.surface,
+            borderColor: selectedCategory === item.id ? colors.primary : colors.borderLight,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.categoryChipText,
+            { color: selectedCategory === item.id ? '#FFF' : colors.textSecondary },
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [selectedCategory, colors]
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader title={t('donasiZakat.allPrograms') || 'Semua Program'} />
@@ -180,27 +205,7 @@ export const DonationListScreen = () => {
           data={CATEGORIES}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: horizontalPadding }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => setSelectedCategory(item.id)}
-              style={[
-                styles.categoryChip,
-                {
-                  backgroundColor: selectedCategory === item.id ? colors.primary : colors.surface,
-                  borderColor: selectedCategory === item.id ? colors.primary : colors.borderLight,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  { color: selectedCategory === item.id ? '#FFF' : colors.textSecondary },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
+          renderItem={renderCategoryItem}
         />
       </View>
 

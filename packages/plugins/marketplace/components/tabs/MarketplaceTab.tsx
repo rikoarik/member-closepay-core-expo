@@ -68,6 +68,15 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
   const [loadedBatches, setLoadedBatches] = useState<number>(1);
   const scrollPositionRef = useRef(0);
   const flatListRef = useRef<FlatList>(null);
+  const loadMoreTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
+      if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -106,27 +115,15 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
 
   useEffect(() => {
     if (refreshing || isInitialLoad) {
-      const timer = setTimeout(() => {
-        setShowShimmer(true);
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      const timer = setTimeout(() => {
-        setShowShimmer(false);
-        setIsInitialLoad(false);
-      }, 200);
+      const timer = setTimeout(() => setShowShimmer(true), 300);
       return () => clearTimeout(timer);
     }
+    const timer = setTimeout(() => {
+      setShowShimmer(false);
+      setIsInitialLoad(false);
+    }, 200);
+    return () => clearTimeout(timer);
   }, [refreshing, isInitialLoad]);
-
-  useEffect(() => {
-    if (isInitialLoad) {
-      const timer = setTimeout(() => {
-        setIsInitialLoad(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isInitialLoad]);
 
   const loadMore = useCallback(() => {
     if (
@@ -144,7 +141,9 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
         setLoadedBatches(neededBatches);
       }
 
-      setTimeout(() => {
+      if (loadMoreTimeoutRef.current) clearTimeout(loadMoreTimeoutRef.current);
+      loadMoreTimeoutRef.current = setTimeout(() => {
+        loadMoreTimeoutRef.current = null;
         setCurrentPage((prev) => prev + 1);
         setIsLoadingMore(false);
       }, 500);
@@ -164,7 +163,9 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
     setRefreshing(true);
     setCurrentPage(1);
     setLoadedBatches(1);
-    setTimeout(() => {
+    if (refreshTimeoutRef.current) clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshTimeoutRef.current = null;
       setRefreshing(false);
     }, 1000);
   }, []);

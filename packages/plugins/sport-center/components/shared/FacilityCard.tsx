@@ -3,7 +3,7 @@
  * Card untuk menampilkan fasilitas sport center (mirip StoreCard)
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -16,7 +16,7 @@ interface FacilityCardProps {
   onPress: (facility: SportCenterFacility) => void;
 }
 
-export const FacilityCard: React.FC<FacilityCardProps> = ({ facility, onPress }) => {
+export const FacilityCard = memo<FacilityCardProps>(function FacilityCard({ facility, onPress }) {
   const { colors } = useTheme();
   const { t } = useTranslation();
 
@@ -61,7 +61,7 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({ facility, onPress })
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

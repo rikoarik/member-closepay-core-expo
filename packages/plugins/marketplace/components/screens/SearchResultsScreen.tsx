@@ -40,7 +40,7 @@ import { useTranslation } from '@core/i18n';
 import { ProductCard, Product } from '../shared/ProductCard';
 import { ProductCardSkeleton } from '../shared/ProductCardSkeleton';
 import { StoreCard } from '../shared/StoreCard';
-import { useMarketplaceData, searchStores, getCategories } from '../../hooks/useMarketplaceData';
+import { useMarketplaceData, searchStores, getCategories, type Store } from '../../hooks/useMarketplaceData';
 import { useMarketplaceAnalytics } from '../../hooks/useMarketplaceAnalytics';
 
 const PAGE_SIZE = UI_CONSTANTS.DEFAULT_PAGE_SIZE;
@@ -207,6 +207,18 @@ export const SearchResultsScreen: React.FC = () => {
   const renderProduct = useCallback(
     ({ item }: { item: Product }) => <ProductCard product={item} onPress={handleProductPress} />,
     [handleProductPress]
+  );
+
+  const handleStorePress = useCallback(
+    (store: Store) => {
+      (navigation as any).navigate('StoreDetail', { store });
+    },
+    [navigation]
+  );
+
+  const renderStoreItem = useCallback(
+    ({ item }: { item: Store }) => <StoreCard store={item} onPress={handleStorePress} />,
+    [handleStorePress]
   );
 
   const renderFooter = () => {
@@ -419,6 +431,10 @@ export const SearchResultsScreen: React.FC = () => {
             columnWrapperStyle={{
               gap: scale(12),
             }}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={10}
             contentContainerStyle={[
               styles.listContent,
               {
@@ -446,8 +462,12 @@ export const SearchResultsScreen: React.FC = () => {
         /* Store List */
         <FlatList
           data={filteredStores}
-          renderItem={({ item }) => <StoreCard store={item} onPress={() => {}} />}
+          renderItem={renderStoreItem}
           keyExtractor={(item) => item.id}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
           contentContainerStyle={[
             styles.listContent,
             {

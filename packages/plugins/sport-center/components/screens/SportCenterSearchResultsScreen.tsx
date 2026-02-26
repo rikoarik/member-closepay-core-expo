@@ -2,7 +2,7 @@
  * SportCenterSearchResultsScreen Component
  * Halaman hasil pencarian Sport Center
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -42,10 +42,19 @@ export const SportCenterSearchResultsScreen: React.FC = () => {
     );
   }, [facilities, searchText]);
 
-  const handleFacilityPress = (facility: any) => {
-    // @ts-ignore
-    navigation.navigate('SportCenterFacilityDetail', { facility });
-  };
+  const handleFacilityPress = useCallback(
+    (facility: any) => {
+      (navigation as any).navigate('SportCenterFacilityDetail', { facility });
+    },
+    [navigation]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: (typeof filteredFacilities)[number] }) => (
+      <FacilityCard facility={item} onPress={handleFacilityPress} />
+    ),
+    [handleFacilityPress]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -79,7 +88,7 @@ export const SportCenterSearchResultsScreen: React.FC = () => {
       <FlatList
         data={filteredFacilities}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <FacilityCard facility={item} onPress={handleFacilityPress} />}
+        renderItem={renderItem}
         contentContainerStyle={[
           styles.listContent,
           {
