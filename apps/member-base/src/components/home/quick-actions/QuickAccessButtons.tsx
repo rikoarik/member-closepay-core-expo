@@ -71,6 +71,10 @@ interface QuickAccessButtonsProps {
    */
   onAllMenuPress?: () => void;
   /**
+   * Key that changes when light/dark theme toggles (e.g. colors.surface). Ensures buttons re-render in real time without Metro reload.
+   */
+  themeKey?: string;
+  /**
    * Gap antar button untuk tablet landscape (optional)
    * Jika tidak diatur, akan menggunakan gap default
    */
@@ -216,26 +220,22 @@ const QuickAccessSkeleton = React.memo(() => {
 
 QuickAccessSkeleton.displayName = 'QuickAccessSkeleton';
 
-// Custom comparison untuk mencegah re-render yang tidak perlu
+// Custom comparison: must re-render when theme changes so colors stay in sync
 const areEqualQuickAccess = (
   prevProps: QuickAccessButtonsProps,
   nextProps: QuickAccessButtonsProps
 ) => {
+  if (prevProps.themeKey !== nextProps.themeKey) return false;
   if (prevProps.onAllMenuPress !== nextProps.onAllMenuPress) return false;
-  // Jika buttons prop diberikan, compare buttons
   if (prevProps.buttons && nextProps.buttons) {
-    if (prevProps.buttons.length !== nextProps.buttons.length) {
-      return false;
-    }
+    if (prevProps.buttons.length !== nextProps.buttons.length) return false;
     return prevProps.buttons.every((btn, index) => btn.id === nextProps.buttons![index].id);
   }
-  // Jika buttons tidak diberikan, component akan menggunakan internal state
-  // yang sudah di-handle oleh useQuickMenu, jadi return true untuk skip re-render
   return prevProps.buttons === nextProps.buttons;
 };
 
 export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
-  ({ buttons, onAllMenuPress, tabletLandscapeGap, tabletPortraitGap }) => {
+  ({ buttons, onAllMenuPress, themeKey, tabletLandscapeGap, tabletPortraitGap }) => {
     const { colors } = useTheme();
     const { t } = useTranslation();
     const navigation = useNavigation();
@@ -290,11 +290,10 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
     // Convert enabled menu items ke format QuickAccessButton
     // Hanya recalculate jika enabledItems benar-benar berubah
     const previousMenuButtonsRef = React.useRef<QuickAccessButton[]>([]);
-    const colorsRef = React.useRef(colors);
-    colorsRef.current = colors; // Update ref tanpa trigger re-render
+    const previousSurfaceColorRef = React.useRef<string>(surfaceColor);
 
+    // Background ikon selalu ikut theme (light = putih, dark = gelap). Jangan return cache saat theme berubah.
     const menuButtons = useMemo((): QuickAccessButton[] => {
-      // Jika masih loading, jangan render apa-apa dulu, biarkan skeleton yang tampil
       if (isLoading) {
         return [];
       }
@@ -303,16 +302,21 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
         id: item.id,
         label: getMenuLabelKey(item) ? t(getMenuLabelKey(item)!) : item.label,
         icon: getMenuIconForQuickAccess(primaryColor, item.icon as string, item.id),
-        iconBgColor: item.iconBgColor || getDefaultBgColor(colorsRef.current, item.icon as string),
+        iconBgColor: getDefaultBgColor(colors, item.icon as string),
         onPress: (item as unknown as QuickMenuItem).route
           ? () => {
-              // @ts-ignore - navigation type akan di-setup nanti
-              navigation.navigate((item as unknown as QuickMenuItem).route as never);
+              (navigation as any).navigate((item as unknown as QuickMenuItem).route as never);
             }
           : undefined,
       }));
 
-      // Compare dengan previous untuk mencegah re-render jika sama
+      // Saat theme berubah (surfaceColor beda), selalu pakai buttons baru — jangan return cache yang masih gelap/terang
+      if (previousSurfaceColorRef.current !== surfaceColor) {
+        previousSurfaceColorRef.current = surfaceColor;
+        previousMenuButtonsRef.current = buttons;
+        return buttons;
+      }
+
       const currentKey = JSON.stringify(
         buttons.map((b: QuickAccessButton) => ({ id: b.id, label: b.label }))
       );
@@ -326,7 +330,7 @@ export const QuickAccessButtons: React.FC<QuickAccessButtonsProps> = React.memo(
 
       previousMenuButtonsRef.current = buttons;
       return buttons;
-    }, [stableEnabledItems, t, isLoading, navigation, primaryColor]);
+    }, [stableEnabledItems, t, isLoading, navigation, primaryColor, surfaceColor]);
 
     const allMenuButton: QuickAccessButton = useMemo(
       () => ({

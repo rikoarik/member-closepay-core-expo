@@ -23,8 +23,8 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({ store }) => {
             <Text style={[styles.storeName, { color: colors.text }]} numberOfLines={1}>
               {store.name}
             </Text>
-            {/* Verified Badge */}
-            <TickCircle size={scale(16)} color={colors.primary} variant="Bold" />
+            {/* Verified Badge — compact so it doesn’t overlap description */}
+            <TickCircle size={scale(14)} color={colors.primary} variant="Bold" />
           </View>
 
           <View
@@ -38,14 +38,14 @@ export const MerchantHeader: React.FC<MerchantHeaderProps> = ({ store }) => {
             ]}
           >
             <Text
-              style={[styles.statusText, { color: store.isOpen ? colors.success : colors.error }]}
+              style={[styles.statusText, { color: store.isOpen ? colors.successLight : colors.error }]}
             >
               {store.isOpen ? 'Buka' : 'Tutup'}
             </Text>
           </View>
         </View>
 
-        {/* Description/Tags */}
+        {/* Description/Tags — clear spacing from header row */}
         <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
           {store.description}
         </Text>
@@ -101,10 +101,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: scale(8),
+    marginBottom: scale(10),
   },
   nameContainer: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: scale(12),
@@ -127,6 +128,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: scale(13),
     fontFamily: FontFamily.monasans.regular,
+    marginTop: scale(2),
     marginBottom: scale(16),
     lineHeight: scale(18),
   },

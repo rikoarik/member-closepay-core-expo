@@ -91,7 +91,6 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
   const [showItemDetail, setShowItemDetail] = useState(false);
   const [showCartDetail, setShowCartDetail] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchActive, setIsSearchActive] = useState(false);
 
   // Filter items based on search query
   const searchedItems = useMemo(() => {
@@ -186,15 +185,6 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
     navigation.navigate('FnBCheckout', { entryPoint, storeId: params?.storeId });
   }, [navigation, entryPoint, params?.storeId]);
 
-  const toggleSearch = useCallback(() => {
-    setIsSearchActive((prev) => {
-      if (prev) {
-        setSearchQuery('');
-      }
-      return !prev;
-    });
-  }, []);
-
   const clearSearch = useCallback(() => {
     setSearchQuery('');
   }, []);
@@ -227,62 +217,50 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
       <ScreenHeader
         title={store?.name || t('fnb.title') || 'Pesan Makanan'}
         onBackPress={() => navigation.goBack()}
-        rightComponent={
-          <TouchableOpacity
-            style={[
-              styles.searchButton,
-              { backgroundColor: isSearchActive ? colors.primary : colors.background },
-            ]}
-            onPress={toggleSearch}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            {isSearchActive ? (
-              <CloseCircle size={scale(24)} color={colors.surface} variant="Linear" />
-            ) : (
-              <SearchNormal size={scale(24)} color={colors.text} variant="Linear" />
-            )}
-          </TouchableOpacity>
-        }
         showBorder
         style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
         paddingHorizontal={horizontalPadding}
       />
-      {isSearchActive && (
+      {/* Search bar selalu tampil; clear isi pakai tombol X di dalam field */}
+      <View
+        style={[
+          styles.searchInputRow,
+          {
+            backgroundColor: colors.surface,
+            paddingHorizontal: horizontalPadding,
+            paddingTop: moderateVerticalScale(10),
+            paddingBottom: moderateVerticalScale(10),
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <View
           style={[
-            styles.searchInputRow,
+            styles.searchInputContainer,
             {
-              backgroundColor: colors.surface,
-              paddingHorizontal: horizontalPadding,
-              paddingBottom: moderateVerticalScale(8),
-              borderBottomWidth: 1,
-              borderBottomColor: colors.border,
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+              borderWidth: 1,
             },
           ]}
         >
-          <View
-            style={[
-              styles.searchInputContainer,
-              { backgroundColor: colors.background, borderColor: colors.border },
-            ]}
-          >
-            <SearchNormal size={scale(18)} color={colors.textSecondary} variant="Linear" />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('fnb.searchMenu') || 'Cari menu...'}
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <CloseCircle size={scale(18)} color={colors.error} variant="Linear" />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('fnb.searchMenu') || 'Cari menu...'}
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
+            </TouchableOpacity>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Menu Grid */}
       <FlatList
@@ -296,7 +274,10 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
           styles.listContent,
           {
             paddingHorizontal: horizontalPadding,
-            paddingBottom: itemCount > 0 ? scale(120) : insets.bottom + scale(20),
+            paddingBottom:
+              itemCount > 0
+                ? insets.bottom + scale(120)
+                : insets.bottom + moderateVerticalScale(24),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -443,30 +424,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  searchButton: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(10),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: scale(8),
-  },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(12),
-    height: scale(40),
-    borderRadius: scale(10),
-    borderWidth: 1,
+    paddingHorizontal: scale(14),
+    height: scale(44),
+    borderRadius: scale(12),
+    gap: scale(10),
   },
   searchInput: {
     flex: 1,
-    fontSize: scale(14),
+    fontSize: scale(15),
     fontFamily: FontFamily.monasans.regular,
-    marginLeft: scale(8),
+    marginLeft: 0,
     marginRight: scale(8),
-    paddingVertical: 0,
+    paddingVertical: scale(10),
   },
   columnWrapper: {
     justifyContent: 'space-between',

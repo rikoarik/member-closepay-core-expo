@@ -128,6 +128,7 @@ const BerandaTabContent: React.FC<BerandaTabProps> = React.memo(
             return (
               <BalanceCard
                 key="balance-card"
+                themeKey={colors.surface}
                 title={t('balance.mainBalance') || 'Saldo Utama'}
                 balance={10000000000}
                 showBalance={showBalance}
@@ -152,7 +153,10 @@ const BerandaTabContent: React.FC<BerandaTabProps> = React.memo(
                     </Text>
                   </TouchableOpacity>
                 </View>
-                <QuickAccessButtons onAllMenuPress={() => setAllMenuVisible(true)} />
+                <QuickAccessButtons
+                  themeKey={colors.surface}
+                  onAllMenuPress={() => setAllMenuVisible(true)}
+                />
               </View>
             );
           }

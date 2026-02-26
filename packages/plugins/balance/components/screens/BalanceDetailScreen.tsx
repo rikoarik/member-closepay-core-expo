@@ -578,6 +578,7 @@ export const BalanceDetailScreen = () => {
     return (
       <View style={[styles.cardWrapper, { backgroundColor: colors.surface }]}>
         <BalanceCard
+          themeKey={colors.surface}
           title={item.title}
           balance={item.balance}
           showBalance={showBalance}

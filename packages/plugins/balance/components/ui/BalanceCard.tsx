@@ -26,6 +26,8 @@ interface BalanceCardProps {
   hideTitle?: boolean; // Optional: hide title when true
   hideBalanceLabel?: boolean; // Optional: hide balance label when true
   backgroundColor?: string; // Optional: custom background color for the card (default: colors.primary)
+  /** Key that changes when light/dark toggles (e.g. colors.surface). Ensures Detail button and styles update in real time. */
+  themeKey?: string;
   // Action button callbacks
   onTopUp?: () => void;
   onTransferMember?: () => void;
@@ -41,8 +43,9 @@ const ICON_SIZE_SMALL = scale(20);
 const EYE_ICON = <Eye size={ICON_SIZE_MEDIUM} color="#FFFFFF" variant="Outline" />;
 const EYE_SLASH_ICON = <EyeSlash size={ICON_SIZE_MEDIUM} color="#FFFFFF" variant="Outline" />;
 
-// Custom comparison untuk mencegah re-render yang tidak perlu
+// Custom comparison: re-render when theme changes so Detail button follows light/dark mode
 const areEqual = (prevProps: BalanceCardProps, nextProps: BalanceCardProps) => {
+  if (prevProps.themeKey !== nextProps.themeKey) return false;
   return (
     prevProps.title === nextProps.title &&
     prevProps.balance === nextProps.balance &&
@@ -67,6 +70,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = React.memo(({
   hideDetailButton = false, // Default: show detail button
   hideTitle = false, // Default: show title
   backgroundColor,
+  themeKey,
   onTopUp,
   onTransferMember,
   onTransferBank,
@@ -109,15 +113,13 @@ export const BalanceCard: React.FC<BalanceCardProps> = React.memo(({
   const actionLabelStyle = useMemo(() => [
     styles.balanceActionLabel,
     { color: colors.text, fontFamily: FontFamily.monasans.bold }
-  ], []);
+  ], [colors.text]);
 
-  // Detail button background style - putih solid
+  // Detail button: putih di light mode, gelap di dark mode (mengikuti theme)
   const detailButtonStyle = useMemo(() => [
     styles.detailButton,
-    {
-      backgroundColor: colors.background,
-    }
-  ], []);
+    { backgroundColor: colors.surface }
+  ], [colors.surface]);
 
   return (
     <View style={styles.mainCard}>

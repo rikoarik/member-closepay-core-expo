@@ -65,7 +65,7 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = React.memo(({
 
       {/* Quick Access */}
       <View style={styles.section}>
-        <QuickAccessButtons />
+        <QuickAccessButtons themeKey={colors.surface} />
       </View>
 
       {/* Transaction History Header */}
@@ -78,7 +78,7 @@ export const TransactionsTab: React.FC<TransactionsTabProps> = React.memo(({
         />
       </View>
     </>
-  ), [title, balance, showBalance, onToggleBalance, transactionHistoryTitle, detailLabel, onBalanceDetailPress]);
+  ), [title, balance, showBalance, onToggleBalance, transactionHistoryTitle, detailLabel, onBalanceDetailPress, colors.surface]);
 
   // Memoized content container style
   const contentContainerStyle = useMemo(

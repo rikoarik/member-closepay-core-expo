@@ -89,11 +89,12 @@ export const DashboardTab: React.FC<DashboardTabProps> = React.memo(
             {/* Main Balance */}
             <View style={styles.balanceSection}>
               <BalanceCard
+                themeKey={colors.surface}
                 title={t('balance.mainBalance') || 'Saldo Utama'}
                 balance={10000000}
                 showBalance={showBalance}
                 onToggleBalance={() => setShowBalance(!showBalance)}
-                backgroundColor="#076409"
+                backgroundColor={colors.primary}
               />
             </View>
 

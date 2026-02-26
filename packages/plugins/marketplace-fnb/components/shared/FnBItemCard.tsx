@@ -158,14 +158,14 @@ export const FnBItemCard: React.FC<FnBItemCardProps> = ({
                                 </TouchableOpacity>
                             </View>
                         ) : (
-                            // Show add button when item not in cart
+                            // Show add button when item not in cart — use white for contrast on primary
                             <TouchableOpacity
                                 style={[styles.addButton, { backgroundColor: colors.primary }]}
                                 onPress={handleAdd}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <Add size={scale(16)} color={colors.surface} variant="Linear" />
-                                <Text style={[styles.addButtonText, { color: colors.surface }]}>
+                                <Add size={scale(16)} color="#FFFFFF" variant="Linear" />
+                                <Text style={[styles.addButtonText, { color: '#FFFFFF' }]}>
                                     Tambah
                                 </Text>
                             </TouchableOpacity>

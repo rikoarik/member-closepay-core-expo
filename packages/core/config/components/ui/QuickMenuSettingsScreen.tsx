@@ -1398,7 +1398,15 @@ export const QuickMenuSettingsScreen: React.FC = () => {
       ) : null}
 
       {!isLoading && menuItems.length > 0 && (
-        <View style={[styles.saveButtonContainerAbsolute, { paddingHorizontal: getHorizontalPadding(), backgroundColor: colors.surface }]}>
+        <View
+          style={[
+            styles.saveButtonContainerAbsolute,
+            {
+              paddingHorizontal: getHorizontalPadding(),
+              paddingBottom: insets.bottom ,
+            },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.saveButton, styles.saveButtonFull, { backgroundColor: colors.primary }]}
             onPress={handleSave}
