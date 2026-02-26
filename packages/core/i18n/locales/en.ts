@@ -547,6 +547,7 @@ export const en = {
     orderStatusReviewed: 'Reviewed',
     noOrdersInStatus: 'No orders with this status.',
     searchPlaceholder: 'Search products, brands, and more...',
+    searchPlaceholderInStore: 'Search products in this store...',
     allCategories: 'All',
     noProductsFound: 'No products found.',
     price: 'Price',

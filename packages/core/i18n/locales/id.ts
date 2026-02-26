@@ -576,6 +576,7 @@ export const id = {
     orderStatusReviewed: 'Ditinjau',
     noOrdersInStatus: 'Tidak ada pesanan dengan status ini.',
     searchPlaceholder: 'Cari produk, brand, dan lainnya...',
+    searchPlaceholderInStore: 'Cari product di toko ini...',
     allCategories: 'Semua',
     noProductsFound: 'Tidak ada produk ditemukan.',
     price: 'Harga',

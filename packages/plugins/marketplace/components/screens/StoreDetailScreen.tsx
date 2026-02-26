@@ -13,13 +13,12 @@ import {
   FlatList,
   Dimensions,
   Alert,
-  TextInput,
   Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft2, Location, Star1, SearchNormal, Copy } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, getResponsiveFontSize } from '@core/config';
+import { ArrowLeft2, Verify, Star1, SearchNormal, Copy, ShoppingCart, MessageText, TickCircle } from 'iconsax-react-nativejs';
+import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { Clipboard } from '@core/native';
@@ -27,6 +26,7 @@ import { ProductCard, Product } from '../shared/ProductCard';
 import { ProductCardSkeleton } from '../shared/ProductCardSkeleton';
 import { MarketplaceCategoryTabs } from '../shared/MarketplaceCategoryTabs';
 import { useMarketplaceData, Store, getCategories } from '../../hooks/useMarketplaceData';
+import { useMarketplaceCart } from '../../hooks/useMarketplaceCart';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ALL_CATEGORIES_VALUE = 'all';
@@ -46,7 +46,7 @@ export const StoreDetailScreen: React.FC = () => {
   const horizontalPadding = getHorizontalPadding();
 
   const store = route.params?.store;
-  const [searchText, setSearchText] = useState('');
+  const { itemCount } = useMarketplaceCart();
   const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES_VALUE);
   const rawCategories = useMemo(() => getCategories(), []);
   const categoryOptions = useMemo(
@@ -69,12 +69,8 @@ export const StoreDetailScreen: React.FC = () => {
       products = products.filter((p) => p.category === selectedCategory);
     }
 
-    if (searchText) {
-      products = products.filter((p) => p.name.toLowerCase().includes(searchText.toLowerCase()));
-    }
-
     return products;
-  }, [store, allProducts, selectedCategory, searchText]);
+  }, [store, allProducts, selectedCategory]);
 
   const handleBack = useCallback(() => {
     navigation.goBack();
@@ -108,6 +104,14 @@ export const StoreDetailScreen: React.FC = () => {
     }
   };
 
+  const handleCartPress = useCallback(() => {
+    (navigation as any).navigate('Cart');
+  }, [navigation]);
+
+  const handleOpenSearch = useCallback(() => {
+    if (store) (navigation as any).navigate('StoreProductSearch', { store });
+  }, [navigation, store]);
+
   if (!store) {
     return (
       <View
@@ -123,89 +127,53 @@ export const StoreDetailScreen: React.FC = () => {
 
   const renderHeader = () => (
     <View>
-      <View style={[styles.storeProfileContainer, { backgroundColor: colors.surface }]}>
-        <View style={styles.profileContent}>
-          <View style={styles.logoAndInfo}>
-            <Image
-              source={{ uri: store.imageUrl }}
-              style={[styles.logoImage, { borderColor: colors.surface }]}
-              resizeMode="cover"
-            />
-            <View style={styles.infoColumn}>
-              <Text style={[styles.storeName, { color: colors.text }]} numberOfLines={1}>
-                {store.name}
-              </Text>
-              <View style={styles.metaRow}>
-                <Location size={scale(14)} color={colors.textSecondary} variant="Linear" />
-                <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                  {store.location}
-                </Text>
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <Star1 size={scale(14)} color={colors.warning} variant="Bold" />
-                <Text style={[styles.ratingText, { color: colors.text }]}>
-                  {store.rating?.toFixed(1) || '4.5'}
-                </Text>
+      {/* Gallery-style store section: circular logo + verified + name + rating • location + Open • hours */}
+      <View style={[styles.storeSectionTop, { paddingHorizontal: horizontalPadding }]}>
+        <View style={styles.storeLogoRow}>
+          <View style={[styles.storeLogoWrap, { borderColor: colors.surface }]}>
+            
+            <Image source={{ uri: store.imageUrl }} style={styles.storeLogoImage} resizeMode="cover" />
+            
+          </View>
+          <View style={styles.storeInfoTop}>
+            <Text style={[styles.storeNameTop, { color: colors.text }]} numberOfLines={1}>
+              {store.name}
+              <View style={[styles.verifiedBadge]}>
+                  <Verify color={colors.success}  variant="Linear" />
               </View>
-              {store.openingHours && (
-                <Text
-                  style={[styles.metaText, { color: colors.textSecondary, marginTop: scale(4) }]}
-                >
-                  {t('marketplace.openingHours')}: {store.openingHours}
-                </Text>
-              )}
-              {store.phoneNumber && (
-                <TouchableOpacity
-                  style={[styles.copyContainer, { marginTop: scale(4) }]}
-                  onPress={handleCopyPhoneNumber}
-                >
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                    {store.phoneNumber}
-                  </Text>
-                  <View style={{ marginLeft: scale(4) }}>
-                    <Copy size={scale(14)} color={colors.primary} variant="Bold" />
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.chatButton, { borderColor: colors.border, flex: 1 }]}
-              onPress={handleChat}
-            >
-              <Text style={[styles.chatButtonText, { color: colors.text }]}>
-                {t('marketplace.chatWhatsApp')}
+            </Text>
+            <View style={styles.storeMetaRow}>
+              <Star1 size={scale(14)} color={colors.warning} variant="Bold" />
+              <Text style={[styles.storeRatingText, { color: colors.text }]}>
+                {store.rating?.toFixed(1) || '4.9'}
               </Text>
-            </TouchableOpacity>
+              <Text style={[styles.storeMetaDot, { color: colors.border }]}>•</Text>
+              <Text style={[styles.storeLocationTop, { color: colors.textSecondary }]} numberOfLines={1}>
+                {store.location}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.storeOpenText,
+                { color: store.isOpen ? colors.success : colors.error },
+              ]}
+            >
+              {store.isOpen
+                ? `${t('marketplace.storeOpen') || 'Open'} • ${store.openingHours ?? '08:00 - 21:00'}`
+                : (t('marketplace.storeClosed') || 'Closed')}
+            </Text>
           </View>
         </View>
       </View>
 
-      <View style={[styles.searchContainer, { paddingHorizontal: horizontalPadding }]}>
-        <View
-          style={[
-            styles.searchInputContainer,
-            { backgroundColor: colors.surface },
-          ]}
-        >
-          <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('marketplace.searchPlaceholder')}
-            placeholderTextColor={colors.textSecondary}
-            value={searchText}
-            onChangeText={setSearchText}
-            returnKeyType="search"
-          />
-        </View>
+      {/* Category pills - horizontal scroll */}
+      <View style={styles.categoryPillsWrap}>
+        <MarketplaceCategoryTabs
+          categories={categoryOptions}
+          selectedCategory={selectedCategory}
+          onSelectCategory={handleCategorySelect}
+        />
       </View>
-
-      <MarketplaceCategoryTabs
-        categories={categoryOptions}
-        selectedCategory={selectedCategory}
-        onSelectCategory={handleCategorySelect}
-      />
     </View>
   );
 
@@ -215,24 +183,40 @@ export const StoreDetailScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Navbar */}
+      {/* Gallery-style sticky header: back + search + cart */}
       <View
         style={[
-          styles.navbar,
+          styles.galleryHeader,
           {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingEnd: horizontalPadding,
+            paddingTop: insets.top + moderateVerticalScale(8),
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: moderateVerticalScale(12),
+            backgroundColor: (colors.surface || '#FFFFFF') + 'E6',
             borderBottomColor: colors.border,
           },
         ]}
       >
-        <TouchableOpacity onPress={handleBack} style={styles.navButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.headerIconButton} hitSlop={8}>
           <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.text }]}>
-          {t('marketplace.storeDetail')}
-        </Text>
+        <TouchableOpacity
+          style={[styles.searchInputWrap, { backgroundColor: colors.inputBackground || colors.border + '40' }]}
+          onPress={handleOpenSearch}
+          activeOpacity={0.8}
+        >
+          <SearchNormal size={scale(18)} color={colors.textSecondary} variant="Linear" />
+          <Text style={[styles.searchPlaceholderText, { color: colors.textSecondary }]}>
+            {t('marketplace.searchPlaceholderInStore')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleCartPress} style={styles.headerIconButton} hitSlop={8}>
+          <ShoppingCart size={scale(24)} color={colors.text} variant="Linear" />
+          {itemCount > 0 && (
+            <View style={[styles.cartBadge, { backgroundColor: colors.error }]}>
+              <Text style={styles.cartBadgeText}>{itemCount > 99 ? '99+' : itemCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -244,7 +228,7 @@ export const StoreDetailScreen: React.FC = () => {
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + moderateVerticalScale(20) },
+          { paddingBottom: insets.bottom + moderateVerticalScale(80) },
         ]}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}
@@ -264,6 +248,17 @@ export const StoreDetailScreen: React.FC = () => {
           )
         }
       />
+
+      {/* FAB Chat (gallery style) */}
+      {store.phoneNumber && (
+        <TouchableOpacity
+          style={[styles.fabChat, { backgroundColor: colors.primary, bottom: insets.bottom + moderateVerticalScale(24) }]}
+          onPress={handleChat}
+          activeOpacity={0.9}
+        >
+          <MessageText size={scale(24)} color="#FFFFFF" variant="Bold" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -272,114 +267,113 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  navbar: {
+  galleryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingVertical: moderateVerticalScale(12),
+    gap: scale(12),
     borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
     zIndex: 10,
   },
-  navButton: {
-    padding: scale(4),
+  headerIconButton: {
+    padding: scale(8),
+    position: 'relative',
   },
-  navTitle: {
-    fontSize: scale(16),
-    fontFamily: FontFamily.monasans.semiBold,
-  },
-  storeProfileContainer: {
-    marginBottom: moderateVerticalScale(16),
-    paddingBottom: moderateVerticalScale(16),
-  },
-  bannerImage: {
-    width: '100%',
-    height: scale(120),
-  },
-  profileContent: {
-    paddingHorizontal: getHorizontalPadding(),
-    paddingTop: moderateVerticalScale(16),
-  },
-  logoAndInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: moderateVerticalScale(16),
-  },
-  logoImage: {
-    width: scale(70),
-    height: scale(70),
-    borderRadius: scale(35),
-    borderWidth: 3,
-  },
-  infoColumn: {
+  searchInputWrap: {
     flex: 1,
-    marginLeft: scale(12),
-    paddingBottom: scale(4),
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: scale(999),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(14),
+    gap: scale(8),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  storeName: {
-    fontSize: scale(16),
+  searchPlaceholderText: {
+    flex: 1,
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: scale(4),
+    right: scale(4),
+    minWidth: scale(16),
+    height: scale(16),
+    borderRadius: scale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scale(4),
+  },
+  cartBadgeText: {
+    fontSize: scale(10),
+    fontFamily: FontFamily.monasans.bold,
+    color: '#FFFFFF',
+  },
+  storeSectionTop: {
+    paddingVertical: moderateVerticalScale(20),
+  },
+  storeLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(16),
+  },
+  storeLogoWrap: {
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
+    overflow: 'hidden',
+    borderWidth: 2,
+    position: 'relative',
+  },
+  storeLogoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: -scale(4),
+    right: -scale(4),
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
+    zIndex: 999999999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  storeInfoTop: {
+    flex: 1,
+    minWidth: 0,
+  },
+  storeNameTop: {
+    fontSize: scale(20),
     fontFamily: FontFamily.monasans.bold,
     marginBottom: scale(4),
   },
-  metaRow: {
+  storeMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: scale(6),
     marginBottom: scale(2),
   },
-  metaText: {
-    fontSize: scale(12),
-    fontFamily: FontFamily.monasans.regular,
-    marginLeft: scale(2),
-  },
-  ratingText: {
-    fontSize: scale(12),
-    fontFamily: FontFamily.monasans.bold,
-    marginLeft: scale(2),
-  },
-  divider: {
-    width: 1,
-    height: scale(10),
-    marginHorizontal: scale(8),
-  },
-  followersText: {
-    fontSize: scale(11),
-    fontFamily: FontFamily.monasans.regular,
-    marginTop: scale(2),
-  },
-  copyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    marginTop: moderateVerticalScale(8),
-  },
-  followButton: {
-    flex: 1,
-    paddingVertical: moderateVerticalScale(8),
-    borderRadius: scale(8),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  followButtonText: {
+  storeRatingText: {
     fontSize: scale(14),
     fontFamily: FontFamily.monasans.semiBold,
   },
-  chatButton: {
-    flex: 1,
-    paddingVertical: moderateVerticalScale(8),
-    borderRadius: scale(8),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  storeMetaDot: {
+    fontSize: scale(12),
   },
-  chatButtonText: {
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.medium,
+  storeLocationTop: {
+    flex: 1,
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  storeOpenText: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  categoryPillsWrap: {
+    marginBottom: moderateVerticalScale(8),
   },
   listContent: {
     flexGrow: 1,
@@ -404,23 +398,19 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.monasans.regular,
     textAlign: 'center',
   },
-  searchContainer: {
-    marginTop: moderateVerticalScale(16),
-    marginBottom: moderateVerticalScale(8),
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
+  fabChat: {
+    position: 'absolute',
+    right: getHorizontalPadding() + scale(8),
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: scale(12),
-    height: scale(40),
-    borderRadius: scale(20),
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: scale(8),
-    fontSize: getResponsiveFontSize('small'),
-    fontFamily: FontFamily.monasans.regular,
-    paddingVertical: 0,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
 });
 

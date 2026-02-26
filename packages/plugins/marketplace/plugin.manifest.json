@@ -23,6 +23,8 @@
       "ProductDetailScreen": "ProductDetailScreen",
       "ProductReviewsScreen": "ProductReviewsScreen",
       "StoreDetailScreen": "StoreDetailScreen",
+      "StoreProductSearchScreen": "StoreProductSearchScreen",
+      "StoreProductSearchResultsScreen": "StoreProductSearchResultsScreen",
       "CheckoutScreen": "CheckoutScreen",
       "PaymentMethodSelectionScreen": "PaymentMethodSelectionScreen",
       "MarketplaceOrderDetailScreen": "MarketplaceOrderDetailScreen",
@@ -157,6 +159,32 @@
       ],
       "meta": {
         "title": "Detail Toko",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "StoreProductSearch",
+      "path": "/marketplace/store/search",
+      "component": "StoreProductSearchScreen",
+      "permissions": [
+        "marketplace:view",
+        "marketplace:search"
+      ],
+      "meta": {
+        "title": "Cari Produk Toko",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "StoreProductSearchResults",
+      "path": "/marketplace/store/search/results",
+      "component": "StoreProductSearchResultsScreen",
+      "permissions": [
+        "marketplace:view",
+        "marketplace:search"
+      ],
+      "meta": {
+        "title": "Hasil Cari Produk Toko",
         "showInMenu": false
       }
     },

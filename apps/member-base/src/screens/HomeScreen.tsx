@@ -3,7 +3,7 @@
  * Dashboard screen sesuai design
  * Responsive untuk semua device termasuk EDC
  */
-import React, { useState, useRef, useCallback, useMemo, memo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect, memo } from "react";
 import {
   View,
   ScrollView,
@@ -150,6 +150,7 @@ const HomeScreenComponent = () => {
   // Default tab tengah = Beranda (tab index 1: kiri=0, beranda=1, kanan=2)
   const [activeTab, setActiveTab] = useState<string>("beranda");
   const tabRefreshFunctionsRef = useRef<{ [key: string]: () => void }>({});
+  const scrollPageIndexRef = useRef<number>(-1);
 
   // Di web pakai max lebar 414 (sama seperti HP) agar layout/gambar tidak nge-scale
   const MOBILE_VIEWPORT_WIDTH = 414;
@@ -174,6 +175,23 @@ const HomeScreenComponent = () => {
     scrollX,
   });
   useDoubleBackExit({ tabs, activeTab, setActiveTab, pagerRef, layoutWidth });
+
+  // Sync activeTab with scroll position during swipe so isVisible/isActive become true earlier and tab data loads during the gesture
+  useEffect(() => {
+    const listener = scrollX.addListener(({ value }) => {
+      const pageIndex = Math.round(value / layoutWidth);
+      const clampedIndex = Math.max(
+        0,
+        Math.min(tabs.length - 1, pageIndex),
+      );
+      const tabId = tabs[clampedIndex]?.id;
+      if (tabId && scrollPageIndexRef.current !== clampedIndex) {
+        scrollPageIndexRef.current = clampedIndex;
+        setActiveTab(tabId);
+      }
+    });
+    return () => scrollX.removeListener(listener);
+  }, [scrollX, layoutWidth, tabs]);
 
   const registerTabRefresh = useCallback(
     (tabId: string, refreshFn: () => void) => {
@@ -239,7 +257,7 @@ const HomeScreenComponent = () => {
 
   const shouldRenderTab = useCallback(
     (tabId: string, index: number) => {
-      return Math.abs(index - activeTabIndex) <= 1;
+      return Math.abs(index - activeTabIndex) <= 2;
     },
     [activeTabIndex],
   );

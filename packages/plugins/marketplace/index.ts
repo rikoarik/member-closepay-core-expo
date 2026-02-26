@@ -11,6 +11,8 @@ export { CartScreen } from './components/screens/CartScreen';
 export { ProductDetailScreen } from './components/screens/ProductDetailScreen';
 export { ProductReviewsScreen } from './components/screens/ProductReviewsScreen';
 export { StoreDetailScreen } from './components/screens/StoreDetailScreen';
+export { StoreProductSearchScreen } from './components/screens/StoreProductSearchScreen';
+export { StoreProductSearchResultsScreen } from './components/screens/StoreProductSearchResultsScreen';
 export { CheckoutScreen } from './components/screens/CheckoutScreen';
 export { PaymentMethodSelectionScreen } from './components/screens/PaymentMethodSelectionScreen';
 export { MarketplaceOrderDetailScreen } from './components/screens/MarketplaceOrderDetailScreen';
@@ -55,6 +57,8 @@ export const MarketplaceModule = {
     ProductDetail: 'ProductDetailScreen',
     ProductReviews: 'ProductReviewsScreen',
     StoreDetail: 'StoreDetailScreen',
+    StoreProductSearch: 'StoreProductSearchScreen',
+    StoreProductSearchResults: 'StoreProductSearchResultsScreen',
     Checkout: 'CheckoutScreen',
     MarketplacePaymentMethod: 'PaymentMethodSelectionScreen',
     MarketplaceOrderDetail: 'MarketplaceOrderDetailScreen',
