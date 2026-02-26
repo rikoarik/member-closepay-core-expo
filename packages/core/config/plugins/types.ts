@@ -28,6 +28,11 @@ export interface PluginExports {
   widgets?: Record<string, string>;
 }
 
+export interface PluginRegistryEntry {
+  id: string;
+  manifestPath: string;
+}
+
 export interface PluginManifest {
   id: string;
   name: string;

@@ -1,46 +1,37 @@
 /**
  * Core Config - Tenant Service
- * Service for loading and managing tenant configurations
+ * Pure helpers for tenant config from AppConfig. No configService import to avoid require cycle.
  */
 
-import { TenantId, TenantConfig } from '../tenants';
-import { configService } from './configService';
-import { AppConfig } from '../types/AppConfig';
+import type { TenantId, TenantConfig } from '../tenants';
+import type { AppConfig } from '../types/AppConfig';
 
 /**
- * Get tenant configuration by tenant ID
- * Loads from AppConfig if tenantId matches, or returns null
+ * Get tenant configuration from a given app config (pure function, no cycle).
  */
-export function getTenantConfig(tenantId: TenantId): TenantConfig | null {
-  const config = configService.getConfig();
-  
-  if (!config) {
-    return null;
-  }
-
-  // If config has tenantId that matches, extract tenant config
-  if (config.companyId === tenantId || config.tenantId === tenantId) {
-    return {
-      id: tenantId,
-      name: config.companyName,
-      role: 'merchant', // Default role, can be extended
-      enabledFeatures: config.enabledModules || config.enabledFeatures || [],
-      theme: {
-        logo: config.branding?.logo,
-        appName: config.branding?.appName,
-      },
-      homeVariant: config.homeVariant || 'dashboard',
-    };
-  }
-
-  return null;
+export function getTenantConfigFromConfig(
+  tenantId: TenantId,
+  config: AppConfig | null
+): TenantConfig | null {
+  if (!config) return null;
+  if (config.companyId !== tenantId && config.tenantId !== tenantId) return null;
+  return {
+    id: tenantId,
+    name: config.companyName,
+    role: 'merchant',
+    enabledFeatures: config.enabledModules || config.enabledFeatures || [],
+    theme: {
+      logo: config.branding?.logo,
+      appName: config.branding?.appName,
+    },
+    homeVariant: config.homeVariant || 'dashboard',
+  };
 }
 
 /**
- * Get tenant ID from current config
+ * Get current tenant ID from a given app config (pure function, no cycle).
  */
-export function getCurrentTenantId(): TenantId | null {
-  const config = configService.getConfig();
+export function getCurrentTenantIdFromConfig(config: AppConfig | null): TenantId | null {
   return config?.companyId || config?.tenantId || null;
 }
 

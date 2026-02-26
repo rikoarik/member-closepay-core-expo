@@ -4,8 +4,9 @@
  */
 
 import { AppConfig, MenuItemConfig } from '../types/AppConfig';
-import { getTenantConfig } from './tenantService';
-import { TenantConfig } from '../tenants';
+import { getTenantConfigFromConfig, getCurrentTenantIdFromConfig } from './tenantService';
+import type { TenantConfig } from '../tenants';
+import type { TenantId } from '../tenants';
 import { configEventEmitter } from '../utils/configEventEmitter';
 import Config from '../../native/Config';
 import { logger } from './loggerService';
@@ -81,7 +82,7 @@ class ConfigServiceImpl implements ConfigService {
     // Merge tenant config if tenantId is present
     if (config.tenantId || config.companyId) {
       const tenantId = config.tenantId || config.companyId;
-      const tenantConfig = getTenantConfig(tenantId as string);
+      const tenantConfig = getTenantConfigFromConfig(tenantId as TenantId, config);
 
       if (tenantConfig) {
         // Merge tenant config into app config
@@ -115,11 +116,9 @@ class ConfigServiceImpl implements ConfigService {
   getTenantConfig(): TenantConfig | null {
     const config = this.getConfig();
     if (!config) return null;
-
     const tenantId = config.tenantId || config.companyId;
     if (!tenantId) return null;
-
-    return getTenantConfig(tenantId);
+    return getTenantConfigFromConfig(tenantId, config);
   }
 
   getConfig(): AppConfig | null {
@@ -157,3 +156,13 @@ class ConfigServiceImpl implements ConfigService {
 }
 
 export const configService: ConfigService = new ConfigServiceImpl();
+
+/** Public API: get tenant config for current app config (avoids cycle with tenantService). */
+export function getTenantConfig(tenantId: TenantId): TenantConfig | null {
+  return getTenantConfigFromConfig(tenantId, configService.getConfig());
+}
+
+/** Public API: get current tenant ID from app config. */
+export function getCurrentTenantId(): TenantId | null {
+  return getCurrentTenantIdFromConfig(configService.getConfig());
+}

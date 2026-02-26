@@ -1,19 +1,13 @@
 /**
  * Plugin Registry
- * Dynamic registry derived from MANIFEST_LOADERS
- * This eliminates duplication - plugins are discovered from the manifest loaders
+ * Dynamic registry derived from PLUGIN_REGISTRY in pluginLoader (no circular import).
  */
 
-import { PluginManifest, PluginRoute } from './types';
-import { PLUGIN_REGISTRY } from './pluginLoader';
-
-/**
- * Plugin registry entry
- */
-export interface PluginRegistryEntry {
-  id: string;
-  manifestPath: string;
-}
+import type { PluginManifest, PluginRoute, PluginRegistryEntry } from './types';
+import { PLUGIN_REGISTRY, loadPluginManifest } from './pluginLoader';
+import { validateManifestOrThrow } from './manifestValidator';
+import { configService } from '../services/configService';
+import { logger } from '../services/loggerService';
 
 /**
  * Get plugin registry entry by ID
@@ -29,8 +23,7 @@ export function getAllPluginIds(): string[] {
   return PLUGIN_REGISTRY.map(entry => entry.id);
 }
 
-// Re-export PluginManifest for backward compatibility
-export type { PluginManifest };
+export type { PluginManifest, PluginRegistryEntry };
 
 /**
  * PluginRegistry class
@@ -138,5 +131,49 @@ class PluginRegistryClass {
   }
 }
 
-// Export singleton instance
 export const PluginRegistry = new PluginRegistryClass();
+
+/**
+ * Initialize and register plugins from PLUGIN_REGISTRY. Lives here to avoid pluginLoader → PluginRegistry cycle.
+ */
+export async function initializePlugins(): Promise<void> {
+  if (PluginRegistry.isInitialized()) {
+    logger.debug('PluginRegistry already initialized');
+    return;
+  }
+  logger.info('Initializing PluginRegistry...');
+  try {
+    const config = configService.getConfig();
+    const allManifests = await Promise.all(
+      PLUGIN_REGISTRY.map(async (entry) => {
+        try {
+          const manifest = await loadPluginManifest(entry.id);
+          validateManifestOrThrow(manifest);
+          return manifest;
+        } catch (error) {
+          logger.error(`Failed to load plugin ${entry.id}`, error);
+          return null;
+        }
+      })
+    );
+    const validManifests = allManifests.filter((m): m is NonNullable<typeof m> => m !== null);
+    const corePlugins = validManifests.filter(m => m.type === 'core-plugin').map(m => m.id);
+    const enabledPlugins = config?.enabledModules || [];
+    const pluginsToLoad = new Set([...corePlugins, ...enabledPlugins]);
+    logger.info(`Loading ${pluginsToLoad.size} plugins:`, Array.from(pluginsToLoad));
+    const manifestsToRegister = validManifests.filter(m => pluginsToLoad.has(m.id));
+    manifestsToRegister.forEach(manifest => PluginRegistry.registerPlugin(manifest));
+    for (const pluginId of enabledPlugins) {
+      if (pluginsToLoad.has(pluginId)) PluginRegistry.enablePlugin(pluginId);
+    }
+    PluginRegistry.markInitialized();
+    logger.info(`PluginRegistry initialized with ${manifestsToRegister.length} plugins`);
+  } catch (error) {
+    logger.error('Failed to initialize plugins', error);
+    PluginRegistry.markInitialized();
+  }
+}
+
+export function isPluginSystemInitialized(): boolean {
+  return PluginRegistry.isInitialized();
+}

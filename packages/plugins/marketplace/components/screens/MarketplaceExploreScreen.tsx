@@ -20,7 +20,6 @@ import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { ProductCard, Product } from '../shared/ProductCard';
 import { ProductCardSkeleton } from '../shared/ProductCardSkeleton';
-import { CartBar } from '../shared/CartBar';
 import { StoreCard } from '../shared/StoreCard';
 import { MarketplaceCategoryTabs } from '../shared/MarketplaceCategoryTabs';
 import { useMarketplaceData, getCategories, getAllStores } from '../../hooks/useMarketplaceData';
@@ -51,7 +50,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
   const { isFavorite, toggleFavorite } = useMarketplaceWishlist();
   const lastContentOffset = React.useRef(0);
 
-  const { itemCount, subtotal, getItemQuantity } = useMarketplaceCart();
+  const { itemCount } = useMarketplaceCart();
 
   const { products: allProducts, loading: isInitialLoading } = useMarketplaceData(
     loadedBatches * 20,
@@ -313,7 +312,7 @@ export const MarketplaceExploreScreen: React.FC = () => {
         contentContainerStyle={[
           styles.listContent,
           {
-            paddingBottom: insets.bottom + moderateVerticalScale(80),
+            paddingBottom: insets.bottom + moderateVerticalScale(20),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -330,13 +329,6 @@ export const MarketplaceExploreScreen: React.FC = () => {
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyComponent}
         keyboardShouldPersistTaps="handled"
-      />
-
-      <CartBar
-        itemCount={itemCount}
-        total={subtotal}
-        onPress={handleCartPress}
-        visible={itemCount > 0}
       />
     </View>
   );

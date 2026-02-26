@@ -12,7 +12,13 @@ const FnBScanScreenExpoLazy = lazy(() =>
   import('./FnBScanScreenExpo').then((m) => ({ default: m.FnBScanScreenExpo }))
 );
 const FnBScanScreenVisionLazy = lazy(() =>
-  import('./FnBScanScreenVision').then((m) => ({ default: m.FnBScanScreenVision }))
+  import('./FnBScanScreenVision')
+    .then((m) => {
+      const C = m?.FnBScanScreenVision ?? (m as any)?.default;
+      if (!C) throw new Error('FnBScanScreenVision export not found');
+      return { default: C };
+    })
+    .catch(() => import('./FnBScanScreenExpo').then((m) => ({ default: m.FnBScanScreenExpo })))
 );
 
 const isExpoGo = Constants.appOwnership === 'expo';

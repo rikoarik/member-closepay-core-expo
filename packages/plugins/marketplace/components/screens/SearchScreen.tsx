@@ -3,18 +3,17 @@
  * Halaman search untuk marketplace seperti Shopee
  * Menampilkan history search dan rekomendasi
  */
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Keyboard, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { SearchNormal, CloseCircle, Calendar, Chart, Trash } from 'iconsax-react-nativejs';
+import { SearchNormal, CloseCircle, Calendar, Chart, Trash, ArrowLeft2 } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   getResponsiveFontSize,
   FontFamily,
-  ScreenHeader,
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
@@ -94,12 +93,25 @@ export const SearchScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScreenHeader
-        title={t('common.search')}
-        style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
-        paddingHorizontal={horizontalPadding}
-      />
-      <View style={[styles.searchRow, { paddingHorizontal: horizontalPadding, paddingTop: moderateVerticalScale(8), paddingBottom: moderateVerticalScale(12) }]}>
+      {/* Custom header: back + search bar */}
+      <View
+        style={[
+          styles.customHeader,
+          {
+            paddingTop: insets.top,
+            paddingHorizontal: horizontalPadding,
+            paddingBottom: moderateVerticalScale(12),
+            backgroundColor: colors.surface,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
+        </TouchableOpacity>
         <View style={[styles.searchInputContainer, { backgroundColor: colors.background || colors.surface }]}>
           <SearchNormal size={scale(20)} color={colors.primary} variant="Linear" />
           <TextInput
@@ -197,10 +209,15 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
-  searchRow: {
+  customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(12),
+  },
+  backButton: {
+    padding: scale(4),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchInputContainer: {
     flex: 1,

@@ -1,6 +1,6 @@
 /**
  * MarketplaceCicilanScreen Component
- * Tab Cicilan: daftar cicilan dari order yang punya installments
+ * Tab Cicilan: daftar cicilan dari order (tabs Belum Lunas / Lunas), expandable cards, status badge (overdue), inline pay
  */
 import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import {
@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Wallet } from 'iconsax-react-nativejs';
+import { Wallet, ArrowDown2, ArrowUp2 } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
@@ -65,6 +65,8 @@ export const MarketplaceCicilanScreen: React.FC = () => {
   const { orders, updateOrderInstallment } = useMarketplaceOrders();
   const lastContentOffset = useRef(0);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'unpaid' | 'paid'>('unpaid');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const flattened = useMemo(() => {
     const list: FlattenedInstallment[] = [];
@@ -81,6 +83,26 @@ export const MarketplaceCicilanScreen: React.FC = () => {
     }
     return list;
   }, [orders]);
+
+  const unpaidList = useMemo(
+    () => flattened.filter((f) => f.installment.status !== 'paid'),
+    [flattened]
+  );
+  const paidList = useMemo(
+    () => flattened.filter((f) => f.installment.status === 'paid'),
+    [flattened]
+  );
+  const displayList = activeTab === 'unpaid' ? unpaidList : paidList;
+
+  const isOverdue = useCallback((inst: MarketplaceInstallment) => {
+    if (inst.status === 'overdue') return true;
+    if (inst.status !== 'unpaid') return false;
+    try {
+      return new Date(inst.dueDate) < new Date();
+    } catch {
+      return false;
+    }
+  }, []);
 
   const goToExplore = useCallback(() => {
     navigation.navigate('MarketplaceExplore' as never);
@@ -147,75 +169,181 @@ export const MarketplaceCicilanScreen: React.FC = () => {
         paddingHorizontal={paddingH}
       />
 
+      {/* Tabs: Belum Lunas | Lunas */}
+      <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'unpaid' && {
+              borderBottomColor: colors.primary,
+              borderBottomWidth: 2,
+            },
+          ]}
+          onPress={() => setActiveTab('unpaid')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === 'unpaid' ? colors.primary : colors.textSecondary },
+            ]}
+          >
+            {t('marketplace.cicilanBelumLunas')}
+          </Text>
+          {unpaidList.length > 0 && (
+            <View style={[styles.badge, { backgroundColor: colors.primaryLight }]}>
+              <Text style={[styles.badgeText, { color: colors.primary }]}>{unpaidList.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'paid' && {
+              borderBottomColor: colors.primary,
+              borderBottomWidth: 2,
+            },
+          ]}
+          onPress={() => setActiveTab('paid')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === 'paid' ? colors.primary : colors.textSecondary },
+            ]}
+          >
+            {t('marketplace.cicilanLunas')}
+          </Text>
+          {paidList.length > 0 && (
+            <View style={[styles.badge, { backgroundColor: colors.primaryLight }]}>
+              <Text style={[styles.badgeText, { color: colors.primary }]}>{paidList.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
             paddingHorizontal: paddingH,
             paddingBottom: insets.bottom + moderateVerticalScale(100),
-            flexGrow: flattened.length === 0 ? 1 : undefined,
+            flexGrow: displayList.length === 0 ? 1 : undefined,
           },
         ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
-        {flattened.length === 0 ? (
+        {displayList.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Wallet size={scale(48)} color={colors.textSecondary} variant="Bulk" />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {t('marketplace.emptyCicilan')}
+              {activeTab === 'unpaid'
+                ? t('marketplace.emptyCicilan')
+                : t('marketplace.emptyCicilan')}
             </Text>
           </View>
         ) : (
-          flattened.map(({ orderId, orderNumber, installment }) => (
-            <View
-              key={installment.id}
-              style={[styles.card, { backgroundColor: colors.surface }]}
-            >
-              <View style={styles.cardRow}>
-                <Text style={[styles.orderLabel, { color: colors.textSecondary }]}>
-                  {orderNumber}
-                </Text>
-                <Text
-                  style={[
-                    styles.statusLabel,
-                    {
-                      color:
-                        installment.status === 'paid'
-                          ? colors.success
-                          : colors.warning,
-                    },
-                  ]}
-                >
-                  {installment.status === 'paid'
-                    ? t('marketplace.installmentPaid')
-                    : t('marketplace.installmentUnpaid')}
-                </Text>
-              </View>
-              <Text style={[styles.dueLabel, { color: colors.text }]}>
-                Jatuh tempo: {formatDate(installment.dueDate)}
-              </Text>
-              <Text style={[styles.amountLabel, { color: colors.primary }]}>
-                {formatPrice(installment.amount)}
-              </Text>
-              {installment.status === 'unpaid' && (
+          displayList.map(({ orderId, orderNumber, installment }) => {
+            const overdue = isOverdue(installment);
+            const expanded = expandedId === installment.id;
+            return (
+              <View
+                key={installment.id}
+                style={[styles.card, { backgroundColor: colors.surface }]}
+              >
                 <TouchableOpacity
-                  style={[styles.payButton, { backgroundColor: colors.primary }]}
-                  onPress={() => handlePay({ orderId, orderNumber, installment })}
-                  disabled={payingId !== null}
+                  activeOpacity={0.8}
+                  onPress={() => setExpandedId(expanded ? null : installment.id)}
                 >
-                  {payingId === installment.id ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Text style={styles.payButtonText}>
-                      {t('marketplace.payInstallment')}
+                  <View style={styles.cardRow}>
+                    <Text style={[styles.orderLabel, { color: colors.textSecondary }]}>
+                      {orderNumber}
+                      {installment.sequenceNumber != null && (
+                        <Text style={{ color: colors.textSecondary }}>
+                          {' '}
+                          · #{installment.sequenceNumber}
+                        </Text>
+                      )}
                     </Text>
-                  )}
+                    <View style={styles.statusRow}>
+                      {overdue && (
+                        <View
+                          style={[
+                            styles.overdueBadge,
+                            { backgroundColor: colors.error + '20' },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.overdueBadgeText, { color: colors.error }]}
+                          >
+                            {t('marketplace.installmentOverdue')}
+                          </Text>
+                        </View>
+                      )}
+                      <Text
+                        style={[
+                          styles.statusLabel,
+                          {
+                            color:
+                              installment.status === 'paid'
+                                ? colors.success
+                                : overdue
+                                  ? colors.error
+                                  : colors.warning,
+                          },
+                        ]}
+                      >
+                        {installment.status === 'paid'
+                          ? t('marketplace.installmentPaid')
+                          : t('marketplace.installmentUnpaid')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.dueLabel, { color: colors.text }]}>
+                    Jatuh tempo: {formatDate(installment.dueDate)}
+                  </Text>
+                  <Text style={[styles.amountLabel, { color: colors.primary }]}>
+                    {formatPrice(installment.amount)}
+                  </Text>
+                  <View style={styles.expandRow}>
+                    {expanded ? (
+                      <ArrowUp2 size={scale(16)} color={colors.textSecondary} />
+                    ) : (
+                      <ArrowDown2 size={scale(16)} color={colors.textSecondary} />
+                    )}
+                  </View>
                 </TouchableOpacity>
-              )}
-            </View>
-          ))
+                {expanded && (
+                  <View style={[styles.expandedContent, { borderTopColor: colors.border }]}>
+                    <Text style={[styles.expandedLabel, { color: colors.textSecondary }]}>
+                      Order: {orderNumber}
+                    </Text>
+                    {installment.sequenceNumber != null && (
+                      <Text style={[styles.expandedLabel, { color: colors.textSecondary }]}>
+                        Cicilan ke-{installment.sequenceNumber}
+                      </Text>
+                    )}
+                  </View>
+                )}
+                {installment.status !== 'paid' && (
+                  <TouchableOpacity
+                    style={[styles.payButton, { backgroundColor: colors.primary }]}
+                    onPress={() => handlePay({ orderId, orderNumber, installment })}
+                    disabled={payingId !== null}
+                  >
+                    {payingId === installment.id ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={styles.payButtonText}>
+                        {t('marketplace.payInstallment')}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -224,6 +352,32 @@ export const MarketplaceCicilanScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    paddingHorizontal: getHorizontalPadding(),
+  },
+  tab: {
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(8),
+    marginRight: scale(16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+  },
+  tabText: {
+    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
+    fontSize: getResponsiveFontSize('small'),
+  },
+  badge: {
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
+  },
+  badgeText: {
+    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
+    fontSize: getResponsiveFontSize('xsmall'),
+  },
   scrollContent: {
     paddingTop: moderateVerticalScale(16),
   },
@@ -252,6 +406,20 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
     fontSize: getResponsiveFontSize('small'),
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  overdueBadge: {
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  overdueBadgeText: {
+    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
+    fontSize: getResponsiveFontSize('xsmall'),
+  },
   statusLabel: {
     fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
     fontSize: getResponsiveFontSize('small'),
@@ -264,7 +432,20 @@ const styles = StyleSheet.create({
   amountLabel: {
     fontFamily: FontFamily?.monasans?.bold ?? 'System',
     fontSize: getResponsiveFontSize('medium'),
-    marginBottom: scale(12),
+    marginBottom: scale(8),
+  },
+  expandRow: {
+    marginBottom: scale(8),
+  },
+  expandedContent: {
+    paddingTop: scale(8),
+    marginTop: scale(4),
+    borderTopWidth: 1,
+  },
+  expandedLabel: {
+    fontFamily: FontFamily?.monasans?.regular ?? 'System',
+    fontSize: getResponsiveFontSize('small'),
+    marginBottom: scale(4),
   },
   payButton: {
     paddingVertical: scale(10),

@@ -31,6 +31,8 @@ const extra = (Platform.OS === 'web')
   ? null
   : (Constants.expoConfig?.extra ?? (Constants as unknown as { manifest?: { extra?: Record<string, string> } }).manifest?.extra);
 
+const DEFAULT_API_BASE_URL = 'https://api.solusiuntuknegeri.com';
+
 const fromExtra = (key: string): string => {
   if (extra && typeof extra[key] === 'string') {
     return extra[key] as string;
@@ -39,13 +41,13 @@ const fromExtra = (key: string): string => {
 };
 
 const Config: ConfigInterface = {
-  get API_URL() { return fromExtra('API_BASE_URL') || 'https://api.example.com'; },
-  get API_HOSTNAME() { return fromExtra('API_BASE_URL').replace(/^https?:\/\//, '').split('/')[0] || ''; },
-  get API_STG_URL() { return fromExtra('API_STG_BASE_URL') || 'https://stg-api.example.com'; },
-  get API_STG_HOSTNAME() { return fromExtra('API_STG_BASE_URL').replace(/^https?:\/\//, '').split('/')[0] || ''; },
-  get API_BASE_URL() { return fromExtra('API_BASE_URL') || 'https://api.example.com'; },
-  get API_STG_BASE_URL() { return fromExtra('API_STG_BASE_URL') || 'https://stg-api.example.com'; },
-  get API_PROD_BASE_URL() { return fromExtra('API_PROD_BASE_URL') || fromExtra('API_BASE_URL') || 'https://api.example.com'; },
+  get API_URL() { return fromExtra('API_BASE_URL') || DEFAULT_API_BASE_URL; },
+  get API_HOSTNAME() { return (fromExtra('API_BASE_URL') || DEFAULT_API_BASE_URL).replace(/^https?:\/\//, '').split('/')[0] || ''; },
+  get API_STG_URL() { return fromExtra('API_STG_BASE_URL') || DEFAULT_API_BASE_URL; },
+  get API_STG_HOSTNAME() { return (fromExtra('API_STG_BASE_URL') || DEFAULT_API_BASE_URL).replace(/^https?:\/\//, '').split('/')[0] || ''; },
+  get API_BASE_URL() { return fromExtra('API_BASE_URL') || DEFAULT_API_BASE_URL; },
+  get API_STG_BASE_URL() { return fromExtra('API_STG_BASE_URL') || DEFAULT_API_BASE_URL; },
+  get API_PROD_BASE_URL() { return fromExtra('API_PROD_BASE_URL') || fromExtra('API_BASE_URL') || DEFAULT_API_BASE_URL; },
   PIN_LEAF_CERT: '',
   PIN_INTERMEDIATE: '',
   get ENV() { return fromExtra('ENV') || 'development'; },

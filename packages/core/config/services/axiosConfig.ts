@@ -16,9 +16,11 @@ import { API_CONSTANTS, TIME_CONSTANTS, ERROR_MESSAGES } from '../constants';
 
 // Base URL dari environment variable atau default ke staging
 // Production build harus set API_BASE_URL di .env.production
-// Fallback URL for iOS (native Config module only works on Android)
+// Fallback URL when env tidak set atau masih placeholder (api.example.com)
 const FALLBACK_API_BASE_URL = 'https://api.solusiuntuknegeri.com';
-const API_BASE_URL = Config.API_BASE_URL || FALLBACK_API_BASE_URL;
+const rawBaseUrl = Config.API_BASE_URL || '';
+const isPlaceholderUrl = /api\.example\.com/i.test(rawBaseUrl);
+const API_BASE_URL = rawBaseUrl && !isPlaceholderUrl ? rawBaseUrl : FALLBACK_API_BASE_URL;
 
 import { logger } from './loggerService';
 

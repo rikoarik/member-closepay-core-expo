@@ -12,8 +12,8 @@ export { PluginRegistry } from './PluginRegistry';
 // Validation
 export * from './manifestValidator';
 
-// Plugin Loader
-export { initializePlugins, isPluginSystemInitialized } from './pluginLoader';
+// Plugin Loader (initializePlugins lives in PluginRegistry to avoid cycle)
+export { initializePlugins, isPluginSystemInitialized } from './PluginRegistry';
 
 // Component Loader
 export {

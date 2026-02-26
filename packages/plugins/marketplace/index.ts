@@ -28,6 +28,18 @@ export {
   marketplaceInstallmentService,
   type InstallmentWithOrder,
 } from './services/marketplaceInstallmentService';
+export { installmentApiService, DEFAULT_INSTALLMENT_CONFIG } from './services/installmentApiService';
+export type {
+  InstallmentSummaryParams,
+  InstallmentSummaryData,
+  CreateInstallmentOrderParams,
+  CreateInstallmentOrderResult,
+  CheckoutLinkResult,
+  InstallmentTransaction,
+  InstallmentStatusResult,
+} from './services/installmentApiService';
+export { useInstallmentAPI } from './hooks/useInstallmentAPI';
+export type { InstallmentCalculateResult } from './hooks/useInstallmentAPI';
 
 // Module definition
 export const MarketplaceModule = {

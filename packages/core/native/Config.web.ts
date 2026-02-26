@@ -18,14 +18,16 @@ export interface ConfigInterface {
   [key: string]: string | undefined;
 }
 
+const DEFAULT_API_BASE_URL = 'https://api.solusiuntuknegeri.com';
+
 const Config: ConfigInterface = {
-  API_URL: 'https://api.example.com',
-  API_HOSTNAME: 'api.example.com',
-  API_STG_URL: 'https://stg-api.example.com',
-  API_STG_HOSTNAME: 'stg-api.example.com',
-  API_BASE_URL: 'https://api.example.com',
-  API_STG_BASE_URL: 'https://stg-api.example.com',
-  API_PROD_BASE_URL: 'https://api.example.com',
+  API_URL: DEFAULT_API_BASE_URL,
+  API_HOSTNAME: 'api.solusiuntuknegeri.com',
+  API_STG_URL: DEFAULT_API_BASE_URL,
+  API_STG_HOSTNAME: 'api.solusiuntuknegeri.com',
+  API_BASE_URL: DEFAULT_API_BASE_URL,
+  API_STG_BASE_URL: DEFAULT_API_BASE_URL,
+  API_PROD_BASE_URL: DEFAULT_API_BASE_URL,
   PIN_LEAF_CERT: '',
   PIN_INTERMEDIATE: '',
   ENV: 'development',

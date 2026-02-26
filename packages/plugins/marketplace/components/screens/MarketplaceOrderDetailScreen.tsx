@@ -11,10 +11,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Location, Wallet3, DocumentText } from 'iconsax-react-nativejs';
+import { Location, Wallet3, DocumentText, ArrowLeft2 } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
@@ -46,6 +48,12 @@ const formatDate = (iso: string): string => {
   } catch {
     return iso;
   }
+};
+
+const PAYMENT_METHOD_I18N_MAP: Record<string, string> = {
+  balance: 'marketplace.paymentBalance',
+  co_link: 'marketplace.paymentCoLink',
+  va: 'marketplace.paymentVa',
 };
 
 const ORDER_STATUS_I18N_MAP: Record<MarketplaceOrderStatus, string> = {
@@ -105,6 +113,23 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
     updateOrderStatus(orderId, 'dibatalkan');
     navigation.goBack();
   }, [orderId, updateOrderStatus, navigation]);
+
+  const handlePayNow = useCallback(async () => {
+    if (!orderId) return;
+    if (order?.checkoutLink) {
+      try {
+        const canOpen = await Linking.canOpenURL(order.checkoutLink);
+        if (canOpen) {
+          await Linking.openURL(order.checkoutLink);
+        } else {
+          Alert.alert(t('common.error'), t('marketplace.orderFailed'));
+        }
+      } catch {
+        Alert.alert(t('common.error'), t('marketplace.orderFailed'));
+      }
+    }
+    updateOrderStatus(orderId, 'dipesan');
+  }, [orderId, order?.checkoutLink, updateOrderStatus, t]);
 
   if (!order) {
     return (
@@ -237,10 +262,22 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
           <View style={styles.infoRow}>
             <Wallet3 size={scale(20)} color={colors.textSecondary} variant="Linear" />
             <Text style={[styles.infoText, { color: colors.text }]}>
-              {order.paymentMethod}
+              {t(PAYMENT_METHOD_I18N_MAP[order.paymentMethod] ?? order.paymentMethod)}
             </Text>
           </View>
         </View>
+
+        {order.status === 'belum_dibayar' &&
+          (order.paymentMethod === 'co_link' || order.paymentMethod === 'va') && (
+          <TouchableOpacity
+            style={[styles.payNowButton, { backgroundColor: colors.primary }]}
+            onPress={handlePayNow}
+          >
+            <Text style={[styles.payNowButtonText, { color: '#fff' }]}>
+              {t('marketplace.payNow')}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {order.allowInstallment && order.installments && order.installments.length > 0 && (
           <TouchableOpacity
@@ -365,6 +402,15 @@ const styles = StyleSheet.create({
   },
   cicilanCard: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
   cicilanText: {
+    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
+    fontSize: getResponsiveFontSize('medium'),
+  },
+  payNowButton: {
+    padding: scale(16),
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  payNowButtonText: {
     fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
     fontSize: getResponsiveFontSize('medium'),
   },

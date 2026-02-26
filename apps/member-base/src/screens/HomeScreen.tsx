@@ -3,23 +3,19 @@
  * Dashboard screen sesuai design
  * Responsive untuk semua device termasuk EDC
  */
-import React, { useState, useRef, useEffect, useCallback, useMemo, memo, Suspense } from 'react';
+import React, { useState, useRef, useCallback, useMemo, memo } from "react";
 import {
   View,
   ScrollView,
   StyleSheet,
   Animated,
-  Text,
-  BackHandler,
   Platform,
-  TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useTheme } from '@core/theme';
-import { useTranslation } from '@core/i18n';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useTheme } from "@core/theme";
+import { useTranslation } from "@core/i18n";
 import {
   moderateVerticalScale,
   getHorizontalPadding,
@@ -29,58 +25,58 @@ import {
   useConfig,
   useRefreshWithConfig,
   loadHomeTabSettings,
-  MAX_HOME_TABS,
-  getTabPlugin,
   getWidgetPlugin,
   PluginRegistry,
   validateEnabledTabIds,
   usePluginComponent,
-} from '@core/config';
+} from "@core/config";
+import { TopBar } from "../components/home";
+import { useNewsState } from "../components/home";
+import { HomeTabContentRouter } from "../components/home/HomeTabContentRouter";
+import { HomeTabPager } from "../components/home/HomeTabPager";
 import {
-  TopBar,
-  AnalyticsTab,
-  BerandaTab,
-  NewsTab,
-  AktivitasTab,
-  BerandaNewsInfo,
-  DashboardTab,
-  TransactionsTab,
-} from '../components/home';
-import { PluginTabContentRenderer } from '../components/home/PluginTabContentRenderer';
-import { getLazyTab, hasLazyTab } from '../components/home/LazyPluginTabs';
-import { useNewsState } from '../components/home';
-import { useNotifications } from '@core/notification';
-import Toast from 'react-native-toast-message';
-import { QrScanIcon } from '@core/config/components/icons';
-import { scale, moderateScale } from '@core/config';
-import { useBalance } from '@plugins/balance';
+  useTabSync,
+  usePagerSync,
+  useDoubleBackExit,
+} from "../components/home/hooks";
+import { QrFab } from "../components/home/QrFab";
+import { useNotifications } from "@core/notification";
+import { useBalance } from "@plugins/balance";
+import { useFnBActiveOrder } from "@plugins/marketplace-fnb";
 
-const FNB_ORDER_FLOATING_WIDGET_ID = 'fnb-order-floating';
+const FNB_ORDER_FLOATING_WIDGET_ID = "fnb-order-floating";
 
 const HomeScreenComponent = () => {
   const navigation = useNavigation();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation();
-  const { width: screenWidth, height: screenHeight } = useDimensions();
+  const { width: screenWidth } = useDimensions();
   const fnbFloatingWidgetPlugin = getWidgetPlugin(FNB_ORDER_FLOATING_WIDGET_ID);
-  const { Component: FnBOrderFloatingWidget, loading: fnbWidgetLoading } = usePluginComponent({
-    pluginId: fnbFloatingWidgetPlugin?.pluginId ?? '',
-    componentName: fnbFloatingWidgetPlugin?.componentName ?? '',
-  });
+  const { Component: FnBOrderFloatingWidget, loading: fnbWidgetLoading } =
+    usePluginComponent({
+      pluginId: fnbFloatingWidgetPlugin?.pluginId ?? "",
+      componentName: fnbFloatingWidgetPlugin?.componentName ?? "",
+    });
   const showFnBFloatingWidget =
     fnbFloatingWidgetPlugin &&
     PluginRegistry.isPluginEnabled(fnbFloatingWidgetPlugin.pluginId) &&
     !fnbWidgetLoading &&
     FnBOrderFloatingWidget;
+  const { activeOrder: fnbActiveOrder } = useFnBActiveOrder();
+  const isFnBWidgetVisible = Boolean(
+    fnbActiveOrder &&
+    fnbActiveOrder.status !== "completed" &&
+    fnbActiveOrder.status !== "cancelled",
+  );
   // State for News Tab (Lifted Up)
   const newsState = useNewsState();
 
   const pagerRef = useRef<any>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const fabOpacity = useRef(new Animated.Value(0)).current;
-  const fabScale = useRef(new Animated.Value(0)).current;
   const { config } = useConfig();
-  const [enabledTabIdsFromSettings, setEnabledTabIdsFromSettings] = useState<string[] | null>(null);
+  const [enabledTabIdsFromSettings, setEnabledTabIdsFromSettings] = useState<
+    string[] | null
+  >(null);
   const [showBalance, setShowBalance] = useState(false);
   const { balance, isLoading: balanceLoading } = useBalance();
 
@@ -93,7 +89,7 @@ const HomeScreenComponent = () => {
       return () => {
         cancelled = true;
       };
-    }, [])
+    }, []),
   );
 
   const configHomeTabs = React.useMemo(() => {
@@ -116,7 +112,10 @@ const HomeScreenComponent = () => {
     if (validIds.length === 0) return configHomeTabs;
     if (enabledTabIdsFromSettings.length === 0) return configHomeTabs;
 
-    const orderedIds = validateEnabledTabIds(enabledTabIdsFromSettings, validIds);
+    const orderedIds = validateEnabledTabIds(
+      enabledTabIdsFromSettings,
+      validIds,
+    );
     const seen = new Set<string>();
     return orderedIds.map((id) => {
       const fromConfig = tabById.get(id);
@@ -126,7 +125,13 @@ const HomeScreenComponent = () => {
       }
       const fallback = validIds.find((vid) => !seen.has(vid)) ?? validIds[0];
       seen.add(fallback);
-      return tabById.get(fallback) ?? { id: fallback, label: fallback, visible: true as const };
+      return (
+        tabById.get(fallback) ?? {
+          id: fallback,
+          label: fallback,
+          visible: true as const,
+        }
+      );
     });
   }, [configHomeTabs, configHomeTabsFull, enabledTabIdsFromSettings]);
 
@@ -134,293 +139,109 @@ const HomeScreenComponent = () => {
     return homeTabs.map((tab) => {
       const i18nKey = `home.${tab.id}`;
       const translatedLabel = t(i18nKey);
-      const label = translatedLabel && translatedLabel !== i18nKey ? translatedLabel : tab.label;
+      const label =
+        translatedLabel && translatedLabel !== i18nKey
+          ? translatedLabel
+          : tab.label;
       return { id: tab.id, label };
     });
   }, [homeTabs, t]);
 
   // Default tab tengah = Beranda (tab index 1: kiri=0, beranda=1, kanan=2)
-  const [activeTab, setActiveTab] = useState<string>('beranda');
+  const [activeTab, setActiveTab] = useState<string>("beranda");
   const tabRefreshFunctionsRef = useRef<{ [key: string]: () => void }>({});
-  const hasSetOrder2TabRef = useRef(false);
-  const backPressTimeRef = useRef<number>(0);
-  const DOUBLE_BACK_PRESS_DELAY = 2000;
 
   // Di web pakai max lebar 414 (sama seperti HP) agar layout/gambar tidak nge-scale
   const MOBILE_VIEWPORT_WIDTH = 414;
   const layoutWidth =
-    Platform.OS === 'web' ? Math.min(screenWidth, MOBILE_VIEWPORT_WIDTH) : screenWidth;
+    Platform.OS === "web"
+      ? Math.min(screenWidth, MOBILE_VIEWPORT_WIDTH)
+      : screenWidth;
 
-  // Animate FAB show/hide based on activeTab
+  // Hide QR FAB when FnB order floating widget is visible (avoid overlap)
   const shouldShowFab =
-    config?.showQrButton !== false && (activeTab === 'beranda' || activeTab === 'home');
+    config?.showQrButton !== false &&
+    (activeTab === "beranda" || activeTab === "home") &&
+    !isFnBWidgetVisible;
 
-  useEffect(() => {
-    if (shouldShowFab) {
-      // Show animation
-      Animated.parallel([
-        Animated.timing(fabOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(fabScale, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Hide animation
-      Animated.parallel([
-        Animated.timing(fabOpacity, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fabScale, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [shouldShowFab, fabOpacity, fabScale]);
-
-  // Default tab = Beranda when 1 or 2 tabs; when 3 tabs, middle = index 1
-  useEffect(() => {
-    if (tabs.length > 0 && !hasSetOrder2TabRef.current) {
-      const berandaTab = tabs.find((t) => t.id === 'beranda' || t.id === 'home');
-      const defaultTabId = berandaTab?.id ?? (tabs.length >= 2 ? tabs[1].id : tabs[0].id);
-      if (activeTab !== defaultTabId) {
-        setActiveTab(defaultTabId);
-      }
-      hasSetOrder2TabRef.current = true;
-    }
-  }, [tabs, activeTab]);
-
-  // Saat daftar tab berubah (mis. setelah simpan dari Pengaturan), pastikan activeTab masih ada di list
-  useEffect(() => {
-    if (tabs.length === 0) return;
-    const idx = tabs.findIndex((t) => t.id === activeTab);
-    if (idx < 0) {
-      const berandaOrMiddle = tabs.find((t) => t.id === 'beranda' || t.id === 'home')?.id ?? (tabs.length >= 2 ? tabs[1].id : tabs[0].id);
-      setActiveTab(berandaOrMiddle);
-    }
-  }, [tabs, activeTab]);
-
-  // Scroll pager ke tab default (tengah) agar indicator dan konten sinkron
-  const hasInitialPagerScrollRef = useRef(false);
-  useEffect(() => {
-    if (hasInitialPagerScrollRef.current || tabs.length === 0) return;
-    const index = tabs.findIndex((t) => t.id === activeTab);
-    if (index < 0) return;
-    hasInitialPagerScrollRef.current = true;
-    scrollX.setValue(index * layoutWidth);
-    requestAnimationFrame(() => {
-      pagerRef.current?.scrollTo({ x: index * layoutWidth, animated: false });
-    });
-  }, [activeTab, tabs, layoutWidth, scrollX]);
-
-  const registerTabRefresh = useCallback((tabId: string, refreshFn: () => void) => {
-    tabRefreshFunctionsRef.current[tabId] = refreshFn;
-  }, []);
-
-  const { refresh: handleRefresh, isRefreshing: refreshing } = useRefreshWithConfig({
-    onRefresh: async () => {
-      // Call refresh function of active tab
-      const refreshFn = tabRefreshFunctionsRef.current[activeTab];
-      if (refreshFn) {
-        refreshFn();
-      }
-    },
-    enableConfigRefresh: true,
+  useTabSync({ tabs, activeTab, setActiveTab });
+  const { handleTabChange } = usePagerSync({
+    tabs,
+    activeTab,
+    setActiveTab,
+    pagerRef,
+    layoutWidth,
+    scrollX,
   });
+  useDoubleBackExit({ tabs, activeTab, setActiveTab, pagerRef, layoutWidth });
 
-  const renderTabContent = useCallback(
-    (tabId: string, index: number) => {
-      const tabConfig = homeTabs.find((tab) => tab.id === tabId);
-
-      const pluginMapping = getTabPlugin(tabId);
-      if (
-        pluginMapping &&
-        PluginRegistry.isPluginEnabled(pluginMapping.pluginId)
-      ) {
-        const LazyTab = hasLazyTab(tabId) ? getLazyTab(tabId) : null;
-        if (LazyTab) {
-          return (
-            <Suspense
-              fallback={
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <ActivityIndicator size="large" color={colors.primary} />
-                </View>
-              }
-            >
-              <LazyTab
-                isActive={activeTab === tabId}
-                isVisible={activeTab === tabId}
-                scrollEnabled={false}
-              />
-            </Suspense>
-          );
-        }
-        return (
-          <PluginTabContentRenderer
-            tabId={tabId}
-            activeTab={activeTab}
-            scrollEnabled={false}
-          />
-        );
-      }
-      if (pluginMapping && !PluginRegistry.isPluginEnabled(pluginMapping.pluginId)) {
-        return (
-          <View
-            style={{
-              width: layoutWidth,
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: getHorizontalPadding(),
-            }}
-          >
-            <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>
-              {t('home.tabModuleNotEnabled')}
-            </Text>
-          </View>
-        );
-      }
-
-      if (tabId === 'beranda' || tabId === 'home') {
-        return (
-          <BerandaTab
-            isActive={activeTab === tabId}
-            onNavigateToNews={() => {
-              navigation.navigate('News' as never);
-            }}
-            scrollEnabled={false}
-          />
-        );
-      }
-
-      if (tabId === 'beranda-news') {
-        return (
-          <BerandaNewsInfo
-            showNewsInfo={true}
-            onNewsPress={() => {
-              navigation.navigate('News' as never);
-            }}
-            onViewAllPress={() => {
-              navigation.navigate('News' as never);
-            }}
-            limit={6}
-          />
-        );
-      }
-
-      if (tabId === 'activity' || tabId === 'aktivitas') {
-        return (
-          <AktivitasTab
-            isActive={activeTab === tabId}
-            isVisible={activeTab === tabId}
-            scrollEnabled={false}
-          />
-        );
-      }
-
-      if (tabId === 'news' || tabId === 'berita') {
-        return (
-          <NewsTab
-            isActive={activeTab === tabId}
-            isVisible={activeTab === tabId}
-            searchState={newsState}
-            scrollEnabled={false}
-          />
-        );
-      }
-
-      if (tabId === 'analytics' || tabId === 'analitik') {
-        return <AnalyticsTab isActive={activeTab === tabId} scrollEnabled={false} />;
-      }
-
-      if (tabId === 'dashboard') {
-        return (
-          <DashboardTab
-            isActive={activeTab === tabId}
-            isVisible={activeTab === tabId}
-            scrollEnabled={false}
-          />
-        );
-      }
-
-      if (tabId === 'transactions') {
-        return (
-          <TransactionsTab
-            title={t('balance.mainBalance') || 'Saldo Utama'}
-            balance={balance?.balance ?? 0}
-            showBalance={showBalance}
-            onToggleBalance={() => setShowBalance((v) => !v)}
-            onBalanceDetailPress={() => navigation.navigate('TransactionHistory' as never)}
-            isLoading={balanceLoading}
-            isActive={activeTab === tabId}
-            isVisible={activeTab === tabId}
-          />
-        );
-      }
-
-      if (tabConfig?.component) {
-        return (
-          <View style={{ width: layoutWidth, padding: getHorizontalPadding() }}>
-            <Text style={{ color: colors.text }}>{tabConfig.label}</Text>
-          </View>
-        );
-      }
-      // Default: simple text content
-      return (
-        <View
-          style={{
-            width: layoutWidth,
-            padding: getHorizontalPadding(),
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ color: colors.text, fontSize: 16 }}>{tabConfig?.label || tabId}</Text>
-        </View>
-      );
+  const registerTabRefresh = useCallback(
+    (tabId: string, refreshFn: () => void) => {
+      tabRefreshFunctionsRef.current[tabId] = refreshFn;
     },
-    [homeTabs, layoutWidth, activeTab, colors, registerTabRefresh, newsState, navigation, showBalance, balance, balanceLoading, t]
+    [],
   );
 
+  const tabRenderContext = useMemo(
+    () => ({
+      activeTab,
+      layoutWidth,
+      newsState,
+      showBalance,
+      balance: balance?.balance ?? 0,
+      balanceLoading,
+      onNavigateToNews: () => navigation.navigate("News" as never),
+      onBalanceDetailPress: () =>
+        navigation.navigate("TransactionHistory" as never),
+      onToggleBalance: () => setShowBalance((v) => !v),
+      registerTabRefresh,
+    }),
+    [
+      activeTab,
+      layoutWidth,
+      newsState,
+      showBalance,
+      balance?.balance,
+      balanceLoading,
+      navigation,
+      registerTabRefresh,
+    ],
+  );
+
+  const { refresh: handleRefresh, isRefreshing: refreshing } =
+    useRefreshWithConfig({
+      onRefresh: async () => {
+        // Call refresh function of active tab
+        const refreshFn = tabRefreshFunctionsRef.current[activeTab];
+        if (refreshFn) {
+          refreshFn();
+        }
+      },
+      enableConfigRefresh: true,
+    });
+
   const handleMenuPress = () => {
-    navigation.navigate('Profile' as never);
+    navigation.navigate("Profile" as never);
   };
 
   const handleNotificationPress = () => {
-    navigation.navigate('Notifications' as never);
+    navigation.navigate("Notifications" as never);
   };
 
   const handleQrPress = () => {
-    navigation.navigate('Qr' as never);
+    navigation.navigate("Qr" as never);
   };
 
   const activeTabIndex = useMemo(
     () => tabs.findIndex((t) => t.id === activeTab),
-    [tabs, activeTab]
-  );
-
-  const getTabIndex = useCallback(
-    (tabId: string) => {
-      return tabs.findIndex((tab) => tab.id === tabId);
-    },
-    [tabs]
+    [tabs, activeTab],
   );
 
   const shouldRenderTab = useCallback(
     (tabId: string, index: number) => {
       return Math.abs(index - activeTabIndex) <= 1;
     },
-    [activeTabIndex]
+    [activeTabIndex],
   );
 
   const handlePagerMomentumEnd = useCallback(
@@ -432,61 +253,8 @@ const HomeScreenComponent = () => {
         setActiveTab(tabs[index].id);
       }
     },
-    [layoutWidth, tabs, activeTab]
+    [layoutWidth, tabs, activeTab],
   );
-
-  const tabChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleTabChange = useCallback(
-    (tabId: string) => {
-      if (tabChangeTimeoutRef.current) {
-        clearTimeout(tabChangeTimeoutRef.current);
-      }
-
-      setActiveTab(tabId);
-      tabChangeTimeoutRef.current = setTimeout(() => {
-        if (pagerRef.current) {
-          const index = getTabIndex(tabId);
-          if (index >= 0) {
-            pagerRef.current.scrollTo({
-              x: index * layoutWidth,
-              animated: true,
-            });
-          }
-        }
-      }, 50);
-    },
-    [layoutWidth, getTabIndex]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (tabChangeTimeoutRef.current) {
-        clearTimeout(tabChangeTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const hasInitializedRef = useRef(false);
-  useEffect(() => {
-    if (
-      pagerRef.current &&
-      tabs.length >= 1 &&
-      hasSetOrder2TabRef.current &&
-      !hasInitializedRef.current
-    ) {
-      const defaultIndex = tabs.findIndex((t) => t.id === 'beranda' || t.id === 'home');
-      const scrollIndex = defaultIndex >= 0 ? defaultIndex : 0;
-      setTimeout(() => {
-        if (pagerRef.current) {
-          pagerRef.current.scrollTo({
-            x: scrollIndex * layoutWidth,
-            animated: false,
-          });
-        }
-      }, 0);
-      hasInitializedRef.current = true;
-    }
-  }, [layoutWidth, tabs, activeTab]);
 
   const { unreadCount, refresh: refreshNotifications } = useNotifications();
 
@@ -496,52 +264,7 @@ const HomeScreenComponent = () => {
         refreshNotifications();
       });
       return () => cancelAnimationFrame(id);
-    }, [refreshNotifications])
-  );
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const onBackPress = () => {
-        const homeTabId = tabs.find((tab) => tab.id === 'home' || tab.id === 'beranda')?.id;
-        const isHomeTab = homeTabId && activeTab === homeTabId;
-
-        if (!isHomeTab && homeTabId) {
-          setActiveTab(homeTabId);
-          const homeIndex = tabs.findIndex((tab) => tab.id === homeTabId);
-          if (homeIndex >= 0 && pagerRef.current) {
-            pagerRef.current.scrollTo({
-              x: homeIndex * layoutWidth,
-              animated: true,
-            });
-          }
-          return true;
-        }
-
-        const now = Date.now();
-        if (backPressTimeRef.current && now - backPressTimeRef.current < DOUBLE_BACK_PRESS_DELAY) {
-          if (Platform.OS === 'android') {
-            BackHandler.exitApp();
-          }
-          return true;
-        } else {
-          backPressTimeRef.current = now;
-          Toast.show({
-            type: 'info',
-            text1: t('common.pressAgainToExit') || 'Tekan sekali lagi untuk keluar',
-            position: 'bottom',
-            visibilityTime: 2000,
-          });
-          return true;
-        }
-      };
-
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => {
-        backHandler.remove();
-        backPressTimeRef.current = 0;
-      };
-    }, [activeTab, tabs, layoutWidth])
+    }, [refreshNotifications]),
   );
 
   return (
@@ -571,8 +294,8 @@ const HomeScreenComponent = () => {
             colors={[colors.primary]}
           />
         }
-        {...(Platform.OS === 'ios' && {
-          contentInsetAdjustmentBehavior: 'automatic',
+        {...(Platform.OS === "ios" && {
+          contentInsetAdjustmentBehavior: "automatic",
           automaticallyAdjustContentInsets: false,
           automaticallyAdjustKeyboardInsets: false,
         })}
@@ -622,71 +345,37 @@ const HomeScreenComponent = () => {
 
         {/* Tab Content - Horizontal Pager untuk swipe antar tab */}
         <View style={styles.tabContentContainer}>
-          <Animated.ScrollView
-            ref={pagerRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            scrollEnabled={true}
-            nestedScrollEnabled={true}
-            decelerationRate="fast"
-            snapToInterval={layoutWidth}
-            removeClippedSubviews={false} // Changed to false to prevent clipping nested scroll
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
-              useNativeDriver: true,
-            })}
+          <HomeTabPager
+            tabs={tabs}
+            activeTab={activeTab}
+            layoutWidth={layoutWidth}
+            scrollX={scrollX}
+            pagerRef={pagerRef}
             onMomentumScrollEnd={handlePagerMomentumEnd}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ flexGrow: 1 }}
-          >
-            {tabs.map((tab, index) => {
-              // Lazy loading: hanya render tab aktif dan tab adjacent
-              if (!shouldRenderTab(tab.id, index)) {
-                return (
-                  <View key={tab.id} style={{ width: layoutWidth, flex: 1 }} pointerEvents="none" />
-                );
-              }
-
-              return (
-                <View
-                  key={tab.id}
-                  style={{ width: layoutWidth, flex: 1 }}
-                  pointerEvents={activeTab === tab.id ? 'auto' : 'none'}
-                >
-                  {renderTabContent(tab.id, index)}
-                </View>
-              );
-            })}
-          </Animated.ScrollView>
+            shouldRenderTab={shouldRenderTab}
+            renderTab={(tabId, index) => (
+              <HomeTabContentRouter
+                tabId={tabId}
+                tabConfig={homeTabs.find((t) => t.id === tabId) ?? undefined}
+                context={tabRenderContext}
+              />
+            )}
+          />
         </View>
       </ScrollView>
 
       {/* FnB active order floating widget (Grab/GoFood style) */}
       {showFnBFloatingWidget && (
-        <View style={styles.fnbFloatingWidgetContainer} pointerEvents="box-none">
+        <View
+          style={styles.fnbFloatingWidgetContainer}
+          pointerEvents="box-none"
+        >
           <FnBOrderFloatingWidget />
         </View>
       )}
 
-      {/* FAB QR Button */}
       {config?.showQrButton !== false && (
-        <Animated.View
-          style={[
-            styles.fab,
-            {
-              backgroundColor: colors.primary,
-              opacity: fabOpacity,
-              zIndex: 2,
-              transform: [{ scale: fabScale }],
-            },
-          ]}
-          pointerEvents={shouldShowFab ? 'auto' : 'none'}
-        >
-          <TouchableOpacity onPress={handleQrPress} activeOpacity={0.8} style={styles.fabTouchable}>
-            <QrScanIcon width={scale(26)} height={scale(26)} fill={colors.surface} />
-          </TouchableOpacity>
-        </Animated.View>
+        <QrFab visible={shouldShowFab} onPress={handleQrPress} />
       )}
     </SafeAreaView>
   );
@@ -704,56 +393,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  headerContent: {
-    width: '100%',
-  },
-  refreshIndicatorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: moderateVerticalScale(8),
-  },
   topBarContainer: {
     paddingBottom: moderateVerticalScale(8),
-  },
-  section: {
-    paddingTop: moderateVerticalScale(16),
-    paddingBottom: moderateVerticalScale(16),
   },
   tabContentContainer: {
     flex: 1,
   },
   fnbFloatingWidgetContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0, // above FAB QR button
     zIndex: 99999999999,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: moderateVerticalScale(54),
-    alignSelf: 'center',
-    width: scale(80),
-    height: scale(55),
-    borderRadius: scale(2000),
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  fabTouchable: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

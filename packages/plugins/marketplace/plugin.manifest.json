@@ -23,7 +23,10 @@
       "ProductDetailScreen": "ProductDetailScreen",
       "StoreDetailScreen": "StoreDetailScreen",
       "CheckoutScreen": "CheckoutScreen",
-      "MarketplaceOrderDetailScreen": "MarketplaceOrderDetailScreen"
+      "MarketplaceOrderDetailScreen": "MarketplaceOrderDetailScreen",
+      "AddressListScreen": "AddressListScreen",
+      "AddressFormScreen": "AddressFormScreen",
+      "MapPickerScreen": "MapPickerScreen"
     },
     "hooks": {
       "useMarketplaceData": "useMarketplaceData",
@@ -140,6 +143,42 @@
       ],
       "meta": {
         "title": "Detail Pesanan",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "AddressList",
+      "path": "/marketplace/addresses",
+      "component": "AddressListScreen",
+      "permissions": [
+        "marketplace:order"
+      ],
+      "meta": {
+        "title": "Daftar Alamat",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "AddressForm",
+      "path": "/marketplace/address/form",
+      "component": "AddressFormScreen",
+      "permissions": [
+        "marketplace:order"
+      ],
+      "meta": {
+        "title": "Tambah/Ubah Alamat",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "MapPicker",
+      "path": "/marketplace/address/map",
+      "component": "MapPickerScreen",
+      "permissions": [
+        "marketplace:order"
+      ],
+      "meta": {
+        "title": "Pilih di Peta",
         "showInMenu": false
       }
     }

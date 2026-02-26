@@ -27,6 +27,8 @@ interface BottomSheetProps {
   snapPoints?: number[];
   initialSnapPoint?: number;
   enablePanDownToClose?: boolean;
+  /** When true, only dragging the handle closes; content area (e.g. ScrollView) gets full scroll priority */
+  panOnlyOnHandle?: boolean;
   disableClose?: boolean;
 }
 
@@ -37,6 +39,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   snapPoints = [75],
   initialSnapPoint = 0,
   enablePanDownToClose = true,
+  panOnlyOnHandle = false,
   disableClose = false,
 }) => {
   const { colors } = useTheme();
@@ -171,10 +174,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               paddingBottom: keyboardHeight + insets.bottom + moderateVerticalScale(16),
             },
           ]}
-          {...panResponder.panHandlers}
+          {...(panOnlyOnHandle ? {} : panResponder.panHandlers)}
         >
           {enablePanDownToClose && !disableClose && (
-            <View style={styles.dragHandleContainer}>
+            <View
+              style={styles.dragHandleContainer}
+              {...(panOnlyOnHandle ? panResponder.panHandlers : {})}
+            >
               <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
             </View>
           )}

@@ -33,6 +33,7 @@ import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenH
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import type { EntryPoint } from '../../models';
+import { FnBOrderFloatingWidget } from '../widgets/FnBOrderFloatingWidget';
 
 interface FnBScreenProps {
   entryPoint?: EntryPoint;
@@ -403,6 +404,11 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
       >
         <ScanBarcode size={scale(34)} color={colors.surface} variant="Outline" />
       </TouchableOpacity>
+
+      {/* FnB active order floating widget (same as Home) */}
+      <View style={styles.fnbFloatingWidgetContainer} pointerEvents="box-none">
+        <FnBOrderFloatingWidget />
+      </View>
     </View>
   );
 };
@@ -669,6 +675,13 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
+  },
+  fnbFloatingWidgetContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99999,
   },
 });
 

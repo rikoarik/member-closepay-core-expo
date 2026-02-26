@@ -26,14 +26,20 @@ import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { QrDisplayScreen } from './QrDisplayScreen';
 
-// Expo Go: pakai expo-camera (QrScanScreenExpo). Lainnya: Vision Camera (QrScanScreen). Web: QrScanScreen.web.
+// Expo Go: pakai expo-camera (QrScanScreenExpo). Lainnya: Vision Camera (QrScanScreen). Fallback to Expo if Vision native module missing.
 const isExpoGo = Constants.appOwnership === 'expo';
 const useExpoCamera = isExpoGo && Platform.OS !== 'web';
-const QrScanScreenLazy = lazy(() =>
-  import('./QrScanScreen').then((m) => ({ default: m.QrScanScreen }))
-);
 const QrScanScreenExpoLazy = lazy(() =>
   import('./QrScanScreenExpo').then((m) => ({ default: m.QrScanScreenExpo }))
+);
+const QrScanScreenLazy = lazy(() =>
+  import('./QrScanScreen')
+    .then((m) => {
+      const C = m?.QrScanScreen ?? (m as any)?.default;
+      if (!C) throw new Error('QrScanScreen export not found');
+      return { default: C };
+    })
+    .catch(() => import('./QrScanScreenExpo').then((m) => ({ default: m.QrScanScreenExpo })))
 );
 
 const MAX_WIDTH_WEB = 414;

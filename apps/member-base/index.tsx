@@ -38,20 +38,9 @@ import { ProfileScreen } from '@core/account';
 import { PlaceholderScreen } from './src/screens/PlaceholderScreen';
 import { FnBCartProvider, FnBActiveOrderProvider } from '@plugins/marketplace-fnb';
 import { MarketplaceOrderProvider } from '@plugins/marketplace';
+import { appConfig } from './config/app.config';
 
 const Stack = createNativeStackNavigator();
-
-
-/**
- * Load config dengan support hot reload di development
- * Metro bundler akan auto-reload file saat berubah, tapi kita perlu clear cache
- */
-const loadAppConfig = (): typeof import('./config/app.config').appConfig => {
-  // Dynamic require untuk support hot reload
-  // Metro akan auto-reload file saat berubah
-  const configModule = require('./config/app.config');
-  return configModule.appConfig;
-};
 
 function MemberBaseAppContent(): React.JSX.Element {
   const { colors, isDark } = useTheme();
@@ -99,8 +88,6 @@ function MemberBaseAppContent(): React.JSX.Element {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Load app-specific config dengan support hot reload
-        const appConfig = loadAppConfig();
         configService.setConfig(appConfig);
 
         setConfigLoaded(true);
@@ -135,71 +122,6 @@ function MemberBaseAppContent(): React.JSX.Element {
     return () => {
       subscription.remove();
     };
-  }, []);
-
-  // Watch config file changes untuk development (polling approach)
-  useEffect(() => {
-    if (!__DEV__) return;
-
-    let lastConfig: typeof import('./config/app.config').appConfig | null = null;
-
-    const checkConfigUpdate = () => {
-      try {
-        const appConfig = loadAppConfig();
-
-        // Deep comparison untuk detect perubahan
-        const hasChanged =
-          !lastConfig ||
-          lastConfig.branding.logo !== appConfig.branding.logo ||
-          lastConfig.branding.appName !== appConfig.branding.appName ||
-          lastConfig.branding.primaryColor !== appConfig.branding.primaryColor ||
-          lastConfig.companyId !== appConfig.companyId ||
-          lastConfig.companyName !== appConfig.companyName;
-
-        if (hasChanged) {
-          logger.debug('Config file changed, updating...');
-          configService.setConfig(appConfig);
-          lastConfig = appConfig;
-        }
-      } catch (error) {
-        // Ignore errors saat file sedang di-edit
-      }
-    };
-
-    checkConfigUpdate();
-    const interval = setInterval(checkConfigUpdate, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Watch theme color file changes untuk realtime color updates
-  useEffect(() => {
-    if (!__DEV__) return;
-
-    const loadThemeColor = (): string | null => {
-      try {
-        const themeColorModule = require('./config/theme.color');
-        return themeColorModule.themeColor || null;
-      } catch (error) {
-        return null;
-      }
-    };
-
-    let lastThemeColor: string | null = null;
-
-    const checkThemeColorUpdate = () => {
-      try {
-        const currentColor = loadThemeColor();
-
-        if (currentColor && currentColor !== lastThemeColor) {
-          logger.debug('Theme color file changed:', lastThemeColor, '→', currentColor);
-          lastThemeColor = currentColor;
-        }
-      } catch (error) {}
-    };
-
-    checkThemeColorUpdate();
-    const interval = setInterval(checkThemeColorUpdate, 500);
-    return () => clearInterval(interval);
   }, []);
 
   if (!configLoaded || !pluginsInitialized) {
