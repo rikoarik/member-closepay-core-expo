@@ -115,7 +115,7 @@ export const AddressFormScreen: React.FC = () => {
       setIsDefault(blank.isDefault);
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [addressId]);
 
   useEffect(() => {

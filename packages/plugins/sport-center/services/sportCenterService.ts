@@ -6,8 +6,6 @@
 import type { SportCenterTimeSlot } from '../models';
 
 export const getAvailableTimeSlots = async (
-  facilityId: string,
-  date: string
 ): Promise<SportCenterTimeSlot[]> => {
   const slots: SportCenterTimeSlot[] = [
     { time: '08:00', available: true, price: 50000 },

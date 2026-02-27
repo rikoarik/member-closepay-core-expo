@@ -10,6 +10,14 @@
     "build:web": "expo export -p web && npx workbox-cli generateSW workbox-config.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "perf:typecheck": "node scripts/run-with-timing.js tsc --noEmit",
+    "perf:lint": "node scripts/run-with-timing.js npm run lint",
+    "perf:build": "node scripts/run-with-timing.js npx expo export -p web",
+    "perf:build:android": "node scripts/run-with-timing.js npx expo export -p android",
+    "perf:build:ios": "node scripts/run-with-timing.js npx expo export -p ios",
+    "perf:bundle:web": "EXPO_ATLAS=true npx expo export -p web && npx expo-atlas .expo/atlas.jsonl",
+    "perf:bundle:android": "EXPO_ATLAS=true npx expo export -p android && npx expo-atlas .expo/atlas.jsonl",
+    "perf:bundle:ios": "EXPO_ATLAS=true npx expo export -p ios && npx expo-atlas .expo/atlas.jsonl",
     "postinstall": "node -e \"var fs=require('fs'); var p='node_modules/react-native-linear-gradient/index.web.js'; var s='shim-linear-gradient.web.js'; if(fs.existsSync(s)) fs.copyFileSync(s,p);\""
   },
   "dependencies": {

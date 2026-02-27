@@ -38,7 +38,7 @@ export const useDraggableBottomSheet = (snapPoints: number[]) => {
           }).start();
        }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [snapPoints, screenHeight]);
 
   const panResponder = useRef(
