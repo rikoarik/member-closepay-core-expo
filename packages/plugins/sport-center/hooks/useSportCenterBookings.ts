@@ -18,6 +18,7 @@ const MOCK_BOOKINGS: SportCenterBooking[] = [
     status: 'upcoming',
     amount: 50000,
     createdAt: '2025-02-10T14:00:00',
+    userEmail: undefined,
   },
   {
     id: 'b2',
@@ -30,6 +31,7 @@ const MOCK_BOOKINGS: SportCenterBooking[] = [
     status: 'completed',
     amount: 25000,
     createdAt: '2025-02-08T09:00:00',
+    userEmail: undefined,
   },
 ];
 

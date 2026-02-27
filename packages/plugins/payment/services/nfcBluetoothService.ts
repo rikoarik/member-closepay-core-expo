@@ -3,7 +3,8 @@
  * Service untuk handle NFC card reading dan Bluetooth communication.
  * NFC/BLE modules are lazy-loaded so Expo Go can start without native modules.
  */
-import type { BleManager, Device, State } from 'react-native-ble-plx';
+import type { BleManager, Device } from 'react-native-ble-plx';
+import { State } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid, Linking } from 'react-native';
 
 // Lazy-load NfcManager so Expo Go doesn't load native module at import time
@@ -13,8 +14,11 @@ type Ndef = typeof import('react-native-nfc-manager').Ndef;
 type NfcEvents = typeof import('react-native-nfc-manager').NfcEvents;
 let _nfc: { default: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents } | null = null;
 function getNfc(): { NfcManager: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents } {
-  if (!_nfc) _nfc = require('react-native-nfc-manager');
-  return { NfcManager: _nfc.default, NfcTech: _nfc.NfcTech, Ndef: _nfc.Ndef, NfcEvents: _nfc.NfcEvents };
+  if (!_nfc) {
+    _nfc = require('react-native-nfc-manager');
+  }
+  const nfc = _nfc!;
+  return { NfcManager: nfc.default, NfcTech: nfc.NfcTech, Ndef: nfc.Ndef, NfcEvents: nfc.NfcEvents };
 }
 
 // Lazy-init BLE Manager so Expo Go doesn't load native module at import time
@@ -24,7 +28,7 @@ function getBleManager(): BleManager {
     const { BleManager: BleManagerCtor } = require('react-native-ble-plx');
     _bleManager = new BleManagerCtor();
   }
-  return _bleManager;
+  return _bleManager as BleManager;
 }
 
 export interface NFCCardData {
@@ -210,16 +214,16 @@ class NFCBluetoothService {
       // Try different NFC technologies in order of preference
       const technologies = [getNfc().NfcTech.Ndef, getNfc().NfcTech.NfcA, getNfc().NfcTech.NfcB, getNfc().NfcTech.NfcF];
       let tag: any = null;
-      let usedTech: NfcTech | null = null;
+      let usedTech: string | null = null;
 
       for (const tech of technologies) {
         try {
           console.log(`Trying NFC technology: ${tech}`);
-          await getNfc().NfcManager.requestTechnology(tech, {
+          await getNfc().NfcManager.requestTechnology(tech as any, {
             alertMessage: 'Tempelkan kartu pada bagian belakang smartphone',
             invalidateAfterFirstRead: false,
           });
-          usedTech = tech;
+          usedTech = String(tech);
           tag = await getNfc().NfcManager.getTag();
           if (tag) {
             console.log(`Successfully read tag with ${tech}`);

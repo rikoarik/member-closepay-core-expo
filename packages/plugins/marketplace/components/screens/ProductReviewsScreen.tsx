@@ -180,7 +180,7 @@ export const ProductReviewsScreen: React.FC = () => {
                       { color: selected ? colors.primary : colors.textSecondary },
                     ]}
                   >
-                    {item.value === 'all' ? t('marketplace.allCategories') : item.label}
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               );

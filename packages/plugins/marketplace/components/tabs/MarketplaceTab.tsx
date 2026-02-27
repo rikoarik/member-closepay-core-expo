@@ -304,7 +304,7 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
               <View key={product.id} style={[styles.horizontalCard, { width: cardWidth }]}>
                 <ProductCard
                   product={product}
-                  onPress={(p) => navigation.navigate('ProductDetail' as never, { product: p })}
+                  onPress={(p) => (navigation as any).navigate('ProductDetail', { product: p })}
                 />
               </View>
             ))}
@@ -330,7 +330,7 @@ export const MarketplaceTab: React.FC<MarketplaceTabProps> = ({
               key={store.id}
               store={store}
               onPress={(s) => {
-                navigation.navigate('StoreDetail' as never, { store: s });
+                (navigation as any).navigate('StoreDetail', { store: s });
               }}
             />
           ))}

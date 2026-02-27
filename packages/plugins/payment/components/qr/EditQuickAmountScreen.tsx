@@ -129,13 +129,13 @@ export const EditQuickAmountScreen: React.FC = () => {
               
               if (inputBottom > visibleAreaBottom - padding) {
                 const scrollOffset = Math.max(0, inputBottom - visibleAreaBottom + padding);
-                scrollViewRef.current?.scrollTo({
+                (scrollViewRef.current as any)?.scrollTo({
                   y: scrollOffset,
                   animated: true,
                 });
               } else if (inputTop < visibleAreaTop + padding) {
                 const scrollOffset = Math.max(0, inputTop - visibleAreaTop - padding);
-                scrollViewRef.current?.scrollTo({
+                (scrollViewRef.current as any)?.scrollTo({
                   y: scrollOffset,
                   animated: true,
                 });

@@ -217,20 +217,32 @@ export function isAxiosError(error: unknown): error is AxiosError {
   );
 }
 
+/** Response data shape for API errors (avoids indexing optional ApiError.response) */
+type ApiErrorResponseData = NonNullable<ApiError['response']>['data'];
+
 /**
  * Convert AxiosError to ApiError
  */
 export function axiosErrorToApiError(error: AxiosError): ApiError {
+  const resUnknown: unknown = error.response;
+  const res = resUnknown as Record<string, unknown> | undefined;
+  const status = res?.status as number | undefined;
+  const statusText = res?.statusText as string | undefined;
+  const resWithData = resUnknown as Record<string, unknown> | null | undefined;
+  const resData: ApiErrorResponseData | undefined = resWithData?.['data'] as ApiErrorResponseData | undefined;
+  const msg = resData && typeof resData === 'object' && resData !== null && 'message' in resData
+    ? (resData as { message?: string }).message
+    : undefined;
   return {
     type: 'api',
-    message: error.response?.data?.message || error.message || 'API request failed',
+    message: msg || error.message || 'API request failed',
     code: error.code,
-    statusCode: error.response?.status,
+    statusCode: status,
     timestamp: Date.now(),
     response: {
-      status: error.response?.status || 0,
-      statusText: error.response?.statusText || '',
-      data: error.response?.data as ApiError['response']['data'],
+      status: status ?? 0,
+      statusText: statusText ?? '',
+      data: resData,
     },
     context: {
       url: error.config?.url,
@@ -244,7 +256,7 @@ export function axiosErrorToApiError(error: AxiosError): ApiError {
  */
 export function isAuthenticationError(error: unknown): boolean {
   if (isAuthError(error)) {
-    return error.isUnauthorized || error.isForbidden;
+    return Boolean(error.isUnauthorized || error.isForbidden);
   }
   if (isApiError(error)) {
     return error.statusCode === 401 || error.statusCode === 403;

@@ -745,7 +745,6 @@ export const en = {
     configureInstallmentHint: 'Set DP and number of installments here',
     configureInstallment: 'Configure installment',
     vaSummary: 'VA summary',
-    bank: 'Bank',
     bankCode: 'Bank code',
     totalDue: 'Total due',
     voucherInvalidOrExpired: 'Voucher code is invalid or expired.',

@@ -13,3 +13,10 @@ export interface Notification {
   createdAt: Date;
 }
 
+export interface NotificationFilters {
+  type?: Notification['type'];
+  isRead?: boolean;
+  limit?: number;
+  offset?: number;
+}
+

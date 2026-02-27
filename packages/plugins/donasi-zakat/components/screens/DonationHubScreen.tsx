@@ -270,7 +270,7 @@ export const DonationHubScreen = () => {
                   <View
                     style={[styles.providerBadge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}
                   >
-                    <Flash size={scale(10)} color={colors.errorContainer} variant="Bold" />
+                    <Flash size={scale(10)} color={colors.errorContainer as string | undefined} variant="Bold" />
                     <Text style={[styles.providerText, { color: colors.textSecondary }]}>
                       {program.provider}
                     </Text>

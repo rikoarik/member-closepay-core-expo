@@ -8,7 +8,7 @@
  * Will be refactored in future phases.
  */
 
-// eslint-disable-next-line no-restricted-imports
+ 
 import { QuickAccessButtons } from '../../../../../apps/member-base/src/components/home';
 
 // Re-export the component to maintain same API

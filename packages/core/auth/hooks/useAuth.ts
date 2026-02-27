@@ -40,6 +40,7 @@ export const useAuth = (): UseAuthReturn => {
     logout,
     setUser,
     setCompany,
+    setToken,
     clearError,
     initializeAuth,
   } = useAuthStore();
@@ -60,6 +61,7 @@ export const useAuth = (): UseAuthReturn => {
     logout,
     setUser,
     setCompany,
+    setToken,
     clearError,
     initializeAuth,
   };

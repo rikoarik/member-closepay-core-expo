@@ -24,9 +24,7 @@ import {
   Camera,
   useCameraDevice,
   useCodeScanner,
-  CameraPermissionStatus,
-  requestCameraPermission,
-  getCameraPermissionStatus,
+  useCameraPermission,
 } from 'react-native-vision-camera';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily } from '@core/config';
 import { useTheme } from '@core/theme';
@@ -40,8 +38,8 @@ export const FnBScanScreenVision: React.FC = () => {
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
 
-  const [cameraPermission, setCameraPermission] =
-    useState<CameraPermissionStatus>('not-determined');
+  const { hasPermission: hasCameraPermission, requestPermission: requestCameraPermission } = useCameraPermission();
+  const [permissionDeniedByUser, setPermissionDeniedByUser] = useState(false);
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
@@ -71,6 +69,20 @@ export const FnBScanScreenVision: React.FC = () => {
     }
   }, [device]);
 
+  useEffect(() => {
+    if (hasCameraPermission) return;
+    const run = async () => {
+      setIsRequestingPermission(true);
+      try {
+        const granted = await requestCameraPermission();
+        if (!granted) setPermissionDeniedByUser(true);
+      } finally {
+        setIsRequestingPermission(false);
+      }
+    };
+    run();
+  }, [hasCameraPermission, requestCameraPermission]);
+
   useFocusEffect(
     useCallback(() => {
       setIsScanning(true);
@@ -78,57 +90,6 @@ export const FnBScanScreenVision: React.FC = () => {
     }, [])
   );
 
-  useEffect(() => {
-    const checkAndRequestPermission = async () => {
-      try {
-        if (Platform.OS === 'android') {
-          const androidPermission = await PermissionsAndroid.check(
-            PermissionsAndroid.PERMISSIONS.CAMERA
-          );
-          if (!androidPermission) {
-            setIsRequestingPermission(true);
-            try {
-              const result = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.CAMERA,
-                {
-                  title: 'Izin Kamera',
-                  message: 'Aplikasi membutuhkan akses kamera untuk scan kode toko FnB',
-                  buttonPositive: 'Izinkan',
-                  buttonNegative: 'Tolak',
-                }
-              );
-              if (result === PermissionsAndroid.RESULTS.GRANTED) {
-                setCameraPermission('granted');
-              } else {
-                setCameraPermission('denied');
-              }
-            } catch (err) {
-              console.error('[FnBScanScreenVision] Android permission error:', err);
-            } finally {
-              setIsRequestingPermission(false);
-            }
-          } else {
-            setCameraPermission('granted');
-          }
-        } else {
-          const status = await getCameraPermissionStatus();
-          setCameraPermission(status);
-          if (status === 'not-determined') {
-            setIsRequestingPermission(true);
-            try {
-              const newStatus = await requestCameraPermission();
-              setCameraPermission(newStatus);
-            } finally {
-              setIsRequestingPermission(false);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('[FnBScanScreenVision] Permission check error:', e);
-      }
-    };
-    checkAndRequestPermission();
-  }, []);
 
   useEffect(() => {
     const startAnimation = () => {
@@ -195,8 +156,8 @@ export const FnBScanScreenVision: React.FC = () => {
     outputRange: [0, scale(200)],
   });
 
-  const permissionDenied = cameraPermission === 'denied' || cameraPermission === 'restricted';
-  const canShowCamera = !isCameraInitializing && device && cameraPermission === 'granted';
+  const permissionDenied = !hasCameraPermission && permissionDeniedByUser;
+  const canShowCamera = !isCameraInitializing && device && hasCameraPermission;
 
   if (isRequestingPermission) {
     return (

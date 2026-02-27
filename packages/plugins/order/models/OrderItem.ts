@@ -3,7 +3,11 @@
  * Model untuk item dalam order
  */
 
-import { Variant } from '../../catalog/models/Variant';
+export interface Variant {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
+}
 
 export interface OrderItem {
   productId: string;

@@ -31,7 +31,7 @@ export const SportCenterFeatured: React.FC<SportCenterFeaturedProps> = React.mem
     const nearbyFacilities = useMemo(() => getNearbyFacilities(3), []);
 
     const handleFacilityPress = (facilityId: string) => {
-      navigation.navigate('SportCenterFacilityDetail' as never, { facilityId });
+      (navigation as any).navigate('SportCenterFacilityDetail', { facilityId });
     };
 
     return (

@@ -25,9 +25,7 @@ import {
     Camera,
     useCameraDevice,
     useCodeScanner,
-    CameraPermissionStatus,
-    requestCameraPermission,
-    getCameraPermissionStatus,
+    useCameraPermission,
 } from 'react-native-vision-camera';
 import { launchImageLibrary, type ImageLibraryOptions } from 'react-native-image-picker';
 
@@ -45,7 +43,8 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({ isActive, onScanned,
     const insets = useSafeAreaInsets();
 
     const [flashEnabled, setFlashEnabled] = useState(false);
-    const [cameraPermission, setCameraPermission] = useState<CameraPermissionStatus>('not-determined');
+    const { hasPermission: hasCameraPermission, requestPermission: requestCameraPermission } = useCameraPermission();
+    const [permissionDeniedByUser, setPermissionDeniedByUser] = useState(false);
     const [isRequestingPermission, setIsRequestingPermission] = useState(false);
     const [scannedValue, setScannedValue] = useState<string | null>(null);
     const [galleryResult, setGalleryResult] = useState<string | null>(null);
@@ -127,60 +126,18 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({ isActive, onScanned,
 
     // Permission Check
     useEffect(() => {
-        const checkAndRequestPermission = async () => {
+        if (!isActive || hasCameraPermission) return;
+        const run = async () => {
+            setIsRequestingPermission(true);
             try {
-                if (Platform.OS === 'android') {
-                    const androidPermission = await PermissionsAndroid.check(
-                        PermissionsAndroid.PERMISSIONS.CAMERA
-                    );
-
-                    if (!androidPermission) {
-                        setIsRequestingPermission(true);
-                        try {
-                            const result = await PermissionsAndroid.request(
-                                PermissionsAndroid.PERMISSIONS.CAMERA,
-                                {
-                                    title: 'Izin Kamera',
-                                    message: 'Aplikasi membutuhkan akses kamera untuk memindai kode QR',
-                                    buttonPositive: 'Izinkan',
-                                    buttonNegative: 'Tolak',
-                                }
-                            );
-                            if (result === PermissionsAndroid.RESULTS.GRANTED) {
-                                setCameraPermission('granted');
-                            } else {
-                                setCameraPermission('denied');
-                            }
-                        } catch (err) {
-                            console.error('[QrScanScreen] Android permission error:', err);
-                        } finally {
-                            setIsRequestingPermission(false);
-                        }
-                    } else {
-                        setCameraPermission('granted');
-                    }
-                } else {
-                    const status = await getCameraPermissionStatus();
-                    setCameraPermission(status);
-                    if (status === 'not-determined') {
-                        setIsRequestingPermission(true);
-                        try {
-                            const newStatus = await requestCameraPermission();
-                            setCameraPermission(newStatus);
-                        } finally {
-                            setIsRequestingPermission(false);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('[QrScanScreen] Permission check error:', e);
+                const granted = await requestCameraPermission();
+                if (!granted) setPermissionDeniedByUser(true);
+            } finally {
+                setIsRequestingPermission(false);
             }
         };
-
-        if (isActive) {
-            checkAndRequestPermission();
-        }
-    }, [isActive]);
+        run();
+    }, [isActive, hasCameraPermission, requestCameraPermission]);
 
     // Listen for zoom animation changes and update the actual zoom state
     useEffect(() => {
@@ -320,12 +277,12 @@ export const QrScanScreen: React.FC<QrScanScreenProps> = ({ isActive, onScanned,
         }
     }, [flashEnabled, handlePickFromGallery, onHeaderActionsReady]);
 
-    const permissionDenied = cameraPermission === 'denied' || cameraPermission === 'restricted';
+    const permissionDenied = !hasCameraPermission && permissionDeniedByUser;
     const canShowCamera =
         isActive &&
         !isCameraInitializing &&
         cameraDevice &&
-        cameraPermission === 'granted';
+        hasCameraPermission;
 
     if (isRequestingPermission) {
         return (

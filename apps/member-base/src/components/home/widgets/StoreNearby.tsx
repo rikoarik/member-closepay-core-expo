@@ -24,7 +24,7 @@ export const StoreNearby: React.FC = React.memo(() => {
   const stores = useStoreData(5);
 
   const handleStorePress = (store: Store) => {
-    navigation.navigate('FnBMerchantDetail' as never, {
+    (navigation as any).navigate('FnBMerchantDetail', {
       storeId: store.id,
       storeName: store.name,
       entryPoint: 'beranda',
@@ -39,7 +39,7 @@ export const StoreNearby: React.FC = React.memo(() => {
         <Text style={[styles.title, { color: colors.text }]}>
           {t('home.storeNearby') || 'Toko Terdekat'}
         </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('FnB' as never)}>
+        <TouchableOpacity onPress={() => (navigation as any).navigate('FnB')}>
           <Text style={[styles.seeAll, { color: colors.primary }]}>
             {t('common.viewAll') || 'Lihat Semua'}
           </Text>

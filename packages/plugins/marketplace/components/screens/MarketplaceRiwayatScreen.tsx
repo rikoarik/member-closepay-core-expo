@@ -208,9 +208,7 @@ export const MarketplaceRiwayatScreen: React.FC = () => {
                 key={order.id}
                 style={[styles.card, { backgroundColor: colors.surface }]}
                 onPress={() =>
-                  navigation.navigate('MarketplaceOrderDetail' as never, {
-                    orderId: order.id,
-                  } as never)
+                  (navigation as any).navigate('MarketplaceOrderDetail', { orderId: order.id })
                 }
                 activeOpacity={0.7}
               >

@@ -80,7 +80,7 @@ export const MarketplaceWishlistScreen: React.FC = () => {
 
   const handleProductPress = useCallback(
     (item: (typeof favoriteItems)[0]) => {
-      navigation.navigate('ProductDetail' as never, {
+      (navigation as any).navigate('ProductDetail', {
         product: {
           id: item.id,
           name: item.name,
@@ -89,7 +89,7 @@ export const MarketplaceWishlistScreen: React.FC = () => {
           storeName: item.storeName,
           category: item.category,
         },
-      } as never);
+      });
     },
     [navigation]
   );

@@ -3,7 +3,7 @@
  * Service untuk mengelola notifications
  */
 
-import { Notification } from '../models/Notification';
+import { Notification, NotificationFilters } from '../models/Notification';
 
 export interface NotificationService {
   getNotifications(filters?: NotificationFilters): Promise<Notification[]>;
@@ -12,13 +12,6 @@ export interface NotificationService {
   markAllAsRead(): Promise<void>;
   sendPushNotification(token: string, notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>): Promise<void>;
   showInfoPopup(title: string, message: string): void;
-}
-
-export interface NotificationFilters {
-  type?: Notification['type'];
-  isRead?: boolean;
-  limit?: number;
-  offset?: number;
 }
 
 // Generate dummy notifications

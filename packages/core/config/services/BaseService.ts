@@ -24,7 +24,9 @@ export abstract class BaseService {
   /**
    * Logger instance for this service
    */
-  protected readonly log = logger.child(this.serviceName);
+  protected get log() {
+    return logger.child(this.serviceName);
+  }
 
   /**
    * Handle and log errors consistently

@@ -266,7 +266,7 @@ export const TopUpMemberScreen = () => {
       // Cleanup on unmount
       stopNFCListener();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [activeTab, cardData, nfcHealthStatus, isBluetoothConnected]);
 
   /**

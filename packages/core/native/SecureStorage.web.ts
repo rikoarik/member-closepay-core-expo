@@ -19,8 +19,8 @@ const SecureStorage: SecureStorageInterface = {
   getItem: (key) => AsyncStorage.getItem(key),
   removeItem: (key) => AsyncStorage.removeItem(key),
   clear: () => AsyncStorage.clear(),
-  getAllKeys: () => AsyncStorage.getAllKeys(),
-  multiGet: (keys) => AsyncStorage.multiGet(keys),
+  getAllKeys: () => AsyncStorage.getAllKeys() as Promise<string[]>,
+  multiGet: (keys) => AsyncStorage.multiGet(keys) as Promise<[string, string | null][]>,
   multiSet: (keyValuePairs) => AsyncStorage.multiSet(keyValuePairs),
   multiRemove: (keys) => AsyncStorage.multiRemove(keys),
 };

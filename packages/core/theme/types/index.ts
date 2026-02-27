@@ -3,6 +3,8 @@
  * Type definitions untuk theme management
  */
 
+import type { ColorValue } from 'react-native';
+
 /**
  * Theme mode preference
  * - 'light': Force light mode

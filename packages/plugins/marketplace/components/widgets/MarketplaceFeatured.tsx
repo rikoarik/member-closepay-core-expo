@@ -33,7 +33,7 @@ export const MarketplaceFeatured: React.FC<MarketplaceFeaturedProps> = React.mem
     }, [products]);
 
     const handleProductPress = (product: Product) => {
-      navigation.navigate('ProductDetail' as never, {
+      (navigation as any).navigate('ProductDetail', {
         productId: product.id,
         productName: product.name,
       });
