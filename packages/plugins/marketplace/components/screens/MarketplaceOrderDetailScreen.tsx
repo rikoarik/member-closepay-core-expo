@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Location, Wallet3, DocumentText, ArrowLeft2 } from 'iconsax-react-nativejs';
+import { Location, Wallet3, DocumentText, ArrowLeft2, Copy } from 'iconsax-react-nativejs';
 import {
   scale,
   moderateVerticalScale,
@@ -27,6 +27,8 @@ import {
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { Clipboard } from '@core/native';
+import { paymentService } from '@plugins/payment';
 import { useMarketplaceOrders } from '../../context/MarketplaceOrderContext';
 import type { MarketplaceOrderStatus } from '../../models/MarketplaceOrder';
 
@@ -114,22 +116,44 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
     navigation.goBack();
   }, [orderId, updateOrderStatus, navigation]);
 
-  const handlePayNow = useCallback(async () => {
-    if (!orderId) return;
-    if (order?.checkoutLink) {
-      try {
-        const canOpen = await Linking.canOpenURL(order.checkoutLink);
-        if (canOpen) {
-          await Linking.openURL(order.checkoutLink);
-        } else {
-          Alert.alert(t('common.error'), t('marketplace.orderFailed'));
-        }
-      } catch {
+  const handleCheckPayment = useCallback(async () => {
+    if (!order?.checkoutLink) return;
+    try {
+      const canOpen = await Linking.canOpenURL(order.checkoutLink);
+      if (canOpen) {
+        await Linking.openURL(order.checkoutLink);
+      } else {
         Alert.alert(t('common.error'), t('marketplace.orderFailed'));
       }
+    } catch {
+      Alert.alert(t('common.error'), t('marketplace.orderFailed'));
     }
-    updateOrderStatus(orderId, 'dipesan');
-  }, [orderId, order?.checkoutLink, updateOrderStatus, t]);
+  }, [order?.checkoutLink, t]);
+
+  const handlePayWithBalance = useCallback(async () => {
+    if (!orderId || !order) return;
+    try {
+      await paymentService.payWithBalance(order.total, orderId, {
+        storeName: t('marketplace.storeName'),
+        itemCount: order.items.length,
+      });
+      updateOrderStatus(orderId, 'dipesan');
+    } catch (err) {
+      const msg =
+        err instanceof Error && err.message.toLowerCase().includes('insufficient')
+          ? t('marketplace.insufficientBalance')
+          : t('marketplace.orderFailed');
+      Alert.alert(t('common.error'), msg);
+    }
+  }, [orderId, order, updateOrderStatus, t]);
+
+  const handleCopyVa = useCallback(
+    (text: string) => {
+      Clipboard.setString(text);
+      Alert.alert(t('common.copied') || 'Tersalin', t('marketplace.vaCopied') || 'Nomor VA disalin ke clipboard');
+    },
+    [t]
+  );
 
   if (!order) {
     return (
@@ -262,22 +286,97 @@ export const MarketplaceOrderDetailScreen: React.FC = () => {
           <View style={styles.infoRow}>
             <Wallet3 size={scale(20)} color={colors.textSecondary} variant="Linear" />
             <Text style={[styles.infoText, { color: colors.text }]}>
-              {t(PAYMENT_METHOD_I18N_MAP[order.paymentMethod] ?? order.paymentMethod)}
+              {order.allowInstallment
+                ? t('marketplace.viewInstallments') || 'Cicilan'
+                : t(PAYMENT_METHOD_I18N_MAP[order.paymentMethod] ?? order.paymentMethod)}
             </Text>
           </View>
         </View>
 
-        {order.status === 'belum_dibayar' &&
-          (order.paymentMethod === 'co_link' || order.paymentMethod === 'va') && (
+        {order.status === 'belum_dibayar' && order.paymentMethod === 'va' && (
+          <>
+            <View style={[styles.card, styles.vaCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.vaCardTitle, { color: colors.text }]}>
+                {t('marketplace.paymentVa') || 'Pembayaran Virtual Account'}
+              </Text>
+              <View style={styles.vaRow}>
+                <Text style={[styles.vaLabel, { color: colors.textSecondary }]}>
+                  {t('marketplace.vaNumber') || 'Nomor VA'}
+                </Text>
+                <View style={styles.vaValueRow}>
+                  <Text style={[styles.vaValue, { color: colors.text }]}>
+                    {order.vaNumber || order.orderNumber}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleCopyVa(order.vaNumber || order.orderNumber)}
+                    style={[styles.copyButton, { backgroundColor: colors.primaryLight || colors.surface }]}
+                  >
+                    <Copy size={scale(18)} color={colors.primary} variant="Linear" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {order.vaBankName ? (
+                <View style={styles.vaRow}>
+                  <Text style={[styles.vaLabel, { color: colors.textSecondary }]}>
+                    {t('marketplace.bank') || 'Bank'}
+                  </Text>
+                  <Text style={[styles.vaValue, { color: colors.text }]}>{order.vaBankName}</Text>
+                </View>
+              ) : null}
+              <View style={styles.vaRow}>
+                <Text style={[styles.vaLabel, { color: colors.textSecondary }]}>
+                  {t('marketplace.amount') || 'Nominal'}
+                </Text>
+                <View style={styles.vaValueRow}>
+                  <Text style={[styles.vaValue, { color: colors.primary }]}>
+                    {formatPrice(order.total)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleCopyVa(formatPrice(order.total))}
+                    style={[styles.copyButton, { backgroundColor: colors.primaryLight || colors.surface }]}
+                  >
+                    <Copy size={scale(18)} color={colors.primary} variant="Linear" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+            {order.checkoutLink ? (
+              <TouchableOpacity
+                style={[styles.payNowButton, { backgroundColor: colors.primary }]}
+                onPress={handleCheckPayment}
+              >
+                <Text style={[styles.payNowButtonText, { color: '#fff' }]}>
+                  {t('marketplace.checkPayment')}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        )}
+
+        {order.status === 'belum_dibayar' && order.paymentMethod === 'balance' && (
           <TouchableOpacity
             style={[styles.payNowButton, { backgroundColor: colors.primary }]}
-            onPress={handlePayNow}
+            onPress={handlePayWithBalance}
           >
             <Text style={[styles.payNowButtonText, { color: '#fff' }]}>
               {t('marketplace.payNow')}
             </Text>
           </TouchableOpacity>
         )}
+
+        {order.status === 'belum_dibayar' &&
+          order.paymentMethod === 'co_link' &&
+          !(order.allowInstallment && order.installments && order.installments.length > 0) &&
+          order.checkoutLink ? (
+          <TouchableOpacity
+            style={[styles.payNowButton, { backgroundColor: colors.primary }]}
+            onPress={handleCheckPayment}
+          >
+            <Text style={[styles.payNowButtonText, { color: '#fff' }]}>
+              {t('marketplace.checkPayment')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         {order.allowInstallment && order.installments && order.installments.length > 0 && (
           <TouchableOpacity
@@ -399,6 +498,31 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: FontFamily?.monasans?.regular ?? 'System',
     fontSize: getResponsiveFontSize('medium'),
+  },
+  vaCard: { gap: scale(12) },
+  vaCardTitle: {
+    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
+    fontSize: getResponsiveFontSize('medium'),
+    marginBottom: scale(4),
+  },
+  vaRow: { marginBottom: scale(8) },
+  vaLabel: {
+    fontFamily: FontFamily?.monasans?.regular ?? 'System',
+    fontSize: getResponsiveFontSize('small'),
+    marginBottom: scale(4),
+  },
+  vaValue: {
+    fontFamily: FontFamily?.monasans?.semiBold ?? 'System',
+    fontSize: getResponsiveFontSize('medium'),
+  },
+  vaValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  copyButton: {
+    padding: scale(8),
+    borderRadius: scale(8),
   },
   cicilanCard: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
   cicilanText: {

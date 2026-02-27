@@ -85,6 +85,8 @@ export const SearchResultsScreen: React.FC = () => {
 
   useEffect(() => {
     setSearchText(searchQuery);
+    setCurrentPage(1);
+    setLoadedBatches(1);
   }, [searchQuery]);
 
   // Bottom sheet animation
@@ -353,7 +355,8 @@ export const SearchResultsScreen: React.FC = () => {
             onSubmitEditing={() => {
               if (searchText.trim()) {
                 trackSearch(searchText.trim());
-                (navigation as any).push('MarketplaceSearchResults', { query: searchText.trim() });
+                // Update params di screen saat ini agar tetap di hasil (tidak back ke SearchScreen)
+                (navigation as any).setParams({ query: searchText.trim() });
               }
             }}
             autoCapitalize="none"

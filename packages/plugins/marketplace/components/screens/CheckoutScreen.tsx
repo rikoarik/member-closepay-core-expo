@@ -361,6 +361,7 @@ export const CheckoutScreen: React.FC = () => {
 
       const initialStatus =
         effectivePaymentMethod === 'balance' ? 'dipesan' : 'belum_dibayar';
+      const vaSuffix = orderId.replace(/\D/g, '').slice(-10);
       const order: MarketplaceOrder = {
         id: orderId,
         orderNumber,
@@ -378,6 +379,12 @@ export const CheckoutScreen: React.FC = () => {
         installments,
         ...(withInstallment && installmentSelection && { installmentSelection }),
         ...(checkoutLink && { checkoutLink }),
+        ...(effectivePaymentMethod === 'va' &&
+          selectedVABank && {
+            vaNumber: `${selectedVABank.code.toUpperCase()}${vaSuffix}`,
+            vaBankCode: selectedVABank.code,
+            vaBankName: selectedVABank.name,
+          }),
         ...(voucherApplied && voucherDiscount > 0 && { voucherCode: voucherCode.trim(), voucherDiscount }),
         ...(shippingInsurance && { shippingInsuranceFee: INSURANCE_FEE }),
       };

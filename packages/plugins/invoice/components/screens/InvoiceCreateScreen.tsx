@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TextInput,
   Switch,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useNavigation } from '@react-navigation/native';
@@ -16,9 +17,10 @@ import {
   User,
   SearchNormal,
   Calendar,
-  DocumentText, // Replaced Note
-  Send2, // Replaced Send
+  Send2,
   Money,
+  Shop,
+  TickCircle,
 } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
 import { scale, FontFamily, getResponsiveFontSize, DatePicker, ScreenHeader } from '@core/config';
@@ -32,6 +34,41 @@ const fontBold = FontFamily?.monasans?.bold ?? 'System';
 
 type TargetType = 'member' | 'merchant';
 
+interface MemberInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface MerchantInfo {
+  id: string;
+  storeName: string;
+  address?: string;
+}
+
+/** Mock lookup by ID – replace with real API later */
+function mockLookupMemberById(id: string): MemberInfo | null {
+  const normalized = id.trim().toLowerCase();
+  if (normalized.length < 2) return null;
+  return {
+    id: normalized,
+    name: `Member ${normalized}`,
+    email: `${normalized}@example.com`,
+    phone: '08xxxxxxxxxx',
+  };
+}
+
+function mockLookupMerchantById(id: string): MerchantInfo | null {
+  const normalized = id.trim().toLowerCase();
+  if (normalized.length < 2) return null;
+  return {
+    id: normalized,
+    storeName: `Toko ${normalized}`,
+    address: 'Jl. Contoh No. 1',
+  };
+}
+
 export const InvoiceCreateScreen: React.FC = () => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -41,6 +78,10 @@ export const InvoiceCreateScreen: React.FC = () => {
   // Form State
   const [targetType, setTargetType] = useState<TargetType>('member');
   const [recipient, setRecipient] = useState('');
+  const [recipientId, setRecipientId] = useState('');
+  const [recipientSearchQuery, setRecipientSearchQuery] = useState('');
+  const [recipientInfo, setRecipientInfo] = useState<MemberInfo | MerchantInfo | null>(null);
+  const [recipientSearching, setRecipientSearching] = useState(false);
   const [billName, setBillName] = useState('');
   const [amount, setAmount] = useState('');
   const [invoiceDate, setInvoiceDate] = useState<Date | null>(new Date());
@@ -54,6 +95,50 @@ export const InvoiceCreateScreen: React.FC = () => {
   const [editingItem, setEditingItem] = useState<InvoiceItem | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+
+  // Reset recipient when switching Member/Merchant
+  useEffect(() => {
+    setRecipient('');
+    setRecipientId('');
+    setRecipientSearchQuery('');
+    setRecipientInfo(null);
+  }, [targetType]);
+
+  // Lookup recipient by ID when user types (mock – replace with API)
+  useEffect(() => {
+    const query = recipientSearchQuery.trim();
+    if (!query || recipient) {
+      setRecipientInfo(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      setRecipientSearching(true);
+      setTimeout(() => {
+        const result =
+          targetType === 'member'
+            ? mockLookupMemberById(query)
+            : mockLookupMerchantById(query);
+        setRecipientInfo(result);
+        setRecipientSearching(false);
+      }, 400);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [recipientSearchQuery, targetType, recipient]);
+
+  const handleSelectRecipient = useCallback((info: MemberInfo | MerchantInfo) => {
+    const displayName = 'name' in info ? info.name : info.storeName;
+    setRecipient(displayName);
+    setRecipientId(info.id);
+    setRecipientInfo(null);
+    setRecipientSearchQuery('');
+  }, []);
+
+  const clearRecipient = useCallback(() => {
+    setRecipient('');
+    setRecipientId('');
+    setRecipientSearchQuery('');
+    setRecipientInfo(null);
+  }, []);
 
   const handleAddItem = (item: InvoiceItem) => {
     if (editingItem) {
@@ -178,31 +263,130 @@ export const InvoiceCreateScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Recipient Selector */}
+        {/* Recipient Selector: Cari member / Cari merchant + info by ID */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: colors.text }]}>{t('invoice.selectRecipient')}</Text>
-          <TouchableOpacity
+          <View
             style={[
               styles.inputContainer,
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}
-            onPress={() => {
-              // TODO: Open member/merchant search
-            }}
           >
             <SearchNormal size={scale(20)} color={colors.textTertiary} />
-            <Text
+            <TextInput
               style={[
-                styles.inputText,
-                { color: recipient ? colors.text : colors.textSecondary, flex: 1 },
+                styles.searchInput,
+                { color: colors.text },
+              ]}
+              placeholder={
+                targetType === 'member'
+                  ? t('invoice.searchRecipientPlaceholder')
+                  : t('invoice.searchMerchantPlaceholder')
+              }
+              placeholderTextColor={colors.textSecondary}
+              value={recipient ? recipient : recipientSearchQuery}
+              onChangeText={(text) => {
+                if (recipient) return;
+                setRecipientSearchQuery(text);
+              }}
+              editable={!recipient}
+              returnKeyType="search"
+            />
+            {recipient ? (
+              <TouchableOpacity onPress={clearRecipient} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Bold" />
+              </TouchableOpacity>
+            ) : recipientSearching ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : null}
+          </View>
+
+          {/* Info penerima by ID (member atau merchant) */}
+          {recipientInfo && (
+            <View
+              style={[
+                styles.recipientInfoCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
               ]}
             >
-              {recipient || t('invoice.searchRecipientPlaceholder')}
-            </Text>
-            <View style={{ transform: [{ rotate: '-90deg' }] }}>
-              <ArrowLeft2 size={scale(16)} color={colors.textTertiary} />
+              {'email' in recipientInfo ? (
+                <>
+                  <View style={styles.recipientInfoRow}>
+                    <User size={scale(18)} color={colors.primary} variant="Linear" />
+                    <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                      ID
+                    </Text>
+                    <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                      {recipientInfo.id}
+                    </Text>
+                  </View>
+                  <View style={styles.recipientInfoRow}>
+                    <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                      Nama
+                    </Text>
+                    <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                      {recipientInfo.name}
+                    </Text>
+                  </View>
+                  <View style={styles.recipientInfoRow}>
+                    <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                      Email
+                    </Text>
+                    <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                      {recipientInfo.email}
+                    </Text>
+                  </View>
+                  <View style={styles.recipientInfoRow}>
+                    <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                      No. Telepon
+                    </Text>
+                    <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                      {recipientInfo.phone}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.recipientInfoRow}>
+                    <Shop size={scale(18)} color={colors.primary} variant="Linear" />
+                    <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                      ID
+                    </Text>
+                    <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                      {recipientInfo.id}
+                    </Text>
+                  </View>
+                  <View style={styles.recipientInfoRow}>
+                    <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                      Nama Toko
+                    </Text>
+                    <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                      {recipientInfo.storeName}
+                    </Text>
+                  </View>
+                  {recipientInfo.address && (
+                    <View style={styles.recipientInfoRow}>
+                      <Text style={[styles.recipientInfoLabel, { color: colors.textSecondary }]}>
+                        Alamat
+                      </Text>
+                      <Text style={[styles.recipientInfoValue, { color: colors.text }]}>
+                        {recipientInfo.address}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+              <TouchableOpacity
+                style={[styles.selectRecipientButton, { backgroundColor: colors.primary }]}
+                onPress={() => handleSelectRecipient(recipientInfo)}
+              >
+                <TickCircle size={scale(18)} color="#FFF" variant="Bold" />
+                <Text style={styles.selectRecipientButtonText}>
+                  {t('invoice.selectRecipientButton')}
+                </Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          )}
         </View>
 
         {/* Bill Name */}
@@ -624,6 +808,48 @@ const styles = StyleSheet.create({
   inputText: {
     fontSize: getResponsiveFontSize('medium'),
     fontFamily: fontRegular,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: getResponsiveFontSize('medium'),
+    fontFamily: fontRegular,
+    paddingVertical: 0,
+  },
+  recipientInfoCard: {
+    marginTop: scale(12),
+    padding: scale(14),
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  recipientInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: scale(8),
+    gap: scale(8),
+  },
+  recipientInfoLabel: {
+    fontSize: scale(12),
+    fontFamily: fontRegular,
+    minWidth: scale(90),
+  },
+  recipientInfoValue: {
+    flex: 1,
+    fontSize: scale(14),
+    fontFamily: fontSemiBold,
+  },
+  selectRecipientButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(10),
+    borderRadius: 10,
+    marginTop: scale(12),
+    gap: scale(8),
+  },
+  selectRecipientButtonText: {
+    fontSize: scale(14),
+    fontFamily: fontSemiBold,
+    color: '#FFF',
   },
   input: {
     borderWidth: 1,

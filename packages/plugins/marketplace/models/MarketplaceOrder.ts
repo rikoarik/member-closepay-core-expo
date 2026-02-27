@@ -43,6 +43,12 @@ export interface MarketplaceOrder {
   paymentMethod: MarketplacePaymentMethod;
   /** URL pembayaran eksternal untuk metode checkout link */
   checkoutLink?: string;
+  /** Nomor VA (untuk paymentMethod === 'va'); untuk tampil & copy di order detail */
+  vaNumber?: string;
+  /** Kode bank VA (e.g. bca, bni) */
+  vaBankCode?: string;
+  /** Nama bank VA (e.g. BCA, BNI) */
+  vaBankName?: string;
   status: MarketplaceOrderStatus;
   createdAt: string; // ISO string
   allowInstallment?: boolean;
