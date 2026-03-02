@@ -74,6 +74,7 @@ export const en = {
     searchPlaceholder: 'Search News...',
     detailTitle: 'News Detail',
     noContent: 'News content will be displayed here',
+    noNewsFound: 'No news found.',
     filterTitle: 'Filter News',
     dateRange: 'Date Range',
     selectStartDate: 'Select Start Date',

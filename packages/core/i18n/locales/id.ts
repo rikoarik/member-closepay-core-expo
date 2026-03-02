@@ -77,6 +77,7 @@ export const id = {
     searchPlaceholder: 'Cari Berita...',
     detailTitle: 'Detail Berita',
     noContent: 'Konten Berita akan ditampilkan di sini',
+    noNewsFound: 'Tidak ada berita ditemukan.',
     filterTitle: 'Filter Berita',
     dateRange: 'Rentang Tanggal',
     selectStartDate: 'Pilih Tanggal Mulai',
