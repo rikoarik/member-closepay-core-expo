@@ -19,6 +19,40 @@ npm install
 - **iOS:** `npx expo start --ios`
 - **Android:** `npx expo start --android`
 
+### Android di device fisik (USB)
+
+Agar bisa run di HP Android yang disambung USB:
+
+1. **USB debugging**  
+   Di HP: Pengaturan → Opsi pengembang → Aktifkan “USB debugging”. Sambungkan kabel USB.
+
+2. **ADB & Android SDK**  
+   Pastikan `adb` terdeteksi di terminal:
+   ```bash
+   adb devices
+   ```
+   Kalau `adb` tidak ditemukan:
+   - Pasang [Android SDK Platform-Tools](https://developer.android.com/studio/releases/platform-tools) (atau lewat Android Studio).
+   - Set env (sesuaikan path SDK kamu):
+     ```bash
+     export ANDROID_HOME=$HOME/Library/Android/sdk
+     export PATH=$ANDROID_HOME/platform-tools:$PATH
+     ```
+   - Simpan di `~/.zshrc` lalu `source ~/.zshrc`.
+
+3. **Jalankan**  
+   - **Expo Go (tanpa build native):**  
+     `npx expo start` → di HP buka aplikasi **Expo Go**, scan QR code (pastikan HP dan laptop satu WiFi), atau pakai:
+     ```bash
+     npx expo start --android
+     ```
+     (akan coba install/buka di device yang terdeteksi `adb`.)
+   - **Development build (NFC/BLE, Vision Camera, dll.):**  
+     ```bash
+     npm run android
+     ```
+     Pertama kali akan prebuild + build APK lalu install ke device. Butuh Android SDK/NDK di Mac.
+
 ## Build Web (static)
 
 ```bash
