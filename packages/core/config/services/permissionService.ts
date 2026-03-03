@@ -2,10 +2,16 @@
  * Permission Service
  * Menggunakan hanya Expo APIs untuk permissions (notifications, camera, location).
  * Tidak memakai react-native-permissions; kompatibel dengan Expo Go dan development/standalone builds.
+ * Di Android Expo Go (SDK 53+), expo-notifications tidak tersedia — pakai hanya PermissionsAndroid.
  * Lihat: https://docs.expo.dev/guides/permissions/
  */
 
 import { Platform, PermissionsAndroid, Alert, Linking } from 'react-native';
+import Constants from 'expo-constants';
+
+/** Android di Expo Go: push notifications dihapus dari Expo Go (SDK 53+), jangan panggil expo-notifications. */
+const isExpoGoAndroid =
+  Platform.OS === 'android' && Constants?.appOwnership === 'expo';
 
 export type PermissionStatus = 'granted' | 'denied' | 'blocked' | 'unavailable';
 
@@ -30,8 +36,20 @@ class PermissionService {
   }
 
   async checkNotificationPermission(): Promise<PermissionStatus> {
+    if (Platform.OS === 'web') return 'unavailable';
+    if (isExpoGoAndroid) {
+      if (Number(Platform.Version) >= 33) {
+        try {
+          const permission = this.getPostNotificationsPermission();
+          const ok = await PermissionsAndroid.check(permission as any);
+          return ok ? 'granted' : 'denied';
+        } catch {
+          return 'unavailable';
+        }
+      }
+      return 'granted';
+    }
     try {
-      if (Platform.OS === 'web') return 'unavailable';
       const Notifications = require('expo-notifications');
       const res = await Notifications.getPermissionsAsync();
       const status = res?.status ?? (res?.granted ? 'granted' : 'denied');
@@ -52,10 +70,26 @@ class PermissionService {
   }
 
   async requestNotificationPermission(): Promise<PermissionResult> {
-    try {
-      if (Platform.OS === 'web') {
-        return { status: 'unavailable', message: 'Not supported on web' };
+    if (Platform.OS === 'web') {
+      return { status: 'unavailable', message: 'Not supported on web' };
+    }
+    if (isExpoGoAndroid) {
+      if (Number(Platform.Version) >= 33) {
+        try {
+          const current = await this.checkNotificationPermission();
+          if (current === 'granted') return { status: 'granted' };
+          const permission = this.getPostNotificationsPermission();
+          const granted = await PermissionsAndroid.request(permission as any);
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) return { status: 'granted' };
+          if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return { status: 'blocked' };
+          return { status: 'denied' };
+        } catch (err: unknown) {
+          return { status: 'denied', message: err instanceof Error ? err.message : undefined };
+        }
       }
+      return { status: 'granted' };
+    }
+    try {
       const Notifications = require('expo-notifications');
       const res = await Notifications.requestPermissionsAsync({
         ios: { allowAlert: true, allowBadge: true, allowSound: true },
@@ -72,8 +106,8 @@ class PermissionService {
           if (granted === PermissionsAndroid.RESULTS.GRANTED) return { status: 'granted' };
           if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return { status: 'blocked' };
           return { status: 'denied' };
-        } catch (err: any) {
-          return { status: 'denied', message: err?.message };
+        } catch (err: unknown) {
+          return { status: 'denied', message: err instanceof Error ? err.message : undefined };
         }
       }
       if (Platform.OS === 'android' && Number(Platform.Version) < 33) {
