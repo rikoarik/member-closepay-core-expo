@@ -13,10 +13,11 @@ import {
   TextInput,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, StackActions } from '@react-navigation/native';
-import { Shop, Truck, Box, Location as LocationIcon } from 'iconsax-react-nativejs';
+import { Shop, Truck, Box, Location as LocationIcon, Reserve, Edit2, ArrowRight2, ArrowLeft2 } from 'iconsax-react-nativejs';
 import Toast from 'react-native-toast-message';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
@@ -70,8 +71,11 @@ export const FnBCheckoutScreen: React.FC = () => {
   // Get available order types based on entry point
   const availableOrderTypes = useMemo(() => getAvailableOrderTypes(entryPoint), [entryPoint]);
 
-  // Local state
-  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(availableOrderTypes[0]);
+  // Local state (typed as full OrderType so all conditionals type-check; runtime value is always in availableOrderTypes)
+  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(
+    availableOrderTypes[0] as OrderType
+  );
+  const orderType = selectedOrderType as OrderType;
   const [customerName, setCustomerName] = useState('');
   const [tableNumber, setTableNumber] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -79,6 +83,7 @@ export const FnBCheckoutScreen: React.FC = () => {
   const [pickupTime, setPickupTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [kitchenNotes, setKitchenNotes] = useState('');
 
   // Pre-fill: only run once per "delivery" session so we don't overwrite user edits
   const lastDeliveryLoadedRef = useRef(false);
@@ -116,7 +121,7 @@ export const FnBCheckoutScreen: React.FC = () => {
         icon: (
           <Shop
             size={scale(24)}
-            color={selectedOrderType === 'dine-in' ? colors.surface : colors.primary}
+            color={orderType === 'dine-in' ? colors.surface : colors.primary}
             variant="Bold"
           />
         ),
@@ -128,7 +133,7 @@ export const FnBCheckoutScreen: React.FC = () => {
         icon: (
           <Box
             size={scale(24)}
-            color={selectedOrderType === 'take-away' ? colors.surface : colors.primary}
+            color={orderType === 'take-away' ? colors.surface : colors.primary}
             variant="Bold"
           />
         ),
@@ -140,7 +145,7 @@ export const FnBCheckoutScreen: React.FC = () => {
         icon: (
           <Truck
             size={scale(24)}
-            color={selectedOrderType === 'delivery' ? colors.surface : colors.primary}
+            color={orderType === 'delivery' ? colors.surface : colors.primary}
             variant="Bold"
           />
         ),
@@ -151,9 +156,14 @@ export const FnBCheckoutScreen: React.FC = () => {
   }, [availableOrderTypes, selectedOrderType, colors, t]);
 
   // Calculate fees
-  const serviceFee = 2000;
-  const deliveryFee = selectedOrderType === 'delivery' && store?.delivery ? store.delivery.fee : 0;
-  const total = getTotal(deliveryFee, serviceFee);
+  const serviceFeeRate = 0.1;
+  const taxRate = 0.05;
+  const serviceFee = orderType === 'dine-in' ? Math.round(subtotal * serviceFeeRate) : 2000;
+  const taxAmount = orderType === 'dine-in' ? Math.round(subtotal * taxRate) : 0;
+  const deliveryFee = orderType === 'delivery' && store?.delivery ? store.delivery.fee : 0;
+  const total = orderType === 'dine-in'
+    ? subtotal + serviceFee + taxAmount
+    : getTotal(deliveryFee, serviceFee);
 
   // Validate form
   const isFormValid = useMemo(() => {
@@ -162,8 +172,8 @@ export const FnBCheckoutScreen: React.FC = () => {
 
     if (!customerName.trim()) return false;
 
-    if (selectedOrderType === 'dine-in' && !tableNumber.trim()) return false;
-    if (selectedOrderType === 'delivery' && (!phoneNumber.trim() || !deliveryAddress.trim()))
+    if (orderType === 'dine-in' && !tableNumber.trim()) return false;
+    if (orderType === 'delivery' && (!phoneNumber.trim() || !deliveryAddress.trim()))
       return false;
 
     return true;
@@ -207,7 +217,7 @@ export const FnBCheckoutScreen: React.FC = () => {
       });
 
       if (result.status === 'success') {
-        if (selectedOrderType === 'delivery' && phoneNumber.trim() && deliveryAddress.trim()) {
+        if (orderType === 'delivery' && phoneNumber.trim() && deliveryAddress.trim()) {
           setLastDelivery({ phoneNumber: phoneNumber.trim(), deliveryAddress: deliveryAddress.trim() }).catch(() => {});
         }
         const orderItems: FnBOrderItem[] = cartItems.map(({ item, quantity, variant, addons, notes, subtotal: itemSubtotal }) => ({
@@ -226,12 +236,12 @@ export const FnBCheckoutScreen: React.FC = () => {
           orderType: selectedOrderType,
           entryPoint,
           customerName: customerName.trim(),
-          tableNumber: selectedOrderType === 'dine-in' ? tableNumber.trim() || undefined : undefined,
-          deliveryAddress: selectedOrderType === 'delivery' ? deliveryAddress.trim() || undefined : undefined,
-          phoneNumber: selectedOrderType === 'delivery' ? phoneNumber.trim() || undefined : undefined,
-          pickupTime: selectedOrderType === 'take-away' ? pickupTime.trim() || undefined : undefined,
+          tableNumber: orderType === 'dine-in' ? tableNumber.trim() || undefined : undefined,
+          deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() || undefined : undefined,
+          phoneNumber: orderType === 'delivery' ? phoneNumber.trim() || undefined : undefined,
+          pickupTime: orderType === 'take-away' ? pickupTime.trim() || undefined : undefined,
           subtotal,
-          deliveryFee: selectedOrderType === 'delivery' && store?.delivery ? store.delivery.fee : undefined,
+          deliveryFee: orderType === 'delivery' && store?.delivery ? store.delivery.fee : undefined,
           serviceFee,
           total,
           status: 'pending',
@@ -244,7 +254,18 @@ export const FnBCheckoutScreen: React.FC = () => {
           text1: t('fnb.orderSuccess') || 'Pesanan Berhasil',
           text2: t('fnb.orderSuccessMessage') || 'Pesanan Anda sedang diproses.',
         });
-        navigation.dispatch(StackActions.replace('FnBOrderStatus', { orderId: order.id }));
+        navigation.dispatch(
+          StackActions.replace('FnBPaymentSuccess', {
+            orderId: order.id,
+            storeId: order.storeId,
+            storeName: order.storeName,
+            total: order.total,
+            tableNumber: order.tableNumber,
+            orderType: order.orderType,
+            pickupTime: order.pickupTime,
+            deliveryAddress: order.deliveryAddress,
+          })
+        );
       }
     } catch (error) {
       const message =
@@ -322,6 +343,133 @@ export const FnBCheckoutScreen: React.FC = () => {
     );
   }
 
+  // ---------- Dine-in layout (reference: Dine-in Checkout HTML) ----------
+  if (orderType === 'dine-in') {
+    const storeImageUrl = store?.imageUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuB9-tChAXE6IXgKdAAgTPDdMFluVaahvUF-utstyU9cum83_wTzKL3rWzsUa7kFK0EN2Th2Xs_M0QB_bqCAuuoawfw1gc5J-GcovK6VPNWQv_KhkVwIydrltJ9JheRoQj-fCtDIIMM5ZmwMwm-QhwQCqAffkL9d_cTn-0FGgvUjFyafQEEFpSF03eSEKvi-W0jQtM_n7yn1elHNo2IcfZanYaCAMECHor1u4I99ZN_GOTQvXvOHS48GhrEBuYTxXgoAEONqmiKX7xDf';
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.dineInHeader, { paddingTop: insets.top + scale(12), paddingHorizontal: horizontalPadding, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.dineInHeaderBtn}>
+            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
+          </TouchableOpacity>
+          <View style={styles.dineInHeaderCenter}>
+            <Text style={[styles.dineInHeaderTitle, { color: colors.text }]}>{t('fnb.checkout') || 'Checkout'}</Text>
+            <Text style={[styles.dineInHeaderSubtitle, { color: colors.primary }]}>{t('fnb.dineInOrder') || 'Dine-in Order'}</Text>
+          </View>
+          <View style={styles.dineInHeaderBtn} />
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: moderateVerticalScale(120) }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Restaurant & Table */}
+          <View style={styles.dineInRestaurantSection}>
+            <View style={[styles.dineInRestaurantLogoWrap, { backgroundColor: colors.background }]}>
+              <Image source={{ uri: storeImageUrl }} style={styles.dineInRestaurantLogo} resizeMode="cover" />
+            </View>
+            <Text style={[styles.dineInStoreName, { color: colors.text }]}>{store?.name || t('fnb.merchantName') || 'The Burger Joint'}</Text>
+            <Text style={[styles.dineInStoreBranch, { color: colors.textSecondary }]}>{t('fnb.downtownBranch') || 'Downtown Branch'}</Text>
+            <View style={[styles.dineInTableCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.dineInTableRow}>
+                <View style={[styles.dineInTableIconWrap, { backgroundColor: colors.primary + '20' }]}>
+                  <Reserve size={scale(24)} color={colors.primary} variant="Bold" />
+                </View>
+                <View style={styles.dineInTableText}>
+                  <Text style={[styles.dineInTableLabel, { color: colors.textSecondary }]}>{t('fnb.tableNumber') || 'Table Number'}</Text>
+                  <Text style={[styles.dineInTableValue, { color: colors.text }]}>{tableNumber.trim() || '—'}</Text>
+                </View>
+                <TouchableOpacity onPress={() => {}}>
+                  <Text style={[styles.dineInTableChange, { color: colors.primary }]}>{t('common.edit') || 'Change'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Your Order */}
+          <View style={styles.dineInSection}>
+            <Text style={[styles.dineInSectionTitle, { color: colors.text }]}>{t('fnb.yourOrder') || 'Your Order'}</Text>
+            {cartItems.map((cartItem) => (
+              <View key={cartItem.cartId} style={[styles.dineInOrderItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.dineInOrderItemThumb, { backgroundColor: colors.background }]}>
+                  {cartItem.item.imageUrl ? (
+                    <Image source={{ uri: cartItem.item.imageUrl }} style={styles.dineInOrderItemThumbImg} resizeMode="cover" />
+                  ) : null}
+                </View>
+                <View style={styles.dineInOrderItemBody}>
+                  <View style={styles.dineInOrderItemRow}>
+                    <View style={styles.dineInOrderItemNames}>
+                      <Text style={[styles.dineInOrderItemName, { color: colors.text }]}>{cartItem.item.name}</Text>
+                      {cartItem.notes ? (
+                        <Text style={[styles.dineInOrderItemNote, { color: colors.textSecondary }]} numberOfLines={1}>{cartItem.notes}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.dineInOrderItemPrice, { color: colors.text }]}>{formatPrice(cartItem.subtotal)}</Text>
+                  </View>
+                  <View style={[styles.dineInOrderQtyBadge, { backgroundColor: colors.background }]}>
+                    <Text style={[styles.dineInOrderQtyText, { color: colors.text }]}>x{cartItem.quantity}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Kitchen Notes */}
+          <View style={styles.dineInSection}>
+            <Text style={[styles.dineInSectionTitle, { color: colors.text }]}>{t('fnb.kitchenNotes') || 'Kitchen Notes'}</Text>
+            <View style={[styles.dineInKitchenNotes, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Edit2 size={scale(20)} color={colors.textSecondary} variant="Linear" style={styles.dineInKitchenNotesIcon} />
+              <TextInput
+                style={[styles.dineInKitchenNotesInput, { color: colors.text }]}
+                placeholder={t('fnb.kitchenNotesPlaceholder') || 'Any allergies or special requests? e.g. Extra spicy, sauce on side...'}
+                placeholderTextColor={colors.textSecondary}
+                value={kitchenNotes}
+                onChangeText={setKitchenNotes}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          </View>
+
+          {/* Payment Summary */}
+          <View style={[styles.dineInSummaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.dineInSummaryRow}>
+              <Text style={[styles.dineInSummaryLabel, { color: colors.textSecondary }]}>{t('fnb.subtotal') || 'Subtotal'}</Text>
+              <Text style={[styles.dineInSummaryValue, { color: colors.text }]}>{formatPrice(subtotal)}</Text>
+            </View>
+            <View style={styles.dineInSummaryRow}>
+              <Text style={[styles.dineInSummaryLabel, { color: colors.textSecondary }]}>{t('fnb.serviceCharge10') || 'Service Charge (10%)'}</Text>
+              <Text style={[styles.dineInSummaryValue, { color: colors.text }]}>{formatPrice(serviceFee)}</Text>
+            </View>
+            <View style={styles.dineInSummaryRow}>
+              <Text style={[styles.dineInSummaryLabel, { color: colors.textSecondary }]}>{t('fnb.tax5') || 'Tax (5%)'}</Text>
+              <Text style={[styles.dineInSummaryValue, { color: colors.text }]}>{formatPrice(taxAmount)}</Text>
+            </View>
+            <View style={[styles.dineInSummaryDivider, { borderColor: colors.border }]} />
+            <View style={styles.dineInSummaryRow}>
+              <Text style={[styles.dineInSummaryTotalLabel, { color: colors.text }]}>{t('fnb.total') || 'Total'}</Text>
+              <Text style={[styles.dineInSummaryTotalValue, { color: colors.text }]}>{formatPrice(total)}</Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        <View style={[styles.dineInBottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + scale(24), paddingHorizontal: horizontalPadding }]}>
+          <TouchableOpacity
+            style={[styles.dineInConfirmButton, { backgroundColor: colors.primary }]}
+            onPress={handleOrder}
+            disabled={!isFormValid || isSubmitting || hasInsufficientBalance}
+          >
+            <Text style={[styles.dineInConfirmButtonText, { color: '#102222' }]}>
+              {isSubmitting ? (t('fnb.processing') || 'Processing...') : (t('fnb.confirmAndPay') || 'Confirm & Pay')}
+            </Text>
+            <ArrowRight2 size={scale(22)} color="#102222" variant="Bold" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
@@ -361,56 +509,33 @@ export const FnBCheckoutScreen: React.FC = () => {
             {t('fnb.orderType') || 'Tipe Pesanan'}
           </Text>
 
-          {/* Entry point indicator */}
-          <Text style={[styles.entryPointHint, { color: colors.textSecondary }]}>
-            {entryPoint === 'scan-qr'
-              ? '📍 Anda sedang di lokasi (via QR scan)'
-              : '📱 Pesan dari aplikasi'}
-          </Text>
 
-          {orderTypeOptions.map((option) => {
-            const isSelected = selectedOrderType === option.id;
-            return (
-              <TouchableOpacity
-                key={option.id}
-                style={[
-                  styles.orderTypeCard,
-                  {
-                    backgroundColor: isSelected ? colors.primary : colors.surface,
-                    borderColor: isSelected ? colors.primary : colors.border,
-                  },
-                ]}
-                onPress={() => setSelectedOrderType(option.id)}
-              >
-                <View
+          <View style={[styles.orderTypeTabContainer, { backgroundColor: colors.border + '40' }]}>
+            {orderTypeOptions.map((option) => {
+              const isSelected = orderType === option.id;
+              return (
+                <TouchableOpacity
+                  key={option.id}
                   style={[
-                    styles.orderTypeIcon,
-                    { backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : colors.primaryLight },
+                    styles.orderTypeTab,
+                    {
+                      backgroundColor: isSelected ? colors.primary : 'transparent',
+                    },
                   ]}
+                  onPress={() => setSelectedOrderType(option.id)}
                 >
-                  {option.icon}
-                </View>
-                <View style={styles.orderTypeInfo}>
                   <Text
                     style={[
-                      styles.orderTypeLabel,
+                      styles.orderTypeTabLabel,
                       { color: isSelected ? colors.surface : colors.text },
                     ]}
                   >
                     {option.label}
                   </Text>
-                  <Text
-                    style={[
-                      styles.orderTypeDesc,
-                      { color: isSelected ? colors.surface : colors.textSecondary },
-                    ]}
-                  >
-                    {option.description}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Customer Info */}
@@ -431,8 +556,8 @@ export const FnBCheckoutScreen: React.FC = () => {
             onChangeText={setCustomerName}
           />
 
-          {/* Conditional fields based on order type */}
-          {selectedOrderType === 'dine-in' && (
+          {/* Conditional fields based on order type (orderType asserted as OrderType for conditionals when entryPoint limits options) */}
+          {(orderType as OrderType) === 'dine-in' && (
             <>
               <Text style={[styles.inputLabel, { color: colors.text }]}>
                 {t('fnb.tableNumber') || 'Nomor Meja'} *
@@ -455,7 +580,7 @@ export const FnBCheckoutScreen: React.FC = () => {
             </>
           )}
 
-          {selectedOrderType === 'take-away' && (
+          {orderType === 'take-away' && (
             <>
               <Text style={[styles.inputLabel, { color: colors.text }]}>
                 {t('fnb.pickupTime') || 'Waktu Pengambilan'}
@@ -477,7 +602,7 @@ export const FnBCheckoutScreen: React.FC = () => {
             </>
           )}
 
-          {selectedOrderType === 'delivery' && (
+          {orderType === 'delivery' && (
             <>
               <Text style={[styles.inputLabel, { color: colors.text }]}>No. Telepon *</Text>
               <TextInput
@@ -542,7 +667,7 @@ export const FnBCheckoutScreen: React.FC = () => {
           </Text>
 
           <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
-            {cartItems.map((cartItem, index) => (
+            {cartItems.map((cartItem) => (
               <View key={cartItem.cartId} style={styles.summaryItem}>
                 <Text style={[styles.summaryItemQty, { color: colors.textSecondary }]}>
                   {cartItem.quantity}x
@@ -577,7 +702,7 @@ export const FnBCheckoutScreen: React.FC = () => {
               </Text>
             </View>
 
-            {selectedOrderType === 'delivery' && (
+            {orderType === 'delivery' && (
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
                   {t('fnb.deliveryFee') || 'Ongkos Kirim'}
@@ -696,33 +821,22 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.monasans.regular,
     marginBottom: scale(12),
   },
-  orderTypeCard: {
+  orderTypeTabContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: scale(14),
     borderRadius: scale(12),
-    borderWidth: 1,
-    marginBottom: scale(10),
+    padding: scale(4),
   },
-  orderTypeIcon: {
-    width: scale(48),
-    height: scale(48),
-    borderRadius: scale(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: scale(12),
-  },
-  orderTypeInfo: {
+  orderTypeTab: {
     flex: 1,
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(8),
+    borderRadius: scale(10),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  orderTypeLabel: {
-    fontSize: scale(15),
+  orderTypeTabLabel: {
+    fontSize: scale(14),
     fontFamily: FontFamily.monasans.semiBold,
-  },
-  orderTypeDesc: {
-    fontSize: scale(12),
-    fontFamily: FontFamily.monasans.regular,
-    marginTop: scale(2),
   },
   inputLabel: {
     fontSize: scale(13),
@@ -866,6 +980,227 @@ const styles = StyleSheet.create({
   emptyCartButtonText: {
     fontSize: scale(15),
     fontFamily: FontFamily.monasans.semiBold,
+  },
+  // Dine-in layout
+  dineInHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: scale(12),
+    borderBottomWidth: 1,
+  },
+  dineInHeaderBtn: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dineInHeaderCenter: {
+    alignItems: 'center',
+  },
+  dineInHeaderTitle: {
+    fontSize: scale(18),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  dineInHeaderSubtitle: {
+    fontSize: scale(11),
+    fontFamily: FontFamily.monasans.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: scale(2),
+  },
+  dineInRestaurantSection: {
+    alignItems: 'center',
+    paddingVertical: scale(24),
+  },
+  dineInRestaurantLogoWrap: {
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(12),
+    overflow: 'hidden',
+    marginBottom: scale(12),
+  },
+  dineInRestaurantLogo: {
+    width: '100%',
+    height: '100%',
+  },
+  dineInStoreName: {
+    fontSize: scale(20),
+    fontFamily: FontFamily.monasans.bold,
+    marginBottom: scale(4),
+  },
+  dineInStoreBranch: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+    marginBottom: scale(16),
+  },
+  dineInTableCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: scale(16),
+    borderRadius: scale(12),
+    borderWidth: 1,
+  },
+  dineInTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dineInTableIconWrap: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: scale(12),
+  },
+  dineInTableText: { flex: 1 },
+  dineInTableLabel: {
+    fontSize: scale(11),
+    fontFamily: FontFamily.monasans.medium,
+    textTransform: 'uppercase',
+  },
+  dineInTableValue: {
+    fontSize: scale(18),
+    fontFamily: FontFamily.monasans.bold,
+    marginTop: scale(2),
+  },
+  dineInTableChange: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  dineInSection: {
+    marginBottom: scale(24),
+  },
+  dineInSectionTitle: {
+    fontSize: scale(18),
+    fontFamily: FontFamily.monasans.bold,
+    marginBottom: scale(12),
+    paddingHorizontal: scale(4),
+  },
+  dineInOrderItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: scale(12),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    marginBottom: scale(12),
+  },
+  dineInOrderItemThumb: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: scale(8),
+    overflow: 'hidden',
+    marginRight: scale(12),
+  },
+  dineInOrderItemThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  dineInOrderItemBody: { flex: 1 },
+  dineInOrderItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  dineInOrderItemNames: { flex: 1, marginRight: scale(8) },
+  dineInOrderItemName: {
+    fontSize: scale(16),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  dineInOrderItemNote: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.regular,
+    marginTop: scale(2),
+  },
+  dineInOrderItemPrice: {
+    fontSize: scale(16),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  dineInOrderQtyBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(6),
+    marginTop: scale(8),
+  },
+  dineInOrderQtyText: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  dineInKitchenNotes: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: scale(16),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    gap: scale(12),
+  },
+  dineInKitchenNotesIcon: {
+    marginTop: scale(2),
+  },
+  dineInKitchenNotesInput: {
+    flex: 1,
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+    padding: 0,
+    minHeight: scale(80),
+    textAlignVertical: 'top',
+  },
+  dineInSummaryCard: {
+    padding: scale(16),
+    borderRadius: scale(12),
+    borderWidth: 1,
+  },
+  dineInSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(12),
+  },
+  dineInSummaryLabel: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.regular,
+  },
+  dineInSummaryValue: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  dineInSummaryDivider: {
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    marginVertical: scale(12),
+  },
+  dineInSummaryTotalLabel: {
+    fontSize: scale(18),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  dineInSummaryTotalValue: {
+    fontSize: scale(20),
+    fontFamily: FontFamily.monasans.bold,
+  },
+  dineInBottomBar: {
+    paddingTop: scale(16),
+    borderTopWidth: 1,
+  },
+  dineInConfirmButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: scale(56),
+    borderRadius: scale(12),
+    gap: scale(8),
+    ...Platform.select({
+      ios: { shadowRadius: 8, shadowOpacity: 0.2 },
+      android: { elevation: 4 },
+    }),
+  },
+  dineInConfirmButtonText: {
+    fontSize: scale(18),
+    fontFamily: FontFamily.monasans.bold,
   },
 });
 

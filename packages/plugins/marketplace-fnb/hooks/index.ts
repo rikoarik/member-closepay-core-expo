@@ -5,3 +5,4 @@
 export { useFnBData } from './useFnBData';
 export { useFnBCart } from './useFnBCart';
 export { useFnBFavorites } from './useFnBFavorites';
+export { useFnBStoreFavorites } from './useFnBStoreFavorites';

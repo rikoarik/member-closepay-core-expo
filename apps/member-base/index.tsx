@@ -134,29 +134,28 @@ function MemberBaseAppContent(): React.JSX.Element {
     };
   }, []);
 
-  if (!configLoaded || !pluginsInitialized) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: colors.background,
-        }}
-      >
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: 16, color: colors.textSecondary }}>Memuat aplikasi...</Text>
-      </View>
-    );
-  }
-
   return (
     <>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <MarketplaceOrderProvider>
         <FnBCartProvider>
           <FnBActiveOrderProvider>
-            <AppNavigator />
+            {!configLoaded || !pluginsInitialized ? (
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: colors.background,
+                }}
+              >
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={{ marginTop: 16, color: colors.textSecondary }}>Memuat aplikasi...</Text>
+              </View>
+            ) : (
+              // eslint-disable-next-line react-hooks/static-components
+              <AppNavigator />
+            )}
           </FnBActiveOrderProvider>
         </FnBCartProvider>
       </MarketplaceOrderProvider>

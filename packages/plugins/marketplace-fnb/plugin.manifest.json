@@ -25,8 +25,10 @@
       "FnBScan": "FnBScanScreen",
       "FnBFavorites": "FnBFavoritesScreen",
       "FnBOrderStatus": "FnBOrderStatusScreen",
+      "FnBPaymentSuccess": "FnBPaymentSuccessScreen",
       "FnBOrderTracking": "FnBOrderTrackingScreen",
-      "FnBChatDriver": "FnBChatDriverScreen"
+      "FnBChatDriver": "FnBChatDriverScreen",
+      "FnBOrderHistory": "FnBOrderHistoryScreen"
     },
     "hooks": [
       "useFnBData",
@@ -138,6 +140,18 @@
       }
     },
     {
+      "name": "FnBPaymentSuccess",
+      "path": "/fnb/payment-success",
+      "component": "FnBPaymentSuccessScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Pembayaran Berhasil",
+        "showInMenu": false
+      }
+    },
+    {
       "name": "FnBOrderTracking",
       "path": "/fnb/order-tracking",
       "component": "FnBOrderTrackingScreen",
@@ -158,6 +172,18 @@
       ],
       "meta": {
         "title": "Chat",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBOrderHistory",
+      "path": "/fnb/order-history",
+      "component": "FnBOrderHistoryScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Riwayat Order",
         "showInMenu": false
       }
     }

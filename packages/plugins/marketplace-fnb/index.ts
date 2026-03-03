@@ -40,7 +40,7 @@ export {
 } from './components/shared';
 
 // Screens
-export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
+export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBPaymentSuccessScreen, FnBOrderHistoryScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
 
 // Module definition
 export const FnBModule = {
@@ -52,6 +52,8 @@ export const FnBModule = {
         FnBCheckout: 'FnBCheckoutScreen',
         FnBScan: 'FnBScanScreen',
         FnBFavorites: 'FnBFavoritesScreen',
+    FnBPaymentSuccess: 'FnBPaymentSuccessScreen',
+    FnBOrderHistory: 'FnBOrderHistoryScreen',
     },
 };
 
@@ -70,6 +72,8 @@ const componentLoaders: Record<string, () => Promise<any>> = {
   FnBCheckoutScreen: () => import('./components/screens/FnBCheckoutScreen'),
   FnBScanScreen: () => import('./components/screens/FnBScanScreen'),
   FnBOrderStatusScreen: () => import('./components/screens/FnBOrderStatusScreen'),
+  FnBPaymentSuccessScreen: () => import('./components/screens/FnBPaymentSuccessScreen'),
+  FnBOrderHistoryScreen: () => import('./components/screens/FnBOrderHistoryScreen'),
   FnBOrderTrackingScreen: () => import('./components/screens/FnBOrderTrackingScreen'),
   FnBChatDriverScreen: () => import('./components/screens/FnBChatDriverScreen'),
   FnBTab: () => import('./components/tabs/FnBTab'),

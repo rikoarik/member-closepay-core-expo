@@ -1,6 +1,7 @@
 /**
  * FnBScreen Component
- * Premium Marketplace Landing Page (Superapp Style)
+ * FnB Home Discovery – layout matches reference (Delivering to, Search+Scan, Banners, Categories, Recommended Merchants).
+ * Flow: FnBMerchantDetail, FnBScan, FnBFavorites; FnBOrderFloatingWidget at bottom.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -13,7 +14,6 @@ import {
   Image,
   FlatList,
   TextInput,
-  StatusBar,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -24,99 +24,105 @@ import {
   ArrowDown2,
   Heart,
   Star1,
-  Clock,
-  DiscountShape,
-  TruckFast,
+  Location,
   ScanBarcode,
+  DiscountShape,
+  Shop,
+  Cake,
+  Coffee,
+  Discover,
+  ReceiptItem,
 } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
+import {
+  scale,
+  moderateVerticalScale,
+  getHorizontalPadding,
+  FontFamily,
+} from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import type { EntryPoint } from '../../models';
+import { useFnBStoreFavorites } from '../../hooks';
 import { FnBOrderFloatingWidget } from '../widgets/FnBOrderFloatingWidget';
 
 interface FnBScreenProps {
   entryPoint?: EntryPoint;
 }
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// --- Mock Data ---
+// --- Data (match reference copy & structure) ---
 
 const BANNERS = [
   {
     id: '1',
-    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
-    title: 'Diskon 50%',
-    subtitle: 'Spesial Hari Ini',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBWyem3VPeIeVGlwdhRc47bzmSwB9pKrdWT7a0Rc1AP4VzSRhtMC2E-TjmfyCsWj7V1udDJ3gdmZVzy9lFWwd-ImUFUqlhQIM6lmhbAVU-aSjETyAeOsaSZOVrdyENacXoOgDeff2kiVFLQ0tsKo6Fr3w_9Gh9-Qe4Cy5jVkgfeiLkblLoAMq2HW6QLLwBgqQ4GJtaXVc1F3vARUearq6k7jQsosh8voVpOJS9tLYrmLo3KGeUBIGCD0fISkJawRfO7A-JkWd9Zq0d3',
+    badge: 'PROMO',
+    badgeBg: 'primary',
+    title: '50% OFF\nSelected Items',
+    subtitle: 'Valid until 25 Oct',
   },
   {
     id: '2',
-    imageUrl: 'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=800',
-    title: 'Gratis Ongkir',
-    subtitle: 'Min. Belanja 50rb',
-  },
-  {
-    id: '3',
-    imageUrl: 'https://images.unsplash.com/photo-1493770348161-369560ae357d?w=800',
-    title: 'Menu Baru',
-    subtitle: 'Cobain Sekarang',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCHfyBwgQ8ElUtgZsMyKMenLipEecXBlPorwQrZI7N7VfOno-H56q33nAkrO6EyyhSWlj142RYUvIDVUIs1LSvlSDX9pAKgBqkA-xQZRDz8SxweVglQmqzb2Z4Z1y1rF2fL0jM2t7ZqqP-ElMV5eWJ4u0R0ZZDRtjpF1y975rhxaDfAid_jJYHpIwyrXtKL0-PZoMCFg2Ls9advSszDtI24scMVO7eZLh5OFIima-PP2S6gxrwIDqxpERF67oldhdlC2MDHbvBtqgrR',
+    badge: 'NEW',
+    badgeBg: 'orange',
+    title: 'Healthy Bowls\nFree Delivery',
+    subtitle: 'Min order $15',
   },
 ];
 
 const CATEGORIES = [
-  { id: '1', name: 'Terdekat', icon: '📍', color: '#E8F5E9' },
-  { id: '2', name: 'Terlaris', icon: '🔥', color: '#FFEBEE' },
-  { id: '3', name: 'Promo', icon: '🏷️', color: '#FFF3E0' },
-  { id: '4', name: 'Baru', icon: '✨', color: '#E3F2FD' },
-  { id: '5', name: 'Sehat', icon: '🥗', color: '#F3E5F5' },
-  { id: '6', name: 'Minuman', icon: '🥤', color: '#E0F7FA' },
-  { id: '7', name: 'Snack', icon: '🍟', color: '#FFF8E1' },
-  { id: '8', name: 'Roti', icon: '🍞', color: '#FBE9E7' },
+  { id: '1', name: 'Rice', Icon: Shop },
+  { id: '2', name: 'Noodles', Icon: Discover },
+  { id: '3', name: 'Drinks', Icon: Coffee },
+  { id: '4', name: 'Snacks', Icon: Cake },
 ];
 
-const STORES = [
+const MERCHANTS = [
   {
     id: 'store-001',
-    name: 'Warung Makan Sederhana',
-    description: 'Indonesian • 0.5 km',
+    name: 'Burger King & Queen',
+    time: '25-35 min',
+    description: 'American • Burgers • Fast Food',
     rating: 4.8,
-    imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600',
-    isOpen: true,
-    time: '15-20 min',
-    promo: 'Diskon 20%',
+    distance: '1.2 km',
+    promoLabel: 'Free Delivery',
+    promoHighlight: '20% off over $30',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCvkxFChGMIqGhKSSuFDoQgJ2kTNdu_eGm55B4msAG62ce9SCHkmheTU1GEoy6teblqJHTFPz-h8uCtcc6n06L16xhqpVhDfBp16uyghpTCZALvhThQ9ekCqJuPAf4PJZc7YZzjaYf7o_H5SCCdEbR0bKxvTGi9uJa8PnoF5UuEEp7j_joFAyxKhZ5Mwd_cAwxSzlyBsitipgJwkOm6FFjB5xiZKIRhRc9M7pLTX0mIOdaiL-9vUalNb_jPIOw2mfRq02PvKiul0gl7',
   },
   {
     id: 'store-002',
-    name: 'Burger King Clone',
-    description: 'Fast Food • 1.2 km',
+    name: 'Golden Dragon Dimsum',
+    time: '40-50 min',
+    description: 'Chinese • Dimsum • Noodles',
     rating: 4.5,
-    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600',
-    isOpen: true,
-    time: '20-30 min',
-    promo: 'Gratis Ongkir',
+    distance: '3.5 km',
+    promoLabel: null,
+    promoHighlight: null,
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuAJaihUMJ4cZeYMR-9IWZL8AM_zRIJLjvp2s62UvSXG9QUFQCbm9eObPadR_-hGnDFmc9PVw8Vc4zxvPuQmw7LxZIfGe73vXYhvd_X5C4JT6HByLMFdwe6xb989DiSIWxeP8EIzO6FhdtMVF626GKoWZzIB7HuTog9e1Bz9KgcuLWfJVYaE5eJair6WyAdiafC_MLARKzuPLYfXZJfgz9c49TDdgptro0tRCKBihg_30LdQapMyViPRu9uoq1AM3OJQSBgb6paCHuiP',
   },
   {
     id: 'store-003',
-    name: 'Bakso Pak Kumis',
-    description: 'Indonesian • 0.8 km',
+    name: 'Daily Dose Coffee',
+    time: '15-25 min',
+    description: 'Cafe • Beverages • Pastry',
     rating: 4.9,
-    imageUrl: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600',
-    isOpen: false,
-    time: '10-15 min',
-    promo: null,
-  },
-  {
-    id: 'store-004',
-    name: 'Pizza Hut Delivery',
-    description: 'Pizza • 2.5 km',
-    rating: 4.7,
-    imageUrl: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600',
-    isOpen: true,
-    time: '30-40 min',
-    promo: 'Beli 1 Gratis 1',
+    distance: '0.8 km',
+    promoLabel: 'Buy 1 Get 1',
+    promoHighlight: 'Promo Available',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCYcqwHU48mVBh7AMArNvi92S8ilr-WnvpkB7erlrK1UtCvU-L-1QABzNc6FYK65BFE8BiFNq6_gNHNZ-aVi_-zTIk25zygmQPHPCKl5PkuR53lXJPjkfVRJXxOdK26CqUMeINaTi9_hbseDh_G_Y5DE4gCUJpz47X42IRxVn4nK0rpFU4dAJ7FO0cmV9-TgoK3lXZNzgBkjnTOR5rsWF3nuL1b2TYN3M3-a03iCDMWDqEinmID7tqjQs0YdWky4CK0csnq4qOHc-ad',
   },
 ];
+
+const BORDER_RADIUS = scale(16);
+const BORDER_RADIUS_LG = scale(20);
+const BANNER_CARD_WIDTH = SCREEN_WIDTH * 0.85;
 
 export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) => {
   const { colors } = useTheme();
@@ -126,286 +132,286 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
   const horizontalPadding = getHorizontalPadding();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  const handleMerchantPress = (storeId: string) => {
-    // Clean suffix -dup if exists (from duplicated list items)
-    const cleanId = storeId.replace('-dup', '');
-    // @ts-ignore
-    navigation.navigate('FnBMerchantDetail', { entryPoint, storeId: cleanId });
-  };
+  const handleMerchantPress = useCallback(
+    (storeId: string) => {
+      const cleanId = storeId.replace(/-dup$/, '');
+      (navigation as any).navigate('FnBMerchantDetail', { entryPoint, storeId: cleanId });
+    },
+    [navigation, entryPoint]
+  );
 
   const handleScanPress = useCallback(() => {
-    // Navigate to dedicated FnB scan screen
-    // @ts-ignore
-    navigation.navigate('FnBScan');
+    (navigation as any).navigate('FnBScan');
   }, [navigation]);
 
   const handleFavoritesPress = useCallback(() => {
-    // Navigate to favorites screen
-    // @ts-ignore
-    navigation.navigate('FnBFavorites');
+    (navigation as any).navigate('FnBFavorites');
   }, [navigation]);
 
-  // --- Render Items ---
+  const { isFavoriteStore, toggleStoreFavorite } = useFnBStoreFavorites();
 
-  const renderBanner = ({ item }: { item: (typeof BANNERS)[0] }) => (
-    <TouchableOpacity style={styles.bannerContainer} activeOpacity={0.9}>
-      <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
-      <View style={styles.bannerContent}>
-        <View style={[styles.bannerBadge, { backgroundColor: colors.primary }]}>
-          <Text style={styles.bannerTitle}>{item.title}</Text>
+  const handleSeeAllPress = useCallback(() => {
+    (navigation as any).navigate('FnBFavorites');
+  }, [navigation]);
+
+  const handleRiwayatOrderPress = useCallback(() => {
+    (navigation as any).navigate('FnBOrderHistory');
+  }, [navigation]);
+
+  // --- Header ---
+  const header = (
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: colors.surface,
+          paddingTop: insets.top + moderateVerticalScale(8),
+          paddingBottom: moderateVerticalScale(12),
+          paddingHorizontal: horizontalPadding,
+        },
+      ]}
+    >
+      {/* Row 1: Delivering to + Address + Notification */}
+      <View style={styles.addressRow}>
+        <View style={styles.addressCol}>
+          <Text
+            style={[styles.deliveringTo, { color: colors.textSecondary }]}
+            numberOfLines={1}
+          >
+            {t('fnb.deliveringTo') || 'Delivering to'}
+          </Text>
+          <View style={styles.addressValueRow}>
+            <Text
+              style={[styles.addressValue, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              Home • 123 Main St, Apt 4B
+            </Text>
+            <ArrowDown2 size={scale(20)} color={colors.primary} variant="Linear" />
+          </View>
         </View>
+        <TouchableOpacity
+          style={[styles.riwayatOrderButton, { backgroundColor: colors.primary + '1A' }]}
+          onPress={handleRiwayatOrderPress}
+          activeOpacity={0.7}
+        >
+          <ReceiptItem size={scale(18)} color={colors.primary} variant="Bold" />
+          <Text style={[styles.riwayatOrderText, { color: colors.primary }]} numberOfLines={1}>
+            {t('fnb.riwayatOrder') || 'Riwayat Order'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Row 2: Search + Scan */}
+      <View style={styles.searchScanRow}>
+        <View style={[styles.searchWrap, { backgroundColor: colors.background }]}>
+          <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t('fnb.searchCraving') || 'What are you craving?'}
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <TouchableOpacity
+          style={[styles.scanButtonHeader, { backgroundColor: colors.primary }]}
+          onPress={handleScanPress}
+          activeOpacity={0.85}
+        >
+          <ScanBarcode size={scale(22)} color="#fff" variant="Bold" />
+          <Text style={styles.scanButtonText}>Scan</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // --- Banner card ---
+  const renderBanner = ({ item }: { item: (typeof BANNERS)[0] }) => (
+    <TouchableOpacity
+      style={[styles.bannerCard, { width: BANNER_CARD_WIDTH }]}
+      activeOpacity={0.95}
+    >
+      <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+      <View style={styles.bannerGradient} />
+      <View style={styles.bannerContent}>
+        <View
+          style={[
+            styles.bannerBadge,
+            {
+              backgroundColor:
+                item.badgeBg === 'orange' ? '#f97316' : colors.primary,
+            },
+          ]}
+        >
+          <Text style={styles.bannerBadgeText}>{item.badge}</Text>
+        </View>
+        <Text style={styles.bannerTitle}>{item.title}</Text>
         <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const renderCategory = ({ item }: { item: (typeof CATEGORIES)[0] }) => (
-    <TouchableOpacity style={styles.categoryItem} activeOpacity={0.7}>
-      <View style={[styles.categoryIconContainer, { backgroundColor: item.color }]}>
-        <Text style={styles.categoryIcon}>{item.icon}</Text>
-      </View>
-      <Text style={[styles.categoryName, { color: colors.text }]}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+  const categoryColors = [colors.primary, '#fb923c', '#60a5fa', '#f472b6'];
 
-  const renderHorizontalStore = ({ item }: { item: (typeof STORES)[0] }) => (
+  const renderCategory = ({ item, index }: { item: (typeof CATEGORIES)[0]; index: number }) => {
+    const IconComponent = item.Icon;
+    return (
+      <TouchableOpacity style={styles.categoryItem} activeOpacity={0.7}>
+        <View
+          style={[
+            styles.categoryIconBox,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border || 'rgba(0,0,0,0.06)',
+            },
+          ]}
+        >
+          <IconComponent
+            size={scale(28)}
+            color={categoryColors[index % categoryColors.length]}
+            variant="Bold"
+          />
+        </View>
+        <Text style={[styles.categoryLabel, { color: colors.text }]}>{item.name}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // --- Merchant card (Recommended) ---
+  const renderMerchant = ({ item }: { item: (typeof MERCHANTS)[0] }) => (
     <TouchableOpacity
-      style={[styles.horizontalStoreCard, { backgroundColor: colors.surface }]}
+      style={[
+        styles.merchantCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border || 'rgba(0,0,0,0.06)',
+        },
+      ]}
       onPress={() => handleMerchantPress(item.id)}
       activeOpacity={0.8}
     >
-      <View style={styles.horizontalImageContainer}>
-        <Image source={{ uri: item.imageUrl }} style={styles.horizontalStoreImage} />
-        <View style={styles.timeBadge}>
-          <Text style={styles.timeText}>{item.time}</Text>
+      <View style={styles.merchantImageWrap}>
+        <Image source={{ uri: item.imageUrl }} style={styles.merchantImage} resizeMode="cover" />
+        <View style={[styles.ratingBadge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+          <Star1 size={scale(14)} color="#eab308" variant="Bold" />
+          <Text style={[styles.ratingBadgeText, { color: colors.text }]}>{item.rating}</Text>
         </View>
-        {item.promo && (
-          <View style={styles.promoBadge}>
-            <DiscountShape size={scale(12)} color="#FFF" variant="Bold" />
-            <Text style={styles.promoText}>{item.promo}</Text>
+        {item.promoLabel ? (
+          <View style={[styles.promoBadgeTop, { backgroundColor: colors.primary }]}>
+            <Text style={styles.promoBadgeTopText}>{item.promoLabel}</Text>
           </View>
-        )}
+        ) : null}
+        <TouchableOpacity
+          style={styles.favButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            toggleStoreFavorite(item.id);
+          }}
+        >
+          <Heart
+            size={scale(22)}
+            color={isFavoriteStore(item.id) ? '#ef4444' : '#fff'}
+            variant={isFavoriteStore(item.id) ? 'Bold' : 'Linear'}
+          />
+        </TouchableOpacity>
       </View>
-      <View style={styles.horizontalStoreInfo}>
-        <Text style={[styles.storeName, { color: colors.text }]} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <View style={{ flexDirection: 'row', paddingTop: scale(2), paddingBottom: scale(4) }}>
-          <View
-            style={[styles.statusPill, { backgroundColor: item.isOpen ? '#E8F5E9' : '#FFEBEE' }]}
-          >
-            <Text style={[styles.statusPillText, { color: item.isOpen ? '#4CAF50' : '#d32f2f' }]}>
-              {item.isOpen ? 'BUKA' : 'TUTUP'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.ratingRow}>
-          <Star1 size={scale(12)} color="#FFC107" variant="Bold" />
-          <Text style={[styles.ratingText, { color: colors.text }]}>{item.rating}</Text>
-          <Text style={[styles.dot, { color: colors.textSecondary }]}>•</Text>
-          <Text style={[styles.descText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.description}
+      <View style={styles.merchantBody}>
+        <View style={styles.merchantTitleRow}>
+          <Text style={[styles.merchantName, { color: colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={[styles.merchantTime, { color: colors.textSecondary }]}>
+            {item.time}
           </Text>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderVerticalStore = (store: (typeof STORES)[0]) => (
-    <TouchableOpacity
-      key={store.id}
-      style={[
-        styles.verticalStoreCard,
-        { backgroundColor: colors.surface, borderBottomColor: colors.border },
-      ]}
-      onPress={() => handleMerchantPress(store.id)}
-      activeOpacity={0.7}
-    >
-      <View>
-        <Image source={{ uri: store.imageUrl }} style={styles.verticalStoreImage} />
-      </View>
-      <View style={styles.verticalStoreContent}>
-        <Text style={[styles.storeName, { color: colors.text }]} numberOfLines={1}>
-          {store.name}
-        </Text>
-        <View style={{ flexDirection: 'row', paddingTop: scale(2), paddingBottom: scale(4) }}>
-          <View
-            style={[styles.statusPill, { backgroundColor: store.isOpen ? '#E8F5E9' : '#FFEBEE' }]}
-          >
-            <Text style={[styles.statusPillText, { color: store.isOpen ? '#4CAF50' : '#d32f2f' }]}>
-              {store.isOpen ? 'BUKA' : 'TUTUP'}
-            </Text>
-          </View>
-        </View>
         <Text
-          style={[styles.descText, { color: colors.textSecondary, marginTop: scale(2) }]}
+          style={[styles.merchantDescription, { color: colors.textSecondary }]}
           numberOfLines={1}
         >
-          {store.description}
+          {item.description}
         </Text>
-
-        <View style={styles.verticalMetaRow}>
+        <View style={styles.merchantMetaRow}>
           <View style={styles.metaItem}>
-            <Star1 size={scale(14)} color="#FFC107" variant="Bold" />
-            <Text style={[styles.ratingText, { color: colors.text }]}>{store.rating}</Text>
-          </View>
-          <View style={[styles.metaItem, { marginLeft: scale(12) }]}>
-            <Clock size={scale(14)} color={colors.textSecondary} variant="Linear" />
-            <Text style={[styles.metaText, { color: colors.textSecondary }]}>{store.time}</Text>
-          </View>
-          <View style={[styles.metaItem, { marginLeft: scale(12) }]}>
-            <TruckFast size={scale(14)} color={colors.primary} variant="Bold" />
-            <Text style={[styles.metaText, { color: colors.primary }]}>
-              {t('common.free') || 'Free'}
+            <Location size={scale(14)} color={colors.textSecondary} variant="Linear" />
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+              {item.distance}
             </Text>
           </View>
+          {item.promoHighlight ? (
+            <View style={styles.metaItem}>
+              <DiscountShape size={scale(14)} color={colors.primary} variant="Bold" />
+              <Text style={[styles.metaText, { color: colors.primary }]} numberOfLines={1}>
+                {item.promoHighlight}
+              </Text>
+            </View>
+          ) : null}
         </View>
-
-        {store.promo && (
-          <View style={[styles.smallPromoBadge, { backgroundColor: '#FFF3E0' }]}>
-            <DiscountShape size={scale(12)} color="#F57C00" variant="Bold" />
-            <Text style={[styles.smallPromoText, { color: '#F57C00' }]}>{store.promo}</Text>
-          </View>
-        )}
       </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.surface,
-            paddingTop: insets.top,
-            paddingBottom: moderateVerticalScale(8),
-            paddingHorizontal: horizontalPadding,
-          },
-        ]}
-      >
-        <ScreenHeader
-          title={t('fnb.title') || 'Pesan Makanan'}
-          onBackPress={handleBack}
-          rightComponent={
-            <TouchableOpacity onPress={handleFavoritesPress} style={styles.iconButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Heart size={scale(24)} color={colors.text} variant="Linear" />
-            </TouchableOpacity>
-          }
-          style={{ paddingTop: 0, paddingVertical: 0 }}
-          paddingHorizontal={0}
-        />
-        <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
-          <SearchNormal size={scale(20)} color={colors.textSecondary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Mau makan apa hari ini?"
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-      </View>
+      {header}
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + scale(20) }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + scale(100) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Categories */}
-        <View style={styles.categoryContainer}>
-          <FlatList
-            key="fnb-categories-grid-4"
-            data={CATEGORIES}
-            renderItem={renderCategory}
-            keyExtractor={(item) => item.id}
-            numColumns={4}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.categoryColumnWrapper}
-          />
-        </View>
-
-        {/* Banners */}
+        {/* Promo Banners Carousel */}
         <View style={styles.bannerSection}>
           <FlatList
             data={BANNERS}
             renderItem={renderBanner}
+            keyExtractor={(o) => o.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: horizontalPadding }}
-            ItemSeparatorComponent={() => <View style={{ width: scale(12) }} />}
-            snapToInterval={scale(280) + scale(12)}
+            contentContainerStyle={[styles.bannerListContent, { paddingLeft: horizontalPadding }]}
+            ItemSeparatorComponent={() => <View style={{ width: scale(16) }} />}
+            snapToInterval={BANNER_CARD_WIDTH + scale(16)}
             decelerationRate="fast"
           />
         </View>
 
-        {/* Nearest / Popular (Horizontal) */}
-        <View style={styles.sectionHeader}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: colors.text, marginHorizontal: horizontalPadding },
-            ]}
-          >
-            Terlaris di Sekitarmu 🌟
-          </Text>
+        {/* Categories Grid */}
+        <View style={[styles.categoriesSection, { paddingHorizontal: horizontalPadding }]}>
+          <View style={styles.categoriesGrid}>
+            {CATEGORIES.map((item, index) => (
+              <View key={item.id} style={styles.categoryItemWrapper}>
+                {renderCategory({ item, index })}
+              </View>
+            ))}
+          </View>
         </View>
-        <FlatList
-          data={STORES}
-          renderItem={renderHorizontalStore}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: horizontalPadding }}
-          ItemSeparatorComponent={() => <View style={{ width: scale(12) }} />}
-        />
 
-        {/* Promo Section (Horizontal) */}
-        <View style={[styles.sectionHeader, { marginTop: moderateVerticalScale(24) }]}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: colors.text, marginHorizontal: horizontalPadding },
-            ]}
-          >
-            Lagi Ada Promo 🤑
-          </Text>
+        {/* Recommended Merchants */}
+        <View style={[styles.section, { paddingHorizontal: horizontalPadding }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('fnb.recommendedMerchants') || 'Recommended Merchants'}
+            </Text>
+            <TouchableOpacity onPress={handleSeeAllPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>
+                {t('common.seeAll') || 'See All'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.merchantList}>
+            {MERCHANTS.map((m) => (
+              <View key={m.id} style={styles.merchantCardWrap}>
+                {renderMerchant({ item: m })}
+              </View>
+            ))}
+          </View>
         </View>
-        <FlatList
-          data={[...STORES].reverse()}
-          renderItem={renderHorizontalStore}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: horizontalPadding }}
-          ItemSeparatorComponent={() => <View style={{ width: scale(12) }} />}
-        />
 
-        {/* All Stores (Vertical) */}
-        <View style={[styles.sectionHeader, { marginTop: moderateVerticalScale(24) }]}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              { color: colors.text, marginHorizontal: horizontalPadding },
-            ]}
-          >
-            Semua Restoran
-          </Text>
-        </View>
-        <View style={{ paddingHorizontal: horizontalPadding }}>
-          {STORES.map((store) => renderVerticalStore(store))}
-          {STORES.map((store) => renderVerticalStore({ ...store, id: `${store.id}-dup` }))}
-        </View>
+        <View style={{ height: scale(24) }} />
       </ScrollView>
-      <TouchableOpacity
-        style={[styles.scanButton, { backgroundColor: colors.primary }]}
-        onPress={handleScanPress}
-      >
-        <ScanBarcode size={scale(34)} color={colors.surface} variant="Outline" />
-      </TouchableOpacity>
 
-      {/* FnB active order floating widget (same as Home) */}
       <View style={styles.fnbFloatingWidgetContainer} pointerEvents="box-none">
         <FnBOrderFloatingWidget />
       </View>
@@ -418,24 +424,76 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    borderBottomLeftRadius: scale(20),
-    borderBottomRightRadius: scale(20),
+    borderBottomLeftRadius: BORDER_RADIUS_LG,
+    borderBottomRightRadius: BORDER_RADIUS_LG,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
     zIndex: 10,
   },
-  iconButton: {
-    padding: scale(4),
-  },
-  searchContainer: {
+  addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(12),
+    justifyContent: 'space-between',
+    gap: scale(12),
+    marginBottom: scale(12),
+  },
+  addressCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  deliveringTo: {
+    fontSize: scale(11),
+    fontFamily: FontFamily.monasans.medium,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: scale(2),
+  },
+  addressValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+  },
+  addressValue: {
+    fontSize: scale(15),
+    fontFamily: FontFamily.monasans.bold,
+    flex: 1,
+  },
+  notifButton: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  riwayatOrderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
+  },
+  riwayatOrderText: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.semiBold,
+    maxWidth: scale(90),
+  },
+  searchScanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(12),
+  },
+  searchWrap: {
+    flex: 1,
+    height: scale(48),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: scale(12),
+    paddingRight: scale(12),
     borderRadius: scale(12),
-    height: scale(44),
   },
   searchInput: {
     flex: 1,
@@ -444,237 +502,232 @@ const styles = StyleSheet.create({
     marginLeft: scale(8),
     paddingVertical: 0,
   },
+  scanButtonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: scale(48),
+    paddingHorizontal: scale(16),
+    borderRadius: scale(12),
+    gap: scale(8),
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  scanButtonText: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(14),
+    color: '#fff',
+  },
   scrollContent: {
     paddingTop: moderateVerticalScale(16),
-  },
-  categoryContainer: {
-    paddingHorizontal: getHorizontalPadding(),
-    marginBottom: moderateVerticalScale(20),
-  },
-  categoryColumnWrapper: {
-    justifyContent: 'space-between',
-    marginBottom: moderateVerticalScale(16),
-  },
-  categoryItem: {
-    alignItems: 'center',
-    width: '22%',
-  },
-  categoryIconContainer: {
-    width: scale(48),
-    height: scale(48),
-    borderRadius: scale(16),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scale(8),
-  },
-  categoryIcon: {
-    fontSize: scale(24),
-  },
-  categoryName: {
-    fontSize: scale(11),
-    fontFamily: FontFamily.monasans.regular,
-    textAlign: 'center',
   },
   bannerSection: {
     marginBottom: moderateVerticalScale(24),
   },
-  bannerContainer: {
-    width: scale(280),
-    height: scale(140),
-    borderRadius: scale(16),
+  bannerListContent: {
+    paddingRight: getHorizontalPadding(),
+  },
+  bannerCard: {
+    height: scale(160),
+    borderRadius: BORDER_RADIUS,
     overflow: 'hidden',
     position: 'relative',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
   },
   bannerImage: {
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
+  },
+  bannerGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   bannerContent: {
     position: 'absolute',
-    bottom: scale(12),
-    left: scale(12),
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: scale(20),
   },
   bannerBadge: {
+    alignSelf: 'flex-start',
     paddingHorizontal: scale(8),
     paddingVertical: scale(4),
     borderRadius: scale(6),
-    alignSelf: 'flex-start',
-    marginBottom: scale(4),
+    marginBottom: scale(8),
+  },
+  bannerBadgeText: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(11),
+    color: '#102220',
   },
   bannerTitle: {
-    color: '#FFF',
-    fontSize: scale(10),
     fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(20),
+    color: '#fff',
+    lineHeight: scale(26),
   },
   bannerSubtitle: {
-    color: '#FFF',
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.bold,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(12),
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: scale(4),
+  },
+  categoriesSection: {
+    marginBottom: moderateVerticalScale(24),
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoryItemWrapper: {
+    width: '24%',
+    marginBottom: scale(12),
+  },
+  categoryItem: {
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  categoryIconBox: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: BORDER_RADIUS,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  categoryLabel: {
+    fontSize: scale(12),
+    fontFamily: FontFamily.monasans.medium,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: moderateVerticalScale(16),
   },
   sectionHeader: {
-    marginBottom: moderateVerticalScale(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: scale(16),
   },
   sectionTitle: {
     fontSize: scale(18),
     fontFamily: FontFamily.monasans.bold,
   },
-  horizontalStoreCard: {
-    width: scale(200),
-    borderRadius: scale(12),
-    overflow: 'hidden',
-    paddingBottom: scale(12),
+  seeAll: {
+    fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
   },
-  horizontalImageContainer: {
+  merchantList: {
+    gap: scale(16),
+  },
+  merchantCardWrap: {
+    marginBottom: 0,
+  },
+  merchantCard: {
+    borderRadius: BORDER_RADIUS,
+    overflow: 'hidden',
+    borderWidth: 1,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
+      android: { elevation: 2 },
+    }),
+  },
+  merchantImageWrap: {
+    height: scale(144),
     width: '100%',
-    height: scale(110),
     position: 'relative',
   },
-  horizontalStoreImage: {
+  merchantImage: {
     width: '100%',
     height: '100%',
-    borderRadius: scale(12),
   },
-  promoBadge: {
+  ratingBadge: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    backgroundColor: '#F44336',
-    borderBottomRightRadius: scale(12),
-    borderTopLeftRadius: scale(12),
+    top: scale(12),
+    left: scale(12),
     flexDirection: 'row',
     alignItems: 'center',
+    gap: scale(4),
     paddingHorizontal: scale(8),
     paddingVertical: scale(4),
+    borderRadius: scale(8),
   },
-  promoText: {
-    color: '#FFF',
-    fontSize: scale(10),
+  ratingBadgeText: {
     fontFamily: FontFamily.monasans.bold,
-    marginLeft: scale(4),
+    fontSize: scale(12),
   },
-  timeBadge: {
+  promoBadgeTop: {
     position: 'absolute',
-    bottom: scale(8),
-    right: scale(8),
-    backgroundColor: '#FFF',
-    borderRadius: scale(12),
+    top: scale(12),
+    right: scale(12),
     paddingHorizontal: scale(8),
     paddingVertical: scale(4),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: scale(8),
   },
-  timeText: {
-    fontSize: scale(10),
+  promoBadgeTopText: {
     fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(11),
+    color: '#102220',
   },
-  statusPill: {
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(2),
-    borderRadius: scale(100), // Capsule shape like Grab/Gojek
+  favButton: {
+    position: 'absolute',
+    bottom: scale(12),
+    right: scale(12),
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
   },
-  statusPillText: {
-    fontSize: scale(10),
-    fontFamily: FontFamily.monasans.bold,
+  merchantBody: {
+    padding: scale(16),
   },
-  horizontalStoreInfo: {
-    paddingTop: scale(8),
-    paddingHorizontal: scale(4),
-  },
-  storeName: {
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.bold,
-    marginBottom: scale(4),
-  },
-  ratingRow: {
+  merchantTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  ratingText: {
-    fontSize: scale(11),
+  merchantName: {
     fontFamily: FontFamily.monasans.bold,
-    marginLeft: scale(4),
+    fontSize: scale(16),
+    flex: 1,
+    marginRight: scale(8),
   },
-  dot: {
-    fontSize: scale(11),
-    marginHorizontal: scale(4),
+  merchantTime: {
+    fontFamily: FontFamily.monasans.medium,
+    fontSize: scale(12),
   },
-  descText: {
-    fontSize: scale(11),
+  merchantDescription: {
     fontFamily: FontFamily.monasans.regular,
-    flex: 1,
+    fontSize: scale(14),
+    marginTop: scale(4),
   },
-  verticalStoreCard: {
-    flexDirection: 'row',
-    paddingVertical: moderateVerticalScale(16),
-    borderBottomWidth: 1,
-  },
-  verticalStoreImage: {
-    width: scale(100),
-    height: scale(100),
-    borderRadius: scale(12),
-  },
-  verticalStoreContent: {
-    flex: 1,
-    marginLeft: scale(12),
-    justifyContent: 'center',
-  },
-  verticalMetaRow: {
+  merchantMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: scale(12),
     marginTop: scale(8),
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: scale(4),
   },
   metaText: {
-    fontSize: scale(11),
-    fontFamily: FontFamily.monasans.regular,
-    marginLeft: scale(4),
-  },
-  smallPromoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: scale(8),
-    paddingHorizontal: scale(6),
-    paddingVertical: scale(2),
-    borderRadius: scale(4),
-    alignSelf: 'flex-start',
-  },
-  smallPromoText: {
-    fontSize: scale(10),
-    fontFamily: FontFamily.monasans.semiBold,
-    marginLeft: scale(4),
-  },
-  scanButton: {
-    position: 'absolute',
-    bottom: moderateVerticalScale(54),
-    alignSelf: 'center',
-    width: scale(80),
-    height: scale(55),
-    borderRadius: scale(2000),
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    fontFamily: FontFamily.monasans.medium,
+    fontSize: scale(12),
   },
   fnbFloatingWidgetContainer: {
     position: 'absolute',

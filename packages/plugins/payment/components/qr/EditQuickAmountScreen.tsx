@@ -5,8 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Platform,
-  Keyboard,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,9 +42,7 @@ export const EditQuickAmountScreen: React.FC = () => {
   const [quickAmounts, setQuickAmounts] = useState<number[]>(initialAmounts);
   const [editingAmount, setEditingAmount] = useState<{ index: number; value: number } | null>(null);
   const [newAmount, setNewAmount] = useState('');
-  const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
   const inputRefs = useRef<{ [key: number]: TextInput | null }>({});
-  const itemRefs = useRef<{ [key: number]: View | null }>({});
 
   const formatCurrency = useCallback((value: string): string => {
     const numericValue = value.replace(/\D/g, '');
@@ -99,89 +95,6 @@ export const EditQuickAmountScreen: React.FC = () => {
     navigation.goBack();
   }, [quickAmounts, navigation]);
 
-  const scrollToInput = useCallback(
-    (index: number, keyboardHeight: number = 0) => {
-      if (!scrollViewRef.current || !itemRefs.current[index]) return;
-
-      const scrollDelay = Platform.OS === 'ios' ? 250 : 100;
-      
-      setTimeout(() => {
-        const itemRef = itemRefs.current[index];
-        if (!itemRef || !scrollViewRef.current) return;
-
-          itemRef.measureLayout(
-            scrollViewRef.current as any,
-            (x, y, width, height) => {
-              const Dimensions = require('react-native').Dimensions;
-              const screenHeight = Dimensions.get('window').height;
-              const actualKeyboardHeight = keyboardHeight || (Platform.OS === 'ios' ? 336 : 300);
-              
-              const headerHeight = moderateVerticalScale(70);
-              const safeAreaTop = insets.top;
-              const safeAreaBottom = insets.bottom;
-              const padding = moderateVerticalScale(30);
-              
-              const visibleAreaTop = safeAreaTop + headerHeight;
-              const visibleAreaBottom = screenHeight - actualKeyboardHeight - safeAreaBottom;
-              
-              const inputTop = y;
-              const inputBottom = y + height;
-              
-              if (inputBottom > visibleAreaBottom - padding) {
-                const scrollOffset = Math.max(0, inputBottom - visibleAreaBottom + padding);
-                (scrollViewRef.current as any)?.scrollTo({
-                  y: scrollOffset,
-                  animated: true,
-                });
-              } else if (inputTop < visibleAreaTop + padding) {
-                const scrollOffset = Math.max(0, inputTop - visibleAreaTop - padding);
-                (scrollViewRef.current as any)?.scrollTo({
-                  y: scrollOffset,
-                  animated: true,
-                });
-              }
-            },
-            () => {
-              // Error callback - ignore silently
-            }
-          );
-      }, scrollDelay);
-    },
-    [insets.top, insets.bottom]
-  );
-
-  useEffect(() => {
-    const keyboardWillShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        const keyboardHeight = e.endCoordinates?.height || 0;
-        if (editingAmount !== null) {
-          scrollToInput(editingAmount.index, keyboardHeight);
-        }
-      }
-    );
-
-    return () => {
-      keyboardWillShowListener.remove();
-    };
-  }, [editingAmount, scrollToInput]);
-
-  useEffect(() => {
-    const keyboardListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        const keyboardHeight = e.endCoordinates?.height || 0;
-        if (newAmount && itemRefs.current[-1] && editingAmount === null) {
-          scrollToInput(-1, keyboardHeight);
-        }
-      }
-    );
-
-    return () => {
-      keyboardListener.remove();
-    };
-  }, [newAmount, editingAmount, scrollToInput]);
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
@@ -197,7 +110,6 @@ export const EditQuickAmountScreen: React.FC = () => {
       />
 
       <KeyboardAwareScrollView
-        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
@@ -207,14 +119,11 @@ export const EditQuickAmountScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
         enableOnAndroid={true}
         enableAutomaticScroll={true}
-        extraScrollHeight={20}
+        extraScrollHeight={40}
       >
           {quickAmounts.map((quickAmount, index) => (
             <View
               key={`edit-${quickAmount}-${index}`}
-              ref={(ref) => {
-                itemRefs.current[index] = ref;
-              }}
               style={[
                 styles.editAmountItem,
                 {
@@ -237,11 +146,6 @@ export const EditQuickAmountScreen: React.FC = () => {
                     placeholderTextColor={colors.textSecondary}
                     keyboardType="numeric"
                     autoFocus
-                    onFocus={() => {
-                      setTimeout(() => {
-                        scrollToInput(index);
-                      }, Platform.OS === 'ios' ? 400 : 300);
-                    }}
                   />
                   <TouchableOpacity
                     onPress={handleSaveEdit}
@@ -281,9 +185,6 @@ export const EditQuickAmountScreen: React.FC = () => {
 
           {/* Add New Amount */}
           <View
-            ref={(ref) => {
-              itemRefs.current[-1] = ref;
-            }}
             style={[
               styles.editAmountItem,
               styles.addAmountItem,
