@@ -473,31 +473,11 @@ const Component = await loadPluginComponent('balance', 'TransactionHistoryScreen
 Sistem untuk mengelola plugin component loaders dengan mudah.
 
 **Files:**
-- `plugins/componentLoaderPaths.ts` - Centralized path mapping configuration
-- `plugins/pluginComponentLoader.ts` - Loader implementation
-- `plugins/PLUGIN_LOADERS.md` - Complete developer guide
+- `plugins/pluginComponentLoader.ts` - Resolves components from PluginRegistry (loaders from app bootstrap)
+- `plugins/PLUGIN_STRUCTURE.md` - Template: manifest + createPluginModule + bootstrap
+- `plugins/PLUGIN_LOADERS.md` - Legacy guide and troubleshooting
 
-**Quick Start:**
-
-Menambahkan component baru (recommended):
-```bash
-# 1. Add component to plugin.manifest.json (exports.components)
-# 2. Run generate script
-npm run generate:loaders
-```
-
-Manual edit (untuk custom paths):
-```typescript
-// Edit plugins/componentLoaderPaths.ts
-export const COMPONENT_LOADER_PATHS = {
-  myPlugin: {
-    MyComponent: '../../../plugins/myPlugin/components/MyComponent',
-  },
-};
-```
-
-**See Also:**
-- [Plugin Loader Guide](plugins/PLUGIN_LOADERS.md) - Complete documentation with examples and troubleshooting
+**Quick Start:** Add component to plugin `plugin.manifest.json` (exports) and to `componentLoaders` in plugin `index.ts`; register plugins in app `bootstrapPlugins()`. Core does not hold plugin paths. See [PLUGIN_STRUCTURE.md](plugins/PLUGIN_STRUCTURE.md).
 
 ### Types
 
@@ -510,7 +490,7 @@ interface AppConfig {
   tenantId: string;
   segmentId: string;
   enabledFeatures: string[];
-  enabledModules: string[];
+  enabledModules: string[] | Record<string, boolean>; // use getEnabledModuleIds() for list
   menuConfig: MenuItemConfig[];
   paymentMethods: string[];
   homeVariant: 'dashboard' | 'member';
@@ -576,7 +556,7 @@ const appConfig: AppConfig = {
   tenantId: 'member-base',
   segmentId: 'balance-management',
   enabledFeatures: ['balance', 'payment'],
-  enabledModules: ['balance', 'payment'],
+  enabledModules: { balance: true, payment: true },
   menuConfig: [
     {
       id: 'home',
@@ -604,11 +584,11 @@ API_PROD_BASE_URL
 
 ### Plugin Configuration
 
-Plugins di-enable via `enabledModules` di AppConfig:
+Plugins di-enable via `enabledModules` di AppConfig. Gunakan `getEnabledModuleIds(config.enabledModules)` untuk daftar ID; jangan akses `.includes()` atau iterasi langsung.
 
 ```typescript
 {
-  enabledModules: ['balance', 'payment', 'catalog'],
+  enabledModules: { balance: true, payment: true, catalog: true },
 }
 ```
 
@@ -703,7 +683,7 @@ Plugins di-enable via `enabledModules` di AppConfig:
 **Problem:** Plugin component tidak ditemukan.
 
 **Solution:**
-- Check plugin ID di `enabledModules` di config
+- Check plugin ID via `getEnabledModuleIds(config.enabledModules)` di config
 - Verify plugin manifest format
 - Check plugin component name sesuai dengan manifest
 - Verify plugin path di `MANIFEST_LOADERS`
@@ -771,7 +751,7 @@ Plugins di-enable via `enabledModules` di AppConfig:
 
 ### Plugin Loading Flow
 
-1. App config menentukan `enabledModules`
+1. App config menentukan `enabledModules` (object atau array legacy); daftar ID lewat `getEnabledModuleIds()`
 2. Plugin loader load manifest dari `MANIFEST_LOADERS`
 3. Manifest validator validate manifest format
 4. Plugin registry register plugin

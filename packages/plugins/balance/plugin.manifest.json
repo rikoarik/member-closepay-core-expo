@@ -58,6 +58,12 @@
             "recent-transactions": "RecentTransactions"
         }
     },
+    "tabs": [
+        { "id": "balance", "component": "BalanceTab", "labelKey": "balance.home", "order": 1 }
+    ],
+    "quickMenuItems": [
+        { "id": "balance-detail", "component": "BalanceDetailScreen", "labelKey": "balance.detail", "order": 1, "route": "BalanceDetail" }
+    ],
     "routes": [
         {
             "name": "BalanceDetail",

@@ -1,32 +1,86 @@
 /**
  * NFC & Bluetooth Service
- * Service untuk handle NFC card reading dan Bluetooth communication.
- * NFC/BLE modules are lazy-loaded so Expo Go can start without native modules.
+ * NFC/BLE modules are lazy-loaded. In Expo Go they are stubbed so the app runs without native modules.
  */
 import type { BleManager, Device } from 'react-native-ble-plx';
-import { State } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid, Linking } from 'react-native';
 
-// Lazy-load NfcManager so Expo Go doesn't load native module at import time
+// Lazy-load NfcManager; stub when unavailable (Expo Go)
 type NfcManagerType = typeof import('react-native-nfc-manager').default;
 type NfcTech = typeof import('react-native-nfc-manager').NfcTech;
 type Ndef = typeof import('react-native-nfc-manager').Ndef;
 type NfcEvents = typeof import('react-native-nfc-manager').NfcEvents;
-let _nfc: { default: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents } | null = null;
-function getNfc(): { NfcManager: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents } {
+type NfcApi = { NfcManager: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents };
+
+let _nfc: NfcApi | null = null;
+function getNfc(): NfcApi {
   if (!_nfc) {
-    _nfc = require('react-native-nfc-manager');
+    try {
+      const mod = require('react-native-nfc-manager');
+      _nfc = { NfcManager: mod.default, NfcTech: mod.NfcTech, Ndef: mod.Ndef, NfcEvents: mod.NfcEvents };
+    } catch {
+      const noop = () => Promise.resolve();
+      const noopSync = () => {};
+      _nfc = {
+        NfcManager: {
+          isSupported: () => Promise.resolve(false),
+          start: noop,
+          isEnabled: () => Promise.resolve(false),
+          requestTechnology: noop,
+          getTag: () => Promise.resolve(null),
+          cancelTechnologyRequest: noop,
+          setEventListener: noopSync,
+          registerTagEvent: noop,
+          unregisterTagEvent: noop,
+        } as unknown as NfcManagerType,
+        NfcTech: {} as NfcTech,
+        Ndef: {
+          TNF_WELL_KNOWN: 1,
+          TNF_ABSOLUTE_URI: 3,
+          TNF_MIME_MEDIA: 2,
+          TNF_EXTERNAL_TYPE: 4,
+          text: { decodePayload: () => '' },
+          uri: { decodePayload: () => '' },
+        } as unknown as Ndef,
+        NfcEvents: {} as NfcEvents,
+      };
+    }
   }
-  const nfc = _nfc!;
-  return { NfcManager: nfc.default, NfcTech: nfc.NfcTech, Ndef: nfc.Ndef, NfcEvents: nfc.NfcEvents };
+  return _nfc;
 }
 
-// Lazy-init BLE Manager so Expo Go doesn't load native module at import time
+// BLE State values (match react-native-ble-plx when available)
+const BLE_STATE = { Unavailable: 0, Unsupported: 1, PoweredOff: 2, Unauthorized: 3, PoweredOn: 4 } as const;
+type BleStateLike = { Unavailable: number; Unsupported: number; PoweredOff: number; Unauthorized: number; PoweredOn: number };
+let _bleState: BleStateLike = BLE_STATE;
+function getBleState(): BleStateLike {
+  if (_bleState === BLE_STATE) {
+    try {
+      const State = require('react-native-ble-plx').State as BleStateLike | undefined;
+      if (State) _bleState = State;
+    } catch {
+      // keep BLE_STATE
+    }
+  }
+  return _bleState;
+}
+
 let _bleManager: BleManager | null = null;
 function getBleManager(): BleManager {
   if (!_bleManager) {
-    const { BleManager: BleManagerCtor } = require('react-native-ble-plx');
-    _bleManager = new BleManagerCtor();
+    try {
+      const { BleManager: BleManagerCtor } = require('react-native-ble-plx');
+      _bleManager = new BleManagerCtor();
+    } catch {
+      _bleManager = {
+        state: () => Promise.resolve(BLE_STATE.Unavailable),
+        startDeviceScan: () => {},
+        stopDeviceScan: () => {},
+        connectToDevice: () => Promise.reject(new Error('BLE not available (Expo Go)')),
+        cancelDeviceConnection: () => Promise.resolve(),
+        destroy: () => {},
+      } as unknown as BleManager;
+    }
   }
   return _bleManager as BleManager;
 }
@@ -509,12 +563,9 @@ class NFCBluetoothService {
   /**
    * Check Bluetooth state
    */
-  async checkBluetoothState(): Promise<State> {
-    return new Promise((resolve) => {
-      getBleManager().state().then((state) => {
-        resolve(state);
-      });
-    });
+  async checkBluetoothState(): Promise<number> {
+    const s = await getBleManager().state();
+    return s as unknown as number;
   }
 
   /**
@@ -611,6 +662,7 @@ class NFCBluetoothService {
   ): Promise<void> {
     try {
       const state = await this.checkBluetoothState();
+      const State = getBleState();
       if (state === State.Unauthorized) {
         throw new Error('Aplikasi tidak memiliki izin untuk menggunakan Bluetooth');
       }
@@ -670,7 +722,7 @@ class NFCBluetoothService {
   ): Promise<void> {
     try {
       const state = await this.checkBluetoothState();
-      if (state !== State.PoweredOn) {
+      if (state !== getBleState().PoweredOn) {
         throw new Error('Bluetooth is not enabled');
       }
 

@@ -24,5 +24,4 @@ export { NewsInfo } from './NewsInfo';
 export type { NewsInfoProps, NewsItem } from './NewsInfo';
 export { SvgLinearGradientView } from './SvgLinearGradient';
 export type { SvgLinearGradientProps } from './SvgLinearGradient';
-export { HomeTabSettingsScreen } from './HomeTabSettingsScreen';
 // TopBarRefreshControl, PullToRefreshWrapper and related components removed in favor of native RefreshControl

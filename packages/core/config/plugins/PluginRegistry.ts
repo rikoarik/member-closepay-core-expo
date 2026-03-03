@@ -1,38 +1,98 @@
 /**
  * Plugin Registry
- * Dynamic registry derived from PLUGIN_REGISTRY in pluginLoader (no circular import).
+ * Plugins are registered via registerPlugins() from app bootstrap; Core does not list plugins by name.
  */
 
-import type { PluginManifest, PluginRoute, PluginRegistryEntry } from './types';
-import { PLUGIN_REGISTRY, loadPluginManifest } from './pluginLoader';
+import type { PluginManifest, PluginRoute, PluginRegistryEntry, PluginModule } from './types';
+import { getExportComponentNames } from './types';
 import { validateManifestOrThrow } from './manifestValidator';
 import { configService } from '../services/configService';
 import { logger } from '../services/loggerService';
+import { getEnabledModuleIds } from '../utils/enabledModules';
 
 /**
- * Get plugin registry entry by ID
+ * Get plugin registry entry by ID (for compatibility; manifestPath unused after Phase 2).
  */
 export function getPluginRegistryEntry(pluginId: string): PluginRegistryEntry | undefined {
-  return PLUGIN_REGISTRY.find(entry => entry.id === pluginId);
+  const manifest = PluginRegistry.getPlugin(pluginId);
+  return manifest ? { id: manifest.id, manifestPath: '' } : undefined;
 }
 
 /**
  * Get all plugin IDs from registry
  */
 export function getAllPluginIds(): string[] {
-  return PLUGIN_REGISTRY.map(entry => entry.id);
+  return PluginRegistry.getAllPlugins().map(p => p.id);
 }
 
-export type { PluginManifest, PluginRegistryEntry };
+export type { PluginManifest, PluginRegistryEntry, PluginModule };
 
 /**
  * PluginRegistry class
- * Manages registered plugins and their state
+ * Manages registered plugins and their state. Manifests and component loaders come from registerPlugins() only.
  */
 class PluginRegistryClass {
   private initialized: boolean = false;
   private plugins: Map<string, PluginManifest> = new Map();
+  private componentLoaders: Map<string, Record<string, () => Promise<any>>> = new Map();
   private enabledPlugins: Set<string> = new Set();
+
+  /**
+   * Register plugins from app bootstrap. Call before initializePlugins().
+   */
+  registerPlugins(modules: PluginModule[]): void {
+    if (this.initialized) {
+      throw new Error('Cannot register plugins after initialization.');
+    }
+    for (const module of modules) {
+      const { manifest, componentLoaders } = module;
+      if (this.plugins.has(manifest.id)) {
+        throw new Error(`Duplicate plugin id: ${manifest.id}`);
+      }
+      validateManifestOrThrow(manifest);
+      this.plugins.set(manifest.id, Object.freeze(manifest));
+      this.componentLoaders.set(manifest.id, componentLoaders);
+    }
+  }
+
+  /** Whether any plugins have been registered (used to enforce init order). */
+  hasRegisteredPlugins(): boolean {
+    return this.plugins.size > 0;
+  }
+
+  /** Get component loader for a plugin component. Single source of truth. */
+  getComponentLoader(pluginId: string, name: string): () => Promise<any> {
+    const loaders = this.componentLoaders.get(pluginId);
+    if (!loaders) {
+      throw new Error(`Plugin not registered: ${pluginId}`);
+    }
+    const loader = loaders[name];
+    if (!loader) {
+      throw new Error(`Missing component loader for ${pluginId}:${name}`);
+    }
+    return loader;
+  }
+
+  /** Get all component loaders for a plugin (for getPluginComponentLoaders). */
+  getComponentLoaders(pluginId: string): Record<string, () => Promise<any>> {
+    return this.componentLoaders.get(pluginId) ?? {};
+  }
+
+  /**
+   * Validate that every exported component (screens/tabs/widgets/components) has a loader.
+   * Call after bootstrapPlugins() in dev only. Flattens all export names via getExportComponentNames.
+   */
+  validate(): void {
+    for (const [pluginId, manifest] of this.plugins) {
+      const loaders = this.componentLoaders.get(pluginId);
+      const names = getExportComponentNames(manifest.exports);
+      for (const name of names) {
+        if (!loaders?.[name]) {
+          throw new Error(`Missing component loader for ${pluginId}:${name}`);
+        }
+      }
+    }
+  }
 
   /**
    * Check if registry is initialized
@@ -49,11 +109,10 @@ class PluginRegistryClass {
   }
 
   /**
-   * Register a plugin manifest
+   * Register a single plugin manifest (used internally; prefer registerPlugins from app).
    */
   registerPlugin(manifest: PluginManifest): void {
     this.plugins.set(manifest.id, manifest);
-    // Core plugins are enabled by default
     if (manifest.type === 'core-plugin') {
       this.enabledPlugins.add(manifest.id);
     }
@@ -134,40 +193,39 @@ class PluginRegistryClass {
 export const PluginRegistry = new PluginRegistryClass();
 
 /**
- * Initialize and register plugins from PLUGIN_REGISTRY. Lives here to avoid pluginLoader → PluginRegistry cycle.
+ * Apply enabled state from config. Call after bootstrapPlugins() (registerPlugins).
  */
 export async function initializePlugins(): Promise<void> {
   if (PluginRegistry.isInitialized()) {
-    logger.debug('PluginRegistry already initialized');
-    return;
+    throw new Error(
+      'PluginRegistry.initializePlugins() already called. Do not call twice (e.g. hot-reload).'
+    );
+  }
+  if (!PluginRegistry.hasRegisteredPlugins()) {
+    throw new Error(
+      'PluginRegistry.initializePlugins() called before registerPlugins(). ' +
+        'Did you forget to call bootstrapPlugins()?'
+    );
   }
   logger.info('Initializing PluginRegistry...');
   try {
-    const config = configService.getConfig();
-    const allManifests = await Promise.all(
-      PLUGIN_REGISTRY.map(async (entry) => {
-        try {
-          const manifest = await loadPluginManifest(entry.id);
-          validateManifestOrThrow(manifest);
-          return manifest;
-        } catch (error) {
-          logger.error(`Failed to load plugin ${entry.id}`, error);
-          return null;
-        }
-      })
-    );
-    const validManifests = allManifests.filter((m): m is NonNullable<typeof m> => m !== null);
-    const corePlugins = validManifests.filter(m => m.type === 'core-plugin').map(m => m.id);
-    const enabledPlugins = config?.enabledModules || [];
-    const pluginsToLoad = new Set([...corePlugins, ...enabledPlugins]);
-    logger.info(`Loading ${pluginsToLoad.size} plugins:`, Array.from(pluginsToLoad));
-    const manifestsToRegister = validManifests.filter(m => pluginsToLoad.has(m.id));
-    manifestsToRegister.forEach(manifest => PluginRegistry.registerPlugin(manifest));
-    for (const pluginId of enabledPlugins) {
-      if (pluginsToLoad.has(pluginId)) PluginRegistry.enablePlugin(pluginId);
+    const config = configService.getEffectiveConfig();
+    // Core-plugin always on first, then config.enabledModules
+    for (const manifest of PluginRegistry.getAllPlugins()) {
+      if (manifest.type === 'core-plugin') {
+        PluginRegistry.enablePlugin(manifest.id);
+      }
+    }
+    const enabledIds = getEnabledModuleIds(config.enabledModules);
+    for (const id of enabledIds) {
+      if (PluginRegistry.getPlugin(id)) {
+        PluginRegistry.enablePlugin(id);
+      } else {
+        logger.warn(`Enabled plugin not registered: ${id}`);
+      }
     }
     PluginRegistry.markInitialized();
-    logger.info(`PluginRegistry initialized with ${manifestsToRegister.length} plugins`);
+    logger.info('PluginRegistry initialized');
   } catch (error) {
     logger.error('Failed to initialize plugins', error);
     PluginRegistry.markInitialized();

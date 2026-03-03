@@ -1,16 +1,18 @@
-import { TalsecConfig } from 'freerasp-react-native';
 import { Platform } from 'react-native';
 
 import Config from '../native/Config';
 
-/**
- * Security Configuration for Talsec (FreeRASP)
- * 
- * IMPORTANT: Set ANDROID_CERTIFICATE_HASH and IOS_APP_TEAM_ID for production builds.
- */
+/** Local type compatible with FreeRASP config (avoids requiring freerasp at load time). */
+export interface SecurityConfigShape {
+  androidConfig?: { packageName: string; certificateHashes: string[]; [k: string]: unknown };
+  iosConfig: { appBundleId: string; appTeamId: string };
+  watcherMail: string;
+  isProd: boolean;
+}
+
 const isProduction = Config.ENV === 'production';
-const certificateHashes = Config.ANDROID_CERTIFICATE_HASH 
-  ? [Config.ANDROID_CERTIFICATE_HASH] 
+const certificateHashes = Config.ANDROID_CERTIFICATE_HASH
+  ? [Config.ANDROID_CERTIFICATE_HASH]
   : [];
 
 const defaultPackageName = Config.ANDROID_PACKAGE_NAME || (Config.ENV === 'staging' ? 'com.solusinegeri.app.staging' : 'com.solusinegeri.app');
@@ -38,10 +40,10 @@ const androidConfigBase = {
 export const shouldInitializeFreeRasp = certificateHashes.length > 0 || Platform.OS === 'ios';
 
 const androidConfig = certificateHashes.length > 0
-  ? { ...androidConfigBase, certificateHashes: certificateHashes }
+  ? { ...androidConfigBase, certificateHashes }
   : undefined;
 
-export const securityConfig: TalsecConfig = {
+export const securityConfig: SecurityConfigShape = {
   ...(androidConfig ? { androidConfig } : {}),
   iosConfig: {
     appBundleId: Config.IOS_BUNDLE_ID || 'com.solusinegeri.app',

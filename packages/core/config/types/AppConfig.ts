@@ -15,7 +15,8 @@ export interface AppConfig {
 
   // Feature flags
   enabledFeatures: string[];
-  enabledModules: string[];
+  /** Array (legacy) or Record<moduleId, boolean>. Use getEnabledModuleIds() for list of IDs. */
+  enabledModules: string[] | Record<string, boolean>;
 
   // Home variant from tenant config
   homeVariant?: 'dashboard' | 'simple' | 'member' | 'custom';

@@ -48,8 +48,8 @@ export const appConfig: AppConfig = {
   companyName: 'Your Company Name',
   segmentId: 'balance-management',
   enabledFeatures: ['balance', 'payment'],
-  enabledModules: ['balance', 'payment'],
-  // ... customize sesuai kebutuhan
+  enabledModules: { balance: true, payment: true },
+  // ... customize sesuai kebutuhan (use getEnabledModuleIds() for list of IDs)
 };
 ```
 
@@ -67,16 +67,16 @@ branding: {
 
 ### 5. Configure Plugins
 
-Enable/disable plugins sesuai kebutuhan:
+Enable/disable plugins sesuai kebutuhan (object form allows tenant/remote override):
 
 ```typescript
-enabledModules: [
-  'balance',      // Core: Balance management
-  'payment',      // Core: Payment gateway
-  'catalog',      // Optional: Product catalog
-  'order',        // Optional: Order management
-  'reporting',    // Optional: Reports & analytics
-],
+enabledModules: {
+  balance: true,
+  payment: true,
+  catalog: true,
+  order: true,
+  reporting: true,
+},
 ```
 
 ## Config Loading Patterns
@@ -254,7 +254,7 @@ function App() {
 ## Troubleshooting
 
 ### Plugin tidak ter-load
-- Pastikan plugin ada di `enabledModules` di config
+- Pastikan plugin ada di `enabledModules` di config (object: `{ 'plugin-id': true }` atau pakai `getEnabledModuleIds(config.enabledModules)`)
 - Pastikan plugin manifest ada di `packages/plugins/{plugin-id}/plugin.manifest.json`
 - Check console untuk error messages
 

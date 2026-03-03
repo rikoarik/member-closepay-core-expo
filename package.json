@@ -8,6 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export -p web && npx workbox-cli generateSW workbox-config.js",
+    "build:android:release": "expo run:android --variant release",
+    "size:android:release": "node -e \"const fs=require('fs'); const p='android/app/build/outputs/apk/release/app-release.apk'; if(fs.existsSync(p)) { const s=fs.statSync(p); const mb=(s.size/1024/1024).toFixed(2); console.log('APK:', p); console.log('Size:', mb, 'MB'); } else { console.log('APK not found. Run: npm run build:android:release'); }\"",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "perf:typecheck": "node scripts/run-with-timing.js tsc --noEmit",
@@ -31,20 +33,19 @@
     "axios": "^1.13.5",
     "babel-plugin-module-resolver": "^2.1.1",
     "base-64": "^1.0.0",
-    "expo": "~55.0.3",
+    "expo": "~55.0.4",
     "expo-application": "~55.0.8",
     "expo-camera": "~55.0.9",
     "expo-clipboard": "~55.0.8",
     "expo-constants": "~55.0.7",
     "expo-font": "~55.0.4",
     "expo-image-manipulator": "~55.0.9",
-    "expo-image-picker": "~55.0.9",
+    "expo-image-picker": "~55.0.10",
     "expo-linear-gradient": "~55.0.8",
     "expo-location": "~55.1.2",
     "expo-notifications": "~55.0.10",
     "expo-secure-store": "~55.0.8",
     "expo-status-bar": "~55.0.4",
-    "freerasp-react-native": "^4.3.2",
     "iconsax-react-nativejs": "^0.0.8",
     "jsqr": "^1.4.0",
     "react": "19.2.0",
@@ -72,7 +73,10 @@
     "react-native-worklets": "0.7.2",
     "react-native-skeleton-placeholder": {
       "@react-native-masked-view/masked-view": "0.3.2"
-    }
+    },
+    "serialize-javascript": ">=7.0.3",
+    "got": ">=11.8.5",
+    "tmp": ">0.2.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
@@ -83,7 +87,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "typescript": "~5.9.2",
-    "workbox-cli": "^7.4.0"
+    "workbox-cli": "^7.0.0"
   },
   "private": true
 }

@@ -9,6 +9,7 @@ export * from './services/configService';
 export * from './services/configRefreshService';
 export * from './tenants';
 export * from './services/tenantService';
+export { resolveTenantConfig } from './tenantResolver';
 export * from './plugins/contracts';
 export { useBalance } from './plugins/contracts/useBalance';
 export { default as axiosInstance, isTokenExpiringSoon, refreshTokenIfNeeded } from './services/axiosConfig';
@@ -18,6 +19,7 @@ export * from './utils/errorHandler';
 export * from './utils/validation';
 export * from './utils/sanitization';
 export * from './utils/companyUtils';
+export * from './utils/enabledModules';
 export { logger, createLogger, setLoggerConfig, getLoggerConfig, LogLevel, type LoggerConfig } from './services/loggerService';
 export { BaseService } from './services/BaseService';
 export * from './constants';
@@ -37,7 +39,7 @@ export * from './components/ui';
 // Feature Components
 export * from './components/onboarding';
 export * from './components/phone-mockup';
-export { QuickMenuSettingsScreen } from './components/ui/QuickMenuSettingsScreen';
+export { QuickMenuSettingsScreen, HomeTabSettingsScreen } from '@experience-core';
 export * from './services/permissionService';
 export * from './services/onboardingService';
 export * from './services/quickMenuService';
@@ -76,4 +78,6 @@ export {
   type UsePluginComponentReturn,
   type ValidationResult,
   type ValidationError,
+  type PluginModule,
+  createPluginModule,
 } from './plugins';

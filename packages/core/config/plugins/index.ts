@@ -6,8 +6,11 @@
 // Types
 export * from './types';
 
+// Plugin module helper (for plugin index.ts)
+export { createPluginModule } from './createPluginModule';
+
 // Registry
-export { PluginRegistry } from './PluginRegistry';
+export { PluginRegistry, getPluginRegistryEntry, getAllPluginIds } from './PluginRegistry';
 
 // Validation
 export * from './manifestValidator';

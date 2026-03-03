@@ -27,6 +27,12 @@
     },
     "widgets": {}
   },
+  "tabs": [
+    { "id": "donasi-zakat", "component": "DonationHubScreen", "labelKey": "home.donasiZakat", "order": 1 }
+  ],
+  "quickMenuItems": [
+    { "id": "donasizakat", "component": "DonationHubScreen", "labelKey": "home.donasiZakat", "icon": "heart", "route": "DonationHub", "order": 1 }
+  ],
   "routes": [
     {
       "name": "DonationHub",

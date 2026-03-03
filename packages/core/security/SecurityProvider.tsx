@@ -1,9 +1,17 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
-import { Alert, BackHandler, Platform } from 'react-native';
-import { useFreeRasp, SuspiciousAppInfo } from 'freerasp-react-native';
+import { BackHandler, Platform } from 'react-native';
 import { securityConfig, shouldInitializeFreeRasp } from './SecurityConfig';
 import { SecurityAlertBottomSheet } from './SecurityAlertBottomSheet';
 import { securityEmitter, SECURITY_EVENTS, ThreatDetectedEvent } from './native/SecurityEventEmitter';
+
+// Lazy-load freerasp so build works when package is optional (Expo full)
+function getFreeRasp(): { useFreeRasp: (config: unknown, actions: unknown) => void } | null {
+  try {
+    return require('freerasp-react-native');
+  } catch {
+    return null;
+  }
+}
 
 interface SecurityContextType {
   isSecure: boolean;
@@ -24,15 +32,12 @@ const reportThreatToServer = async (): Promise<void> => {
   // Mock mode: skip API call
 };
 
-// Inner component that uses useFreeRasp hook
-// This component is only rendered when FreeRASP should be initialized
+// Inner component that uses useFreeRasp hook (only mounted when freerasp is available)
 const SecurityProviderInner: React.FC<{
   children: React.ReactNode;
   onThreatDetected: (threatType: string, message: string) => void;
-}> = ({ children, onThreatDetected }) => {
-  // Define threat handlers based on freerasp-react-native v4.x API
-  // All callbacks are optional - implement the ones you need
-  // Critical threats are reported to server for security monitoring
+  useFreeRasp: (config: unknown, actions: unknown) => void;
+}> = ({ children, onThreatDetected, useFreeRasp }) => {
   const threatActions = useMemo(() => ({
     privilegedAccess: () => {
       reportThreatToServer();
@@ -81,7 +86,7 @@ const SecurityProviderInner: React.FC<{
       onThreatDetected('Developer Mode', 'Developer mode is enabled. This is not allowed.');
     },
     systemVPN: () => {},
-    malware: (suspiciousApps: SuspiciousAppInfo[]) => {
+    malware: (suspiciousApps: { length: number }[]) => {
       reportThreatToServer();
       onThreatDetected('Malware Detected', `${suspiciousApps.length} suspicious app(s) detected on device.`);
     },
@@ -103,15 +108,18 @@ const SecurityProviderInner: React.FC<{
   return <>{children}</>;
 };
 
-// Wrapper component that conditionally renders SecurityProviderInner
 const SecurityProviderWithFreeRasp: React.FC<{
   children: React.ReactNode;
   onThreatDetected: (threatType: string, message: string) => void;
 }> = ({ children, onThreatDetected }) => {
-  if (shouldInitializeFreeRasp) {
-    return <SecurityProviderInner onThreatDetected={onThreatDetected}>{children}</SecurityProviderInner>;
+  const freerasp = useMemo(() => getFreeRasp(), []);
+  if (shouldInitializeFreeRasp && freerasp) {
+    return (
+      <SecurityProviderInner useFreeRasp={freerasp.useFreeRasp} onThreatDetected={onThreatDetected}>
+        {children}
+      </SecurityProviderInner>
+    );
   }
-  // If FreeRASP shouldn't be initialized, just render children without security checks
   return <>{children}</>;
 };
 

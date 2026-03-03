@@ -17,8 +17,9 @@ import { ThemeProvider, useTheme } from '@core/theme';
 import { monaSansFontMap } from './loadFonts';
 import { I18nProvider } from '@core/i18n';
 import { SecurityProviderWrapper } from './SecurityProviderWrapper';
-import { configService, configRefreshService, logger } from '@core/config';
+import { configService, configRefreshService, logger, resolveTenantConfig } from '@core/config';
 import { initializePlugins } from '@core/config';
+import { bootstrapPlugins } from './bootstrap/plugins';
 import { createAppNavigator } from '@core/navigation';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -39,6 +40,8 @@ import { PlaceholderScreen } from './src/screens/PlaceholderScreen';
 import { FnBCartProvider, FnBActiveOrderProvider } from '@plugins/marketplace-fnb';
 import { MarketplaceOrderProvider } from '@plugins/marketplace';
 import { appConfig } from './config/app.config';
+import { setQuickMenuIconProvider } from '@experience-core';
+import { getMenuIconForQuickAccess } from './src/components/home/quick-actions/QuickAccessButtons';
 
 const Stack = createNativeStackNavigator();
 
@@ -89,9 +92,14 @@ function MemberBaseAppContent(): React.JSX.Element {
     let cancelled = false;
     const initializeApp = async () => {
       try {
-        configService.setConfig(appConfig);
+        // Order: setBaseConfig → tenantOverride → bootstrapPlugins → initializePlugins
+        configService.setBaseConfig(appConfig);
+        const tenantId = appConfig.tenantId ?? appConfig.companyId ?? 'default';
+        configService.setTenantOverride(resolveTenantConfig(tenantId));
         if (!cancelled) setConfigLoaded(true);
 
+        setQuickMenuIconProvider(getMenuIconForQuickAccess);
+        bootstrapPlugins();
         await initializePlugins();
         if (!cancelled) setPluginsInitialized(true);
       } catch (error) {

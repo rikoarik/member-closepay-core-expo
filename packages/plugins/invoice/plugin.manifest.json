@@ -18,6 +18,12 @@
     "tabs": { "invoice": "InvoiceTab" },
     "widgets": { "invoice-featured": "InvoiceFeatured" }
   },
+  "tabs": [
+    { "id": "invoice", "component": "InvoiceTab", "labelKey": "home.invoice", "order": 1 }
+  ],
+  "quickMenuItems": [
+    { "id": "invoice", "component": "InvoiceScreen", "labelKey": "home.invoice", "icon": "document", "route": "Invoice", "order": 1 }
+  ],
   "routes": [
     {"name": "Invoice", "path": "/invoice", "component": "InvoiceScreen", "permissions": ["read:invoice"], "meta": {"title": "Invoice", "showInMenu": true}},
     {"name": "InvoiceList", "path": "/invoice/list", "component": "InvoiceListScreen", "permissions": ["read:invoice"], "meta": {"title": "Daftar Tagihan", "showInMenu": false}},

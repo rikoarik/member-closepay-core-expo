@@ -1,6 +1,6 @@
 # Member Closepay – Expo
 
-Project Expo (iOS, Android, Web) yang di-convert dari member-closepay-base. UI dan fitur sama; di web beberapa modul native di-stub (NFC/BLE, Vision Camera, FreeRASP).
+Project Expo (iOS, Android, Web) yang di-convert dari member-closepay-base. UI dan fitur sama; di web beberapa modul native di-stub (NFC/BLE, Vision Camera).
 
 ## Lokasi
 

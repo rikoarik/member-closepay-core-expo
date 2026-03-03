@@ -8,13 +8,15 @@ alwaysApply: true
 ## Monorepo
 
 - **Root**: Expo app (iOS, Android, Web). Entry: `App.tsx` → `apps/member-base`.
-- **packages/core**: Auth, config, theme, i18n, account, navigation, notification, security. Shared logic dan UI core.
+- **packages/core**: Auth, config, theme, i18n, account, navigation, notification, security. Platform logic; re-exports experience-core. Core tidak mengimpor dari app; icon quick menu disediakan app via setQuickMenuIconProvider(@experience-core).
+- **packages/experience-core**: Tab/widget mapping, quick menu service, home tab settings, QuickMenuSettingsScreen, HomeTabSettingsScreen. Experience layer; depends on @core. Core re-exports these screens so app/navigation keep using @core/config.
 - **packages/plugins**: Modul fitur (balance, payment, card-transaction, marketplace, marketplace-fnb, invoice, donasi-zakat, sport-center, dll). Setiap plugin punya `plugin.manifest.json` dan export lewat `index.ts`.
 - **apps/member-base**: App member base; config di `config/app.config.ts`, screens & components di `src/`.
 
 ## Path Aliases (tsconfig + metro.config.js)
 
 - `@core/*` → `packages/core/*`
+- `@experience-core` / `@experience-core/*` → `packages/experience-core/*`
 - `@plugins/*` → `packages/plugins/*`
 - `@app/*` → `apps/member-base/src/*`
 
@@ -29,5 +31,5 @@ Gunakan alias ini untuk import; jangan relative path lintas package (mis. `impor
 ## Menambah Plugin Baru
 
 1. Buat folder `packages/plugins/<pluginId>/` dengan `plugin.manifest.json` dan `index.ts`.
-2. Di `packages/core/config/plugins/pluginLoader.ts` tambah entry di `MANIFEST_LOADERS` dan pastikan path ke `plugin.manifest.json` benar.
-3. Aktifkan di app config: `enabledModules` di `apps/member-base/config/app.config.ts`.
+2. Di plugin: export default `createPluginModule(manifest, componentLoaders)` dari `index.ts`; tambah plugin ke `apps/member-base/bootstrap/plugins.ts` (import + tambah ke `registerPlugins([...])`).
+3. Aktifkan di app config: `enabledModules` di `apps/member-base/config/app.config.ts`. Bentuk disarankan object (`Record<string, boolean>`); daftar ID ambil lewat `getEnabledModuleIds(config.enabledModules)`.

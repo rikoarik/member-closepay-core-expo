@@ -3,6 +3,8 @@
  * Module untuk marketplace lengkap dengan search dan browsing produk
  */
 
+import { createPluginModule } from '@core/config';
+
 // Export semua public API
 export { MarketplaceScreen } from './components/screens/MarketplaceScreen';
 export { SearchScreen } from './components/screens/SearchScreen';
@@ -64,3 +66,34 @@ export const MarketplaceModule = {
     MarketplaceOrderDetail: 'MarketplaceOrderDetailScreen',
   },
 };
+
+const manifest = require('./plugin.manifest.json');
+
+const componentLoaders: Record<string, () => Promise<any>> = {
+  ProductCard: () => import('./components/shared/ProductCard'),
+  ProductCardSkeleton: () => import('./components/shared/ProductCardSkeleton'),
+  CartBar: () => import('./components/shared/CartBar'),
+  StoreCard: () => import('./components/shared/StoreCard'),
+  MarketplaceScreen: () => import('./components/screens/MarketplaceScreen'),
+  SearchScreen: () => import('./components/screens/SearchScreen'),
+  SearchResultsScreen: () => import('./components/screens/SearchResultsScreen'),
+  CartScreen: () => import('./components/screens/CartScreen'),
+  ProductDetailScreen: () => import('./components/screens/ProductDetailScreen'),
+  ProductReviewsScreen: () => import('./components/screens/ProductReviewsScreen'),
+  StoreDetailScreen: () => import('./components/screens/StoreDetailScreen'),
+  StoreProductSearchScreen: () => import('./components/screens/StoreProductSearchScreen'),
+  StoreProductSearchResultsScreen: () => import('./components/screens/StoreProductSearchResultsScreen'),
+  CheckoutScreen: () => import('./components/screens/CheckoutScreen'),
+  PaymentMethodSelectionScreen: () => import('./components/screens/PaymentMethodSelectionScreen'),
+  MarketplaceOrderDetailScreen: () => import('./components/screens/MarketplaceOrderDetailScreen'),
+  AddressListScreen: () => import('./components/screens/AddressListScreen'),
+  AddressFormScreen: () => import('./components/screens/AddressFormScreen'),
+  MapPickerScreen: () => import('./components/screens/MapPickerScreen'),
+  MarketplaceTab: () => import('./components/tabs/MarketplaceTab'),
+  MarketplaceGeneralTab: () => import('./components/tabs/MarketplaceGeneralTab'),
+  MarketplaceBalanceTab: () => import('./components/tabs/MarketplaceBalanceTab'),
+  MarketplaceTransactionTab: () => import('./components/tabs/MarketplaceTransactionTab'),
+  MarketplaceFeatured: () => import('./components/widgets/MarketplaceFeatured'),
+};
+
+export default createPluginModule(manifest, componentLoaders);

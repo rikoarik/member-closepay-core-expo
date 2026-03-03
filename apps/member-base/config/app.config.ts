@@ -27,15 +27,15 @@ export const appConfig: AppConfig = {
   // FEATURES & MODULES
   // ============================================================================
   enabledFeatures: [], // Feature flags (currently unused)
-  enabledModules: [
-    'balance',
-    'payment',
-    'card-transaction',
-    'marketplace',
-    'marketplace-fnb',
-    'invoice',
-    'donasi-zakat',
-  ],
+  enabledModules: {
+    balance: true,
+    payment: true,
+    'card-transaction': true,
+    marketplace: true,
+    'marketplace-fnb': true,
+    invoice: true,
+    'donasi-zakat': true,
+  },
 
   // ============================================================================
   // UI CONFIGURATION

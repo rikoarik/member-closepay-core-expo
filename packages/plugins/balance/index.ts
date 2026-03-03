@@ -3,6 +3,7 @@
  * Export semua types, models, services, hooks, dan components
  */
 
+import { createPluginModule } from '@core/config';
 import { balanceOperationsRegistry, BalanceOperations, BalanceMutation } from '@core/config/plugins/contracts/balance';
 import { balanceService } from './services/balanceService';
 import { mutationService } from './services/mutationService';
@@ -55,3 +56,27 @@ export * from './components/ui/TransactionItem';
 export * from './components/ui/TransactionList';
 export * from './components/ui/TransactionItemSkeleton';
 
+const manifest = require('./plugin.manifest.json');
+
+const componentLoaders: Record<string, () => Promise<any>> = {
+  BalanceDetailScreen: () => import('./components/screens/BalanceDetailScreen'),
+  TransactionHistoryScreen: () => import('./components/screens/TransactionHistoryScreen'),
+  WithdrawIcon: () => import('./components/ui/WithdrawIcon'),
+  TopUpIcon: () => import('./components/ui/TopUpIcon'),
+  BalanceCard: () => import('./components/ui/BalanceCard'),
+  BalanceTab: () => import('./components/tabs/BalanceTab'),
+  BalanceMainTab: () => import('./components/tabs/BalanceMainTab'),
+  BalancePlafonTab: () => import('./components/tabs/BalancePlafonTab'),
+  BalanceMealTab: () => import('./components/tabs/BalanceMealTab'),
+  BalanceHistoryTab: () => import('./components/tabs/BalanceHistoryTab'),
+  BalanceTransferTab: () => import('./components/tabs/BalanceTransferTab'),
+  BalanceTopupTab: () => import('./components/tabs/BalanceTopupTab'),
+  TransactionHistoryTab: () => import('./components/tabs/TransactionHistoryTab'),
+  TransactionAllTab: () => import('./components/tabs/TransactionAllTab'),
+  TransactionCardTab: () => import('./components/tabs/TransactionCardTab'),
+  ActivitySummary: () => import('./components/widgets/ActivitySummary'),
+  SavingsGoal: () => import('./components/widgets/SavingsGoal'),
+  RecentTransactions: () => import('./components/widgets/RecentTransactions'),
+};
+
+export default createPluginModule(manifest, componentLoaders);

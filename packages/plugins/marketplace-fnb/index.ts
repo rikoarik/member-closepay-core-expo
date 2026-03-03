@@ -3,6 +3,8 @@
  * Food & Beverage ordering with dine-in, take away, and delivery options
  */
 
+import { createPluginModule } from '@core/config';
+
 // Models
 export type {
     FnBItem,
@@ -52,3 +54,30 @@ export const FnBModule = {
         FnBFavorites: 'FnBFavoritesScreen',
     },
 };
+
+const manifest = require('./plugin.manifest.json');
+
+const componentLoaders: Record<string, () => Promise<any>> = {
+  FnBItemCard: () => import('./components/shared/FnBItemCard'),
+  FnBCategoryTabs: () => import('./components/shared/FnBCategoryTabs'),
+  FnBCartBar: () => import('./components/shared/FnBCartBar'),
+  FnBItemDetailSheet: () => import('./components/shared/FnBItemDetailSheet'),
+  MerchantHeader: () => import('./components/shared/MerchantHeader'),
+  FnBFavorites: () => import('./components/screens/FnBFavoritesScreen'),
+  FnBFavoritesScreen: () => import('./components/screens/FnBFavoritesScreen'),
+  FnBScreen: () => import('./components/screens/FnBScreen'),
+  FnBMerchantDetailScreen: () => import('./components/screens/FnBMerchantDetailScreen'),
+  FnBCheckoutScreen: () => import('./components/screens/FnBCheckoutScreen'),
+  FnBScanScreen: () => import('./components/screens/FnBScanScreen'),
+  FnBOrderStatusScreen: () => import('./components/screens/FnBOrderStatusScreen'),
+  FnBOrderTrackingScreen: () => import('./components/screens/FnBOrderTrackingScreen'),
+  FnBChatDriverScreen: () => import('./components/screens/FnBChatDriverScreen'),
+  FnBTab: () => import('./components/tabs/FnBTab'),
+  FnBOrderTab: () => import('./components/tabs/FnBOrderTab'),
+  FnBHistoryTab: () => import('./components/tabs/FnBHistoryTab'),
+  FnBBalanceTab: () => import('./components/tabs/FnBBalanceTab'),
+  FnBRecentOrders: () => import('./components/widgets/FnBRecentOrders'),
+  FnBOrderFloatingWidget: () => import('./components/widgets/FnBOrderFloatingWidget'),
+};
+
+export default createPluginModule(manifest, componentLoaders);

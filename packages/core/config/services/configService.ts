@@ -1,6 +1,7 @@
 /**
  * Core Config - Config Service
- * Service untuk load dan manage app configuration
+ * EffectiveConfig = BaseConfig + TenantOverride + (optional) RemoteOverride
+ * Lifecycle: setBaseConfig() → setTenantOverride() → setRemoteOverride()? → getEffectiveConfig()
  */
 
 import { AppConfig, MenuItemConfig } from '../types/AppConfig';
@@ -8,24 +9,27 @@ import { getTenantConfigFromConfig, getCurrentTenantIdFromConfig } from './tenan
 import type { TenantConfig } from '../tenants';
 import type { TenantId } from '../tenants';
 import { configEventEmitter } from '../utils/configEventEmitter';
+import { getEnabledModuleIds } from '../utils/enabledModules';
+import { mergeConfigs } from '../utils/mergeConfigs';
 import Config from '../../native/Config';
 import { logger } from './loggerService';
 
 export interface ConfigService {
   loadConfig(): Promise<AppConfig>;
+  /** Returns effective config or null if not yet initialized. Prefer getEffectiveConfig() after init. */
   getConfig(): AppConfig | null;
+  /** Returns effective config. Throws if config not initialized (fail-fast). */
+  getEffectiveConfig(): AppConfig;
   isFeatureEnabled(feature: string): boolean;
   isModuleEnabled(module: string): boolean;
   getMenuConfig(): MenuItemConfig[];
-  refreshConfig(force?: boolean): Promise<void>; // Add force parameter untuk bypass cache
-  setConfig(config: AppConfig): void; // Add method to set config directly
-  getTenantConfig(): TenantConfig | null; // Get tenant config from current app config
+  refreshConfig(force?: boolean): Promise<void>;
+  setBaseConfig(config: AppConfig): void;
+  setTenantOverride(override?: Partial<AppConfig>): void;
+  setRemoteOverride(override?: Partial<AppConfig>): void;
+  getTenantConfig(): TenantConfig | null;
 }
 
-/**
- * Default config untuk fallback
- * Digunakan ketika config belum di-load dari API/storage
- */
 const DEFAULT_CONFIG: AppConfig = {
   companyInitial: 'DEFAULT',
   companyId: 'default',
@@ -44,7 +48,7 @@ const DEFAULT_CONFIG: AppConfig = {
   login: {
     showSignUp: true,
     showSocialLogin: false,
-    socialLoginProviders: ['google'], // Default only Google, no Facebook
+    socialLoginProviders: ['google'],
   },
   services: {
     api: {
@@ -55,74 +59,64 @@ const DEFAULT_CONFIG: AppConfig = {
 };
 
 class ConfigServiceImpl implements ConfigService {
-  private config: AppConfig | null = null;
+  private baseConfig: AppConfig | null = null;
+  private tenantOverride?: Partial<AppConfig>;
+  private remoteOverride?: Partial<AppConfig>;
+  private effectiveConfig?: AppConfig;
   private lastRefreshTime: number = 0;
 
-  /**
-   * Load config dari API atau local storage
-   * @returns Promise yang resolve dengan AppConfig
-   * @note Apps sebaiknya call setConfig() dengan config spesifik mereka
-   */
+  setBaseConfig(config: AppConfig): void {
+    this.baseConfig = config;
+    this.recompute();
+  }
+
+  setTenantOverride(override?: Partial<AppConfig>): void {
+    this.tenantOverride = override;
+    this.recompute();
+  }
+
+  setRemoteOverride(override?: Partial<AppConfig>): void {
+    this.remoteOverride = override;
+    this.recompute();
+  }
+
+  /** Single merge entry point. */
+  private recompute(): void {
+    if (!this.baseConfig) return;
+    this.effectiveConfig = mergeConfigs(
+      this.baseConfig,
+      this.tenantOverride,
+      this.remoteOverride
+    );
+    configEventEmitter.emit(this.effectiveConfig);
+  }
+
+  getEffectiveConfig(): AppConfig {
+    if (!this.effectiveConfig) {
+      throw new Error('Config not initialized. Call setBaseConfig() (and optionally setTenantOverride/setRemoteOverride) first.');
+    }
+    return this.effectiveConfig;
+  }
+
+  getConfig(): AppConfig | null {
+    return this.effectiveConfig ?? null;
+  }
+
   async loadConfig(): Promise<AppConfig> {
-    // TODO: Load config from API or local storage
-    // For now, return default config as fallback
-    // Apps should call setConfig() with their specific config
-    if (!this.config) {
-      logger.warn('Using default config. Apps should load and set their specific config.');
-      this.config = DEFAULT_CONFIG;
+    const config = this.getConfig();
+    if (!config) {
+      logger.warn('Config not initialized. Returning default. Call setBaseConfig() first.');
+      return DEFAULT_CONFIG;
     }
-    return this.config;
+    return config;
   }
 
-  /**
-   * Set config directly (used by apps to load their specific config)
-   * Merges tenant config if tenantId is present
-   */
-  setConfig(config: AppConfig): void {
-    // Merge tenant config if tenantId is present
-    if (config.tenantId || config.companyId) {
-      const tenantId = config.tenantId || config.companyId;
-      const tenantConfig = getTenantConfigFromConfig(tenantId as TenantId, config);
-
-      if (tenantConfig) {
-        // Merge tenant config into app config
-        this.config = {
-          ...config,
-          tenantId: tenantId,
-          enabledFeatures: tenantConfig.enabledFeatures,
-          homeVariant: tenantConfig.homeVariant || config.homeVariant,
-          branding: {
-            ...config.branding,
-            logo: tenantConfig.theme.logo || config.branding.logo,
-            appName: tenantConfig.theme.appName || config.branding.appName,
-            // Preserve primaryColor dari app config (tidak di-override oleh tenant)
-            primaryColor: config.branding.primaryColor,
-          },
-        };
-        // Emit event untuk notify subscribers
-        configEventEmitter.emit(this.config);
-        return;
-      }
-    }
-
-    this.config = config;
-    // Emit event untuk notify subscribers
-    configEventEmitter.emit(this.config);
-  }
-
-  /**
-   * Get tenant config from current app config
-   */
   getTenantConfig(): TenantConfig | null {
     const config = this.getConfig();
     if (!config) return null;
     const tenantId = config.tenantId || config.companyId;
     if (!tenantId) return null;
     return getTenantConfigFromConfig(tenantId, config);
-  }
-
-  getConfig(): AppConfig | null {
-    return this.config || DEFAULT_CONFIG; // Return default if not set
   }
 
   isFeatureEnabled(feature: string): boolean {
@@ -134,19 +128,17 @@ class ConfigServiceImpl implements ConfigService {
   isModuleEnabled(module: string): boolean {
     const config = this.getConfig();
     if (!config) return false;
-    return config.enabledModules.includes(module);
+    return getEnabledModuleIds(config.enabledModules).includes(module);
   }
 
   getMenuConfig(): MenuItemConfig[] {
     const config = this.getConfig();
     if (!config) return [];
-    return config.menuConfig.filter(item => item.visible);
+    return config.menuConfig.filter((item) => item.visible);
   }
 
-  async refreshConfig(force: boolean = false): Promise<void> {
-    // Mock mode: skip API, gunakan config yang sudah ada
-    const now = Date.now();
-    this.lastRefreshTime = now;
+  async refreshConfig(_force: boolean = false): Promise<void> {
+    this.lastRefreshTime = Date.now();
     const config = this.getConfig();
     if (config) {
       configEventEmitter.emit(config);
@@ -157,12 +149,10 @@ class ConfigServiceImpl implements ConfigService {
 
 export const configService: ConfigService = new ConfigServiceImpl();
 
-/** Public API: get tenant config for current app config (avoids cycle with tenantService). */
 export function getTenantConfig(tenantId: TenantId): TenantConfig | null {
   return getTenantConfigFromConfig(tenantId, configService.getConfig());
 }
 
-/** Public API: get current tenant ID from app config. */
 export function getCurrentTenantId(): TenantId | null {
   return getCurrentTenantIdFromConfig(configService.getConfig());
 }

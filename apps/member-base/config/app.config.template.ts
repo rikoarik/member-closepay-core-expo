@@ -22,11 +22,11 @@ export const appConfig: AppConfig = {
     'payment'
   ],
 
-  // Enabled modules/plugins
-  enabledModules: [
-    'balance',
-    'payment'
-  ],
+  // Enabled modules/plugins (object allows tenant/remote/feature-flag override later)
+  enabledModules: {
+    balance: true,
+    payment: true,
+  },
 
   // Menu configuration
   menuConfig: [

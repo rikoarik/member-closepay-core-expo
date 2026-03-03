@@ -17,6 +17,8 @@ module.exports = ({ config }) => {
     IOS_BUNDLE_ID: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || '',
   };
 
+  // Expo full: only Expo SDK plugins so the app runs in Expo Go.
+  // For dev client / production build with BLE, NFC, FreeRASP, add those plugins back.
   const plugins = [
     ...(Array.isArray(config.plugins) ? config.plugins : []),
     [
@@ -34,9 +36,6 @@ module.exports = ({ config }) => {
         cameraPermission: 'Aplikasi memerlukan kamera untuk mengambil foto profil.',
       },
     ],
-    ['freerasp-react-native/app.plugin.js', { android: { minSdkVersion: '23', R8Version: '8.3.37' } }],
-    'react-native-ble-plx',
-    'react-native-nfc-manager',
   ];
 
   return {

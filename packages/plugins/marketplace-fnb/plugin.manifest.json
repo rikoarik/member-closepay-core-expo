@@ -58,6 +58,12 @@
       "fnb-order-floating": "FnBOrderFloatingWidget"
     }
   },
+  "tabs": [
+    { "id": "fnb", "component": "FnBTab", "labelKey": "home.fnb", "order": 1 }
+  ],
+  "quickMenuItems": [
+    { "id": "fnb", "component": "FnBScreen", "labelKey": "home.fnb", "icon": "shop", "route": "FnB", "order": 1 }
+  ],
   "routes": [
     {
       "name": "FnB",

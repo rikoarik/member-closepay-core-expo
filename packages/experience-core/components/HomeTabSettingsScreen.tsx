@@ -18,19 +18,19 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowDown2, ArrowUp2, InfoCircle } from 'iconsax-react-nativejs';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
+import { useConfig } from '@core/config/hooks/useConfig';
 import {
-  useConfig,
   moderateVerticalScale,
   getHorizontalPadding,
   getMinTouchTarget,
   getResponsiveFontSize,
-  FontFamily,
   scale,
   getIconSize,
-  getTabPlugin,
-  PluginRegistry,
-} from '@core/config';
-import { ScreenHeader } from './ScreenHeader';
+} from '@core/config/utils/responsive';
+import { FontFamily } from '@core/config/utils/fonts';
+import { getTabPlugin } from '../tabWidgetPluginMap';
+import { PluginRegistry } from '@core/config/plugins/PluginRegistry';
+import { ScreenHeader } from '@core/config/components/ui/ScreenHeader';
 import {
   loadHomeTabSettings,
   saveHomeTabSettings,
@@ -39,8 +39,8 @@ import {
   ALL_AVAILABLE_HOME_TABS,
   DEFAULT_BERANDA_WIDGETS,
   type AvailableHomeTab,
-} from '../../services/homeTabSettingsService';
-import type { BerandaWidgetConfig } from '../../types/AppConfig';
+} from '../services/homeTabSettingsService';
+import type { BerandaWidgetConfig } from '@core/config/types/AppConfig';
 
 const fontRegular = FontFamily?.monasans?.regular ?? 'System';
 const fontSemiBold = FontFamily?.monasans?.semiBold ?? 'System';

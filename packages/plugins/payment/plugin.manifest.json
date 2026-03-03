@@ -70,6 +70,14 @@
             "bayar-member": "PaymentMemberTab"
         }
     },
+    "tabs": [
+        { "id": "payment", "component": "PaymentTab", "labelKey": "payment.tab", "order": 1 }
+    ],
+    "quickMenuItems": [
+        { "id": "topupva", "component": "TopUpEntryScreen", "labelKey": "home.topUpVA", "order": 1, "route": "TopUp" },
+        { "id": "transfermember", "component": "TransferMemberScreen", "labelKey": "home.transferMember", "order": 2, "route": "TransferMember" },
+        { "id": "transferbank", "component": "WithdrawScreen", "labelKey": "home.transferBank", "order": 3, "route": "Withdraw" }
+    ],
     "routes": [
         {
             "name": "TopUp",

@@ -24,7 +24,7 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import { getQuickMenuIcon } from './QuickMenuIconWrapper';
+import { getQuickMenuIcon } from '../quickMenuIconProvider';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -37,32 +37,29 @@ import {
   DocumentText,
   Minus,
 } from 'iconsax-react-nativejs';
-// Import QuickAccessButtons via wrapper (temporary solution for dependency violation)
-// TODO: Move QuickAccessButtons to core or refactor in future phase
-import { getIconSize, useDimensions } from '../../utils/responsive';
-import { QuickAccessButtons } from './QuickAccessButtonsWrapper';
-import { useTheme } from '@core/theme';
-import { useTranslation } from '@core/i18n';
-// Direct imports to avoid require cycle through @core/config/index.ts
 import {
+  getIconSize,
+  useDimensions,
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   getMinTouchTarget,
   getResponsiveFontSize,
-} from '../../utils/responsive';
-import { FontFamily } from '../../utils/fonts';
-import { ScreenHeader } from './ScreenHeader';
-import { BottomSheet } from './BottomSheet';
+} from '@core/config/utils/responsive';
+import { useTheme } from '@core/theme';
+import { useTranslation } from '@core/i18n';
+import { FontFamily } from '@core/config/utils/fonts';
+import { ScreenHeader } from '@core/config/components/ui/ScreenHeader';
+import { BottomSheet } from '@core/config/components/ui/BottomSheet';
 import {
   loadQuickMenuSettings,
   saveQuickMenuSettings,
   getAllMenuItems,
   getPluginMenuItems,
   getMenuLabelKey,
-} from '../../services/quickMenuService';
-import type { QuickMenuItem } from '../../services/quickMenuService';
-import { configService } from '../../services/configService';
+} from '../services/quickMenuService';
+import type { QuickMenuItem } from '../services/quickMenuService';
+import { configService } from '@core/config/services/configService';
 
 const PREVIEW_SNAP_POINTS = [100];
 const QUICK_ACCESS_MAX_SLOTS = 7;
@@ -698,140 +695,6 @@ export const QuickMenuSettingsScreen: React.FC = () => {
     };
   }, []);
 
-  const iconCacheRef = React.useRef<Map<string, React.ReactNode>>(new Map());
-
-  const getPreviewMenuIcon = useCallback(
-    (iconName?: string) => {
-      const cacheKey = `preview-${iconName || 'default'}-${colors.info}-${colors.warning}-${
-        colors.success
-      }-${colors.error}`;
-
-      if (iconCacheRef.current.has(cacheKey)) {
-        return iconCacheRef.current.get(cacheKey)!;
-      }
-
-      const iconSize = getIconSize('medium');
-      let icon: React.ReactNode;
-
-      switch (iconName) {
-        case 'payIPL':
-          icon = <ArrowDown2 size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'emergency':
-          icon = <Call size={iconSize} color={colors.warning} variant="Bold" />;
-          break;
-        case 'guest':
-          icon = <People size={iconSize} color={colors.success} variant="Bold" />;
-          break;
-        case 'ppob':
-          icon = <Game size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'transfer':
-          icon = <ArrowDown2 size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        case 'payment':
-          icon = <Game size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'bill':
-          icon = <Game size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        case 'topup':
-          icon = <ArrowUp2 size={iconSize} color={colors.success} variant="Bold" />;
-          break;
-        case 'donation':
-          icon = <People size={iconSize} color={colors.warning} variant="Bold" />;
-          break;
-        case 'marketplace':
-          icon = <Shop size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'withdraw':
-          icon = <ArrowDown2 size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        case 'fnb':
-          icon = <Shop size={iconSize} color={colors.warning} variant="Bold" />;
-          break;
-        case 'sportcenter':
-          icon = <Game size={iconSize} color={colors.success} variant="Bold" />;
-          break;
-        case 'invoice':
-          icon = <DocumentText size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        default:
-          icon = <Game size={iconSize} color={colors.info} variant="Bold" />;
-      }
-
-      iconCacheRef.current.set(cacheKey, icon);
-      return icon;
-    },
-    [colors.info, colors.warning, colors.success, colors.error]
-  );
-
-  const getMenuIcon = useCallback(
-    (iconName?: string) => {
-      const cacheKey = `${iconName || 'default'}-${colors.info}-${colors.warning}-${
-        colors.success
-      }-${colors.error}`;
-
-      if (iconCacheRef.current.has(cacheKey)) {
-        return iconCacheRef.current.get(cacheKey)!;
-      }
-
-      const iconSize = getIconSize('large');
-      let icon: React.ReactNode;
-
-      switch (iconName) {
-        case 'payIPL':
-          icon = <ArrowDown2 size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'emergency':
-          icon = <Call size={iconSize} color={colors.warning} variant="Bold" />;
-          break;
-        case 'guest':
-          icon = <People size={iconSize} color={colors.success} variant="Bold" />;
-          break;
-        case 'ppob':
-          icon = <Game size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'transfer':
-          icon = <ArrowDown2 size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        case 'payment':
-          icon = <Game size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'bill':
-          icon = <Game size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        case 'topup':
-          icon = <ArrowUp2 size={iconSize} color={colors.success} variant="Bold" />;
-          break;
-        case 'donation':
-          icon = <People size={iconSize} color={colors.warning} variant="Bold" />;
-          break;
-        case 'marketplace':
-          icon = <Shop size={iconSize} color={colors.info} variant="Bold" />;
-          break;
-        case 'withdraw':
-          icon = <ArrowDown2 size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        case 'fnb':
-          icon = <Shop size={iconSize} color={colors.warning} variant="Bold" />;
-          break;
-        case 'sportcenter':
-          icon = <Game size={iconSize} color={colors.success} variant="Bold" />;
-          break;
-        case 'invoice':
-          icon = <DocumentText size={iconSize} color={colors.error} variant="Bold" />;
-          break;
-        default:
-          icon = <Game size={iconSize} color={colors.info} variant="Bold" />;
-      }
-
-      iconCacheRef.current.set(cacheKey, icon);
-      return icon;
-    },
-    [colors.info, colors.warning, colors.success, colors.error]
-  );
-
   const getDefaultBgColor = useCallback((_iconName?: string) => colors.surface, [colors.surface]);
 
   const menuItemsKey = useMemo(
@@ -875,7 +738,7 @@ export const QuickMenuSettingsScreen: React.FC = () => {
     const buttons = enabledItems.map((item) => ({
       id: item.id,
       label: item.label,
-      icon: getPreviewMenuIcon(item.icon),
+      icon: getQuickMenuIcon(colors.textSecondary, item.icon, item.id),
       iconBgColor: item.iconBgColor || getDefaultBgColor(item.icon),
     }));
 
@@ -883,7 +746,7 @@ export const QuickMenuSettingsScreen: React.FC = () => {
     previousPreviewButtonsRef.current = buttons;
 
     return buttons;
-  }, [menuItemsKey, menuItems, getPreviewMenuIcon, getDefaultBgColor, emptyButtonsArray]);
+  }, [menuItemsKey, menuItems, colors.textSecondary, getDefaultBgColor, emptyButtonsArray, getQuickMenuIcon]);
 
   const hasEnabledItems = useMemo(() => {
     return menuItems.some((item) => item.enabled);

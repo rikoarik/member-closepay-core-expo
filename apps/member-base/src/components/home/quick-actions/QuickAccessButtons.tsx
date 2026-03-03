@@ -124,7 +124,7 @@ const getIconByItemId = (itemId: string, iconColor: string): React.ReactNode | n
   }
 };
 
-// Icon mapping untuk setiap menu - returns icon dengan dynamic color (exported for QuickMenuSettingsScreen)
+// Icon mapping untuk quick menu. Dipakai di app dan didaftarkan ke QuickMenuSettingsScreen via setQuickMenuIconProvider.
 // Config dari admin bisa cuma kirim dummy/empty icon; pakai itemId fallback + IconMore agar tidak break
 export const getMenuIconForQuickAccess = (iconColor: string, iconName?: string, itemId?: string): React.ReactNode => {
   const assetIcon = itemId ? getQuickAccessAssetIcon(itemId, iconColor) : null;

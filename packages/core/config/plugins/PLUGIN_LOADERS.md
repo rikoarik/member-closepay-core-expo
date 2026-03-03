@@ -2,6 +2,8 @@
 
 Panduan lengkap untuk mengelola plugin component loaders. Dokumentasi ini membantu developer baru memahami dan menggunakan sistem plugin loader dengan mudah.
 
+**Struktur dan template terkini (manifest + createPluginModule + bootstrap):** lihat [PLUGIN_STRUCTURE.md](./PLUGIN_STRUCTURE.md). Daftar plugin hanya di app bootstrap; core tidak punya path/componentLoaderPaths by name.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -29,11 +31,13 @@ Plugin loaders adalah sistem untuk memuat komponen React dari plugin secara dina
 
 ```
 packages/core/config/plugins/
-├── componentLoaderPaths.ts    # Centralized path mapping (EDIT THIS)
-├── pluginComponentLoader.ts   # Loader implementation (DON'T EDIT)
-├── pluginLoader.ts            # Plugin manifest loader
+├── pluginComponentLoader.ts   # Loader implementation (resolves from registry)
+├── pluginLoader.ts            # Legacy re-exports only
+├── PLUGIN_STRUCTURE.md        # Template: manifest + createPluginModule + bootstrap
 └── PLUGIN_LOADERS.md          # This file
 ```
+
+**Note:** Component loaders are no longer defined in Core. Each plugin provides its own loaders in `index.ts` via `createPluginModule(manifest, componentLoaders)`; app registers them in `bootstrapPlugins()`. See [PLUGIN_STRUCTURE.md](./PLUGIN_STRUCTURE.md).
 
 ## Quick Start
 
@@ -390,7 +394,7 @@ Run `npm run generate:loaders` atau manual tambahkan mapping.
 **Step 4:** Enable plugin di `app.config.ts`
 
 ```typescript
-enabledModules: ['my-plugin']
+enabledModules: { 'my-plugin': true }
 ```
 
 ### Custom Path Patterns

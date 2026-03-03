@@ -33,13 +33,18 @@ Contoh (snippet):
 
 ## Registrasi Plugin
 
-- Manifest loader: hanya di `pluginLoader.ts` via `MANIFEST_LOADERS`. Metro butuh static import path.
-- Jangan hardcode daftar plugin di tempat lain; pakai `PluginRegistry.getEnabledPlugins()`, `getEnabledRoutes()`, `getRouteByName()`.
+- Daftar plugin hanya di app: `apps/member-base/bootstrap/plugins.ts`. Import tiap plugin (default export = PluginModule) dan panggil `PluginRegistry.registerPlugins([...])`. Core tidak tahu nama/path plugin.
+- Pakai `PluginRegistry.getEnabledPlugins()`, `getEnabledRoutes()`, `getRouteByName()` untuk konsumsi.
 
 ## Core vs Enabled
 
 - `type === 'core-plugin'` otomatis diload.
-- Plugin lain di-load jika ada di `config.enabledModules` (app config).
+- Plugin lain di-load jika ada di `config.enabledModules` (app config). Bentuk disarankan object; daftar ID lewat `getEnabledModuleIds(config.enabledModules)`.
+
+## Tab & Widget Mapping
+
+- `getTabPlugin(tabId)` dan `getWidgetPlugin(widgetId)` derive dari registry (manifest.exports.tabs, exports.widgets). Tidak ada hardcode plugin ID di Core.
+- Quick menu label: `getMenuLabelKey()` pakai manifest.quickMenuItems (labelKey) dulu, fallback ke legacy map.
 
 ## Validasi
 

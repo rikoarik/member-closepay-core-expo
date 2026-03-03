@@ -5,6 +5,7 @@
 
 import type { TenantId, TenantConfig } from '../tenants';
 import type { AppConfig } from '../types/AppConfig';
+import { getEnabledModuleIds } from '../utils/enabledModules';
 
 /**
  * Get tenant configuration from a given app config (pure function, no cycle).
@@ -15,11 +16,12 @@ export function getTenantConfigFromConfig(
 ): TenantConfig | null {
   if (!config) return null;
   if (config.companyId !== tenantId && config.tenantId !== tenantId) return null;
+  const fromModules = getEnabledModuleIds(config.enabledModules);
   return {
     id: tenantId,
     name: config.companyName,
     role: 'merchant',
-    enabledFeatures: config.enabledModules || config.enabledFeatures || [],
+    enabledFeatures: fromModules.length > 0 ? fromModules : (config.enabledFeatures || []),
     theme: {
       logo: config.branding?.logo,
       appName: config.branding?.appName,

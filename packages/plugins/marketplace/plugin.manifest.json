@@ -53,6 +53,12 @@
       "marketplaceInstallmentService"
     ]
   },
+  "tabs": [
+    { "id": "marketplace", "component": "MarketplaceTab", "labelKey": "home.marketplace", "order": 1 }
+  ],
+  "quickMenuItems": [
+    { "id": "marketplace", "component": "MarketplaceScreen", "labelKey": "home.marketplace", "icon": "shop", "route": "Marketplace", "order": 1 }
+  ],
   "routes": [
     {
       "name": "Marketplace",
