@@ -1,16 +1,55 @@
 /**
  * NFC & Bluetooth Service
- * NFC/BLE modules are lazy-loaded. In Expo Go they are stubbed so the app runs without native modules.
+ * NFC/BLE modules are lazy-loaded. In full Expo (Expo Go) they are stubbed when packages are not installed.
  */
-import type { BleManager, Device } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid, Linking } from 'react-native';
 
-// Lazy-load NfcManager; stub when unavailable (Expo Go)
-type NfcManagerType = typeof import('react-native-nfc-manager').default;
-type NfcTech = typeof import('react-native-nfc-manager').NfcTech;
-type Ndef = typeof import('react-native-nfc-manager').Ndef;
-type NfcEvents = typeof import('react-native-nfc-manager').NfcEvents;
-type NfcApi = { NfcManager: NfcManagerType; NfcTech: NfcTech; Ndef: Ndef; NfcEvents: NfcEvents };
+// Local types for BLE (no dependency on react-native-ble-plx at compile time)
+interface BleScanDevice {
+  id: string;
+  name: string | null;
+  rssi: number | null;
+  serviceUUIDs?: string[];
+}
+interface BleManagerLike {
+  state: () => Promise<number>;
+  startDeviceScan: (uuid: string | null, options: unknown, listener: (error: unknown, device: BleScanDevice | null) => void) => void;
+  stopDeviceScan: () => void;
+  connectToDevice: (id: string) => Promise<DeviceLike>;
+  cancelDeviceConnection: (id: string) => Promise<void>;
+  destroy: () => void;
+}
+interface DeviceLike {
+  id: string;
+  name: string | null;
+  isConnected: () => Promise<boolean>;
+  discoverAllServicesAndCharacteristics: () => Promise<void>;
+  services: () => Promise<unknown[]>;
+  readCharacteristicForService: (s: string, c: string) => Promise<{ value: string }>;
+  writeCharacteristicWithResponseForService: (s: string, c: string, value: string) => Promise<void>;
+  cancelConnection: () => Promise<void>;
+  onDisconnected: (cb: (error: unknown, device: DeviceLike) => void) => void;
+}
+
+// Lazy-load NfcManager; stub when unavailable (full Expo / Expo Go)
+interface NfcManagerLike {
+  isSupported: () => Promise<boolean>;
+  start: () => Promise<void>;
+  isEnabled: () => Promise<boolean>;
+  requestTechnology: (tech: unknown, opts?: unknown) => Promise<void>;
+  getTag: () => Promise<unknown>;
+  cancelTechnologyRequest: () => Promise<void>;
+  setEventListener: (event: string, handler: ((...args: unknown[]) => void) | null) => void;
+  registerTagEvent: (opts?: unknown) => Promise<void>;
+  unregisterTagEvent: () => Promise<void>;
+}
+type NfcTechLike = { Ndef: unknown; NfcA: unknown; NfcB: unknown; NfcF: unknown };
+type NfcApi = {
+  NfcManager: NfcManagerLike;
+  NfcTech: NfcTechLike;
+  Ndef: { TNF_WELL_KNOWN: number; TNF_ABSOLUTE_URI: number; TNF_MIME_MEDIA: number; TNF_EXTERNAL_TYPE: number; text: { decodePayload: (p: unknown) => string }; uri: { decodePayload: (p: unknown) => string } };
+  NfcEvents: { DiscoverTag: string; SessionClosed: string };
+};
 
 let _nfc: NfcApi | null = null;
 function getNfc(): NfcApi {
@@ -32,8 +71,8 @@ function getNfc(): NfcApi {
           setEventListener: noopSync,
           registerTagEvent: noop,
           unregisterTagEvent: noop,
-        } as unknown as NfcManagerType,
-        NfcTech: {} as NfcTech,
+        } as NfcManagerLike,
+        NfcTech: { Ndef: undefined, NfcA: undefined, NfcB: undefined, NfcF: undefined },
         Ndef: {
           TNF_WELL_KNOWN: 1,
           TNF_ABSOLUTE_URI: 3,
@@ -41,8 +80,8 @@ function getNfc(): NfcApi {
           TNF_EXTERNAL_TYPE: 4,
           text: { decodePayload: () => '' },
           uri: { decodePayload: () => '' },
-        } as unknown as Ndef,
-        NfcEvents: {} as NfcEvents,
+        },
+        NfcEvents: { DiscoverTag: 'DiscoverTag', SessionClosed: 'SessionClosed' },
       };
     }
   }
@@ -65,8 +104,8 @@ function getBleState(): BleStateLike {
   return _bleState;
 }
 
-let _bleManager: BleManager | null = null;
-function getBleManager(): BleManager {
+let _bleManager: BleManagerLike | null = null;
+function getBleManager(): BleManagerLike {
   if (!_bleManager) {
     try {
       const { BleManager: BleManagerCtor } = require('react-native-ble-plx');
@@ -79,10 +118,10 @@ function getBleManager(): BleManager {
         connectToDevice: () => Promise.reject(new Error('BLE not available (Expo Go)')),
         cancelDeviceConnection: () => Promise.resolve(),
         destroy: () => {},
-      } as unknown as BleManager;
+      };
     }
   }
-  return _bleManager as BleManager;
+  return _bleManager!;
 }
 
 export interface NFCCardData {
@@ -130,7 +169,7 @@ class NFCBluetoothService {
   private scanningTimeout: NodeJS.Timeout | null = null;
   private nfcListenerActive: boolean = false;
   private nfcTagHandler: ((tag: any) => void) | null = null;
-  private connectedBluetoothDevice: Device | null = null;
+  private connectedBluetoothDevice: DeviceLike | null = null;
   private bluetoothDeviceListener: any = null;
   private nfcInitialized: boolean = false;
 
@@ -630,7 +669,7 @@ class NFCBluetoothService {
   /**
    * Check if device is an NFC Bluetooth device based on name or UUID
    */
-  private isNFCBluetoothDevice(device: any): boolean {
+  private isNFCBluetoothDevice(device: BleScanDevice): boolean {
     // Check by device name
     if (device.name) {
       const deviceName = device.name.toUpperCase();
@@ -775,7 +814,7 @@ class NFCBluetoothService {
   /**
    * Connect to Bluetooth device
    */
-  async connectBluetoothDevice(deviceId: string): Promise<Device> {
+  async connectBluetoothDevice(deviceId: string): Promise<DeviceLike> {
     try {
       // Disconnect existing device if any
       if (this.connectedBluetoothDevice) {
@@ -788,7 +827,7 @@ class NFCBluetoothService {
 
       // Connect with timeout
       let connectionTimeout: NodeJS.Timeout | null = null;
-      const timeoutPromise = new Promise<Device>((_, reject) => {
+      const timeoutPromise = new Promise<DeviceLike>((_, reject) => {
         connectionTimeout = setTimeout(() => {
           reject(new Error('Connection timeout'));
         }, NFC_BLUETOOTH_CONFIG.CONNECTION_TIMEOUT);
@@ -849,7 +888,7 @@ class NFCBluetoothService {
   /**
    * Get currently connected Bluetooth device
    */
-  getConnectedBluetoothDevice(): Device | null {
+  getConnectedBluetoothDevice(): DeviceLike | null {
     return this.connectedBluetoothDevice;
   }
 
@@ -876,7 +915,7 @@ class NFCBluetoothService {
   /**
    * Read data from Bluetooth device
    */
-  async readBluetoothData(device: Device, serviceUUID: string, characteristicUUID: string): Promise<string | null> {
+  async readBluetoothData(device: DeviceLike, serviceUUID: string, characteristicUUID: string): Promise<string | null> {
     try {
       const characteristic = await device.readCharacteristicForService(serviceUUID, characteristicUUID);
       return characteristic.value || null;
@@ -918,14 +957,13 @@ class NFCBluetoothService {
       }
 
       // Try to find NFC service by scanning available services
-      const services = await device.services();
-      let nfcService = services.find((s) => 
+      const services = (await device.services()) as { uuid: string; characteristics: () => Promise<{ uuid: string }[]> }[];
+      let nfcService = services.find((s: { uuid: string }) =>
         s.uuid.toLowerCase() === serviceUUID.toLowerCase()
       );
 
       // If not found, try to find any service that might be NFC-related
       if (!nfcService && services.length > 0) {
-        // Use first available service as fallback
         nfcService = services[0];
         serviceUUID = nfcService.uuid;
       }
@@ -938,10 +976,10 @@ class NFCBluetoothService {
       const characteristics = await nfcService.characteristics();
       
       // Find read and write characteristics
-      let readCharacteristic = characteristics.find((c) =>
+      let readCharacteristic = characteristics.find((c: { uuid: string }) =>
         c.uuid.toLowerCase() === readCharUUID.toLowerCase()
       );
-      let writeCharacteristic = characteristics.find((c) =>
+      let writeCharacteristic = characteristics.find((c: { uuid: string }) =>
         c.uuid.toLowerCase() === writeCharUUID.toLowerCase()
       );
 
@@ -1062,7 +1100,7 @@ class NFCBluetoothService {
    * Write data to Bluetooth device
    */
   async writeBluetoothData(
-    device: Device,
+    device: DeviceLike,
     serviceUUID: string,
     characteristicUUID: string,
     data: string
@@ -1082,7 +1120,7 @@ class NFCBluetoothService {
   /**
    * Disconnect Bluetooth device
    */
-  async disconnectBluetoothDevice(device: Device): Promise<void> {
+  async disconnectBluetoothDevice(device: DeviceLike): Promise<void> {
     try {
       await device.cancelConnection();
       if (this.connectedBluetoothDevice?.id === device.id) {

@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import Constants from 'expo-constants';
 import { ArrowDown2, ArrowLeft2, Scanner, ScanBarcode, TickCircle } from 'iconsax-react-nativejs';
 import {
     scale,
@@ -26,20 +25,17 @@ import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
 import { QrDisplayScreen } from './QrDisplayScreen';
 
-// Expo Go: pakai expo-camera (QrScanScreenExpo). Lainnya: Vision Camera (QrScanScreen). Fallback to Expo if Vision native module missing.
-const isExpoGo = Constants.appOwnership === 'expo';
-const useExpoCamera = isExpoGo && Platform.OS !== 'web';
+// Full Expo: native pakai expo-camera (QrScanScreenExpo). Web pakai QrScanScreen (.web.tsx).
+const useExpoCamera = Platform.OS !== 'web';
 const QrScanScreenExpoLazy = lazy(() =>
   import('./QrScanScreenExpo').then((m) => ({ default: m.QrScanScreenExpo }))
 );
 const QrScanScreenLazy = lazy(() =>
-  import('./QrScanScreen')
-    .then((m) => {
-      const C = m?.QrScanScreen ?? (m as any)?.default;
-      if (!C) throw new Error('QrScanScreen export not found');
-      return { default: C };
-    })
-    .catch(() => import('./QrScanScreenExpo').then((m) => ({ default: m.QrScanScreenExpo })))
+  import('./QrScanScreen').then((m) => {
+    const C = m?.QrScanScreen ?? (m as any)?.default;
+    if (!C) throw new Error('QrScanScreen export not found');
+    return { default: C };
+  })
 );
 
 const MAX_WIDTH_WEB = 414;

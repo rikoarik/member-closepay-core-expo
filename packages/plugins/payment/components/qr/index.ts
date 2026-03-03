@@ -1,6 +1,6 @@
 /**
  * QR Components
- * QrScanScreen not re-exported: uses vision-camera, loaded only via QrScreen lazy import (or direct path).
+ * QrScanScreen (web) resolved via .web.tsx; native uses QrScanScreenExpo from QrScreen.
  */
 export { QrScreen } from './QrScreen';
 export { QrDisplayScreen } from './QrDisplayScreen';

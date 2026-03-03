@@ -1,28 +1,14 @@
 /**
  * FnBScanScreen – Entry for FnB store QR/Barcode scanner.
- * Expo Go: uses expo-camera (FnBScanScreenExpo). Dev client/prebuild: uses vision-camera (FnBScanScreenVision).
- * Web: resolved via FnBScanScreen.web.tsx.
+ * Full Expo: native pakai expo-camera (FnBScanScreenExpo). Web: resolved via FnBScanScreen.web.tsx.
  */
 import React, { lazy, Suspense } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import Constants from 'expo-constants';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useTheme } from '@core/theme';
 
 const FnBScanScreenExpoLazy = lazy(() =>
   import('./FnBScanScreenExpo').then((m) => ({ default: m.FnBScanScreenExpo }))
 );
-const FnBScanScreenVisionLazy = lazy(() =>
-  import('./FnBScanScreenVision')
-    .then((m) => {
-      const C = m?.FnBScanScreenVision ?? (m as any)?.default;
-      if (!C) throw new Error('FnBScanScreenVision export not found');
-      return { default: C };
-    })
-    .catch(() => import('./FnBScanScreenExpo').then((m) => ({ default: m.FnBScanScreenExpo })))
-);
-
-const isExpoGo = Constants.appOwnership === 'expo';
-const useExpoCamera = isExpoGo && Platform.OS !== 'web';
 
 function FnBScanScreenFallback() {
   const { colors } = useTheme();
@@ -37,11 +23,7 @@ function FnBScanScreenFallback() {
 export const FnBScanScreen: React.FC = () => {
   return (
     <Suspense fallback={<FnBScanScreenFallback />}>
-      {useExpoCamera ? (
-        <FnBScanScreenExpoLazy />
-      ) : (
-        <FnBScanScreenVisionLazy />
-      )}
+      <FnBScanScreenExpoLazy />
     </Suspense>
   );
 };

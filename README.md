@@ -1,6 +1,6 @@
 # Member Closepay – Expo
 
-Project Expo (iOS, Android, Web) yang di-convert dari member-closepay-base. UI dan fitur sama; di web beberapa modul native di-stub (NFC/BLE, Vision Camera).
+Project **full Expo** (managed workflow, kompatibel **Expo Go**). iOS, Android, Web; kamera pakai expo-camera; NFC/BLE di Expo Go di-stub (fitur pembayaran NFC/BLE tersedia hanya pesan “tidak tersedia” atau input manual).
 
 ## Lokasi
 
@@ -40,18 +40,26 @@ Agar bisa run di HP Android yang disambung USB:
      ```
    - Simpan di `~/.zshrc` lalu `source ~/.zshrc`.
 
-3. **Jalankan**  
-   - **Expo Go (tanpa build native):**  
-     `npx expo start` → di HP buka aplikasi **Expo Go**, scan QR code (pastikan HP dan laptop satu WiFi), atau pakai:
+3. **Expo Go di HP**  
+   Install [Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) dari Play Store.
+
+4. **Jalankan**  
+   - **Via LAN (HP dan laptop satu WiFi):**  
      ```bash
      npx expo start --android
      ```
-     (akan coba install/buka di device yang terdeteksi `adb`.)
-   - **Development build (NFC/BLE, Vision Camera, dll.):**  
+     atau `npm run android:go`. Expo akan buka URL di device yang terdeteksi `adb`.  
+     Kalau HP tidak bisa konek (blank/error): pastikan satu WiFi, atau coba set IP manual:
      ```bash
-     npm run android
+     REACT_NATIVE_PACKAGER_HOSTNAME=$(ipconfig getifaddr en0) npx expo start --android
      ```
-     Pertama kali akan prebuild + build APK lalu install ke device. Butuh Android SDK/NDK di Mac.
+   - **Via tunnel (HP beda WiFi / LAN gagal):**  
+     ```bash
+     npm run android:tunnel
+     ```
+     atau `npx expo start --android --tunnel`. Lebih lambat, tapi tidak bergantung WiFi yang sama.
+   - **Development build (APK lokal):**  
+     `npm run android` — prebuild + build lalu install ke device (butuh Android SDK di Mac).
 
 ## Build Web (static)
 
@@ -85,6 +93,11 @@ Output di folder `dist/`.
 - `QrScanScreen.web.tsx` – input manual kode (tanpa kamera).
 - `FnBScanScreen.web.tsx` – placeholder.
 - `Clipboard.web.ts` – memakai `navigator.clipboard`.
+
+## Full Expo
+
+- Hanya pakai **Expo SDK** dan modul yang ada di Expo Go (expo-camera, expo-image-picker, expo-linear-gradient via shim, react-native-maps).
+- Tidak ada `react-native-ble-plx`, `react-native-nfc-manager`, `react-native-vision-camera` — NFC/BLE pakai stub di runtime; scan QR pakai expo-camera.
 
 ## Dependency
 

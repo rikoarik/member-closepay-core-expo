@@ -5,6 +5,8 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "android:go": "expo start --android",
+    "android:tunnel": "expo start --android --tunnel",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export -p web && npx workbox-cli generateSW workbox-config.js",
@@ -19,8 +21,7 @@
     "perf:build:ios": "node scripts/run-with-timing.js npx expo export -p ios",
     "perf:bundle:web": "EXPO_ATLAS=true npx expo export -p web && npx expo-atlas .expo/atlas.jsonl",
     "perf:bundle:android": "EXPO_ATLAS=true npx expo export -p android && npx expo-atlas .expo/atlas.jsonl",
-    "perf:bundle:ios": "EXPO_ATLAS=true npx expo export -p ios && npx expo-atlas .expo/atlas.jsonl",
-    "postinstall": "node -e \"var fs=require('fs'); var p='node_modules/react-native-linear-gradient/index.web.js'; var s='shim-linear-gradient.web.js'; if(fs.existsSync(s)) fs.copyFileSync(s,p);\""
+    "perf:bundle:ios": "EXPO_ATLAS=true npx expo export -p ios && npx expo-atlas .expo/atlas.jsonl"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -51,26 +52,19 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.2",
-    "react-native-ble-plx": "^3.3.0",
     "react-native-gesture-handler": "~2.30.0",
-    "react-native-image-picker": "^8.2.1",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
-    "react-native-linear-gradient": "^2.8.3",
     "react-native-maps": "1.26.20",
-    "react-native-nfc-manager": "^3.15.0",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "~4.23.0",
     "react-native-skeleton-placeholder": "^5.2.4",
     "react-native-svg": "15.15.3",
     "react-native-toast-message": "^2.3.3",
-    "react-native-vision-camera": "^4.6.0",
     "react-native-web": "^0.21.0",
-    "react-native-worklets": "0.7.2",
     "zustand": "^5.0.11"
   },
   "overrides": {
-    "react-native-worklets": "0.7.2",
     "react-native-skeleton-placeholder": {
       "@react-native-masked-view/masked-view": "0.3.2"
     },
