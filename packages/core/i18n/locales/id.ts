@@ -818,6 +818,7 @@ export const id = {
     },
     mainBalance: 'Saldo Utama',
     balance: 'Saldo',
+    mealBalance: 'Saldo Makan',
   },
   withdraw: {
     title: 'Pencairan Dana',

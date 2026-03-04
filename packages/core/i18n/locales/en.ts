@@ -789,6 +789,7 @@ export const en = {
     },
     mainBalance: 'Main Balance',
     balance: 'Balance',
+    mealBalance: 'Meal Balance',
   },
   withdraw: {
     title: 'Fund Disbursement',
