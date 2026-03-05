@@ -3,9 +3,9 @@
  * Ensures cart items added on merchant screen appear on checkout screen.
  */
 
-import React, { createContext, useCallback, useMemo, useState } from 'react';
-import type { FnBItem, FnBVariant, FnBAddon, FnBOrderItem } from '../models';
-import { getAvailableOrderTypes } from '../models';
+import React, { createContext, useCallback, useMemo, useState } from "react";
+import type { FnBItem, FnBVariant, FnBAddon, FnBOrderItem } from "../models";
+import { getAvailableOrderTypes } from "../models";
 
 export interface CartItem extends FnBOrderItem {
   cartId: string;
@@ -15,12 +15,14 @@ export interface FnBCartContextValue {
   cartItems: CartItem[];
   itemCount: number;
   subtotal: number;
+  activeStoreId: string | null;
+  activeStoreName: string | null;
   addItem: (
     item: FnBItem,
     quantity: number,
     variant?: FnBVariant,
     addons?: FnBAddon[],
-    notes?: string
+    notes?: string,
   ) => void;
   removeItem: (cartId: string) => void;
   updateQuantity: (cartId: string, quantity: number) => void;
@@ -34,14 +36,19 @@ export interface FnBCartContextValue {
     quantity: number,
     variant?: FnBVariant,
     addons?: FnBAddon[],
-    notes?: string
+    notes?: string,
   ) => void;
+  setActiveStore: (storeId: string, storeName: string) => void;
+  resetAndSwitchStore: (storeId: string, storeName: string) => void;
+  isStoreConflict: (storeId: string) => boolean;
 }
 
 const defaultContextValue: FnBCartContextValue = {
   cartItems: [],
   itemCount: 0,
   subtotal: 0,
+  activeStoreId: null,
+  activeStoreName: null,
   addItem: () => {},
   removeItem: () => {},
   updateQuantity: () => {},
@@ -51,6 +58,9 @@ const defaultContextValue: FnBCartContextValue = {
   incrementItem: () => {},
   decrementItem: () => {},
   updateItem: () => {},
+  setActiveStore: () => {},
+  resetAndSwitchStore: () => {},
+  isStoreConflict: () => false,
 };
 
 export const FnBCartContext = createContext<FnBCartContextValue | null>(null);
@@ -59,9 +69,16 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+  const [activeStoreName, setActiveStoreName] = useState<string | null>(null);
 
   const calculateSubtotal = useCallback(
-    (item: FnBItem, quantity: number, variant?: FnBVariant, addons?: FnBAddon[]): number => {
+    (
+      item: FnBItem,
+      quantity: number,
+      variant?: FnBVariant,
+      addons?: FnBAddon[],
+    ): number => {
       let itemPrice = item.price;
       if (variant) itemPrice += variant.price;
       if (addons?.length) {
@@ -69,7 +86,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return itemPrice * quantity;
     },
-    []
+    [],
   );
 
   const addItem = useCallback(
@@ -78,7 +95,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       quantity: number,
       variant?: FnBVariant,
       addons?: FnBAddon[],
-      notes?: string
+      notes?: string,
     ) => {
       const cartId = `${item.id}-${Date.now()}`;
       const subtotal = calculateSubtotal(item, quantity, variant, addons);
@@ -93,7 +110,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       setCartItems((prev) => [...prev, newCartItem]);
     },
-    [calculateSubtotal]
+    [calculateSubtotal],
   );
 
   const removeItem = useCallback((cartId: string) => {
@@ -113,13 +130,13 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
             cartItem.item,
             quantity,
             cartItem.variant,
-            cartItem.addons
+            cartItem.addons,
           );
           return { ...cartItem, quantity, subtotal: newSubtotal };
-        })
+        }),
       );
     },
-    [calculateSubtotal]
+    [calculateSubtotal],
   );
 
   const updateItem = useCallback(
@@ -128,7 +145,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       quantity: number,
       variant?: FnBVariant,
       addons?: FnBAddon[],
-      notes?: string
+      notes?: string,
     ) => {
       setCartItems((prev) =>
         prev.map((cartItem) => {
@@ -137,7 +154,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
             cartItem.item,
             quantity,
             variant,
-            addons
+            addons,
           );
           return {
             ...cartItem,
@@ -147,19 +164,51 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
             notes,
             subtotal: newSubtotal,
           };
-        })
+        }),
       );
     },
-    [calculateSubtotal]
+    [calculateSubtotal],
   );
 
-  const clearCart = useCallback(() => setCartItems([]), []);
+  const clearCart = useCallback(() => {
+    setCartItems([]);
+    setActiveStoreId(null);
+    setActiveStoreName(null);
+  }, []);
 
-  const getItemQuantity = useCallback((itemId: string): number => {
-    return cartItems
-      .filter((c) => c.item.id === itemId)
-      .reduce((sum, c) => sum + c.quantity, 0);
-  }, [cartItems]);
+  const setActiveStore = useCallback((storeId: string, storeName: string) => {
+    setActiveStoreId(storeId);
+    setActiveStoreName(storeName);
+  }, []);
+
+  const resetAndSwitchStore = useCallback(
+    (storeId: string, storeName: string) => {
+      setCartItems([]);
+      setActiveStoreId(storeId);
+      setActiveStoreName(storeName);
+    },
+    [],
+  );
+
+  const isStoreConflict = useCallback(
+    (storeId: string): boolean => {
+      return (
+        activeStoreId !== null &&
+        activeStoreId !== storeId &&
+        cartItems.length > 0
+      );
+    },
+    [activeStoreId, cartItems.length],
+  );
+
+  const getItemQuantity = useCallback(
+    (itemId: string): number => {
+      return cartItems
+        .filter((c) => c.item.id === itemId)
+        .reduce((sum, c) => sum + c.quantity, 0);
+    },
+    [cartItems],
+  );
 
   const incrementItem = useCallback(
     (item: FnBItem) => {
@@ -168,7 +217,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
           (c) =>
             c.item.id === item.id &&
             !c.variant &&
-            (!c.addons || c.addons.length === 0)
+            (!c.addons || c.addons.length === 0),
         );
         if (existing) {
           const newQty = existing.quantity + 1;
@@ -176,12 +225,12 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
             existing.item,
             newQty,
             existing.variant,
-            existing.addons
+            existing.addons,
           );
           return prev.map((c) =>
             c.cartId === existing.cartId
               ? { ...c, quantity: newQty, subtotal: newSubtotal }
-              : c
+              : c,
           );
         }
         const cartId = `${item.id}-${Date.now()}`;
@@ -189,7 +238,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
         return [...prev, { cartId, item, quantity: 1, subtotal }];
       });
     },
-    [calculateSubtotal]
+    [calculateSubtotal],
   );
 
   const decrementItem = useCallback(
@@ -199,7 +248,7 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
           (c) =>
             c.item.id === itemId &&
             !c.variant &&
-            (!c.addons || c.addons.length === 0)
+            (!c.addons || c.addons.length === 0),
         );
         if (!existing) return prev;
         if (existing.quantity <= 1) {
@@ -210,29 +259,29 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
           existing.item,
           newQty,
           existing.variant,
-          existing.addons
+          existing.addons,
         );
         return prev.map((c) =>
           c.cartId === existing.cartId
             ? { ...c, quantity: newQty, subtotal: newSubtotal }
-            : c
+            : c,
         );
       });
     },
-    [calculateSubtotal]
+    [calculateSubtotal],
   );
 
   const itemCount = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
-    [cartItems]
+    [cartItems],
   );
   const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.subtotal, 0),
-    [cartItems]
+    [cartItems],
   );
   const getTotal = useCallback(
     (deliveryFee = 0, serviceFee = 0) => subtotal + deliveryFee + serviceFee,
-    [subtotal]
+    [subtotal],
   );
 
   const value = useMemo<FnBCartContextValue>(
@@ -240,6 +289,8 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       cartItems,
       itemCount,
       subtotal,
+      activeStoreId,
+      activeStoreName,
       addItem,
       removeItem,
       updateQuantity,
@@ -249,11 +300,16 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       incrementItem,
       decrementItem,
       updateItem,
+      setActiveStore,
+      resetAndSwitchStore,
+      isStoreConflict,
     }),
     [
       cartItems,
       itemCount,
       subtotal,
+      activeStoreId,
+      activeStoreName,
       addItem,
       removeItem,
       updateQuantity,
@@ -263,7 +319,10 @@ export const FnBCartProvider: React.FC<{ children: React.ReactNode }> = ({
       incrementItem,
       decrementItem,
       updateItem,
-    ]
+      setActiveStore,
+      resetAndSwitchStore,
+      isStoreConflict,
+    ],
   );
 
   return (

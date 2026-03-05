@@ -24,6 +24,8 @@
       "FnBCheckout": "FnBCheckoutScreen",
       "FnBScan": "FnBScanScreen",
       "FnBFavorites": "FnBFavoritesScreen",
+      "FnBProductSearch": "FnBProductSearchScreen",
+      "FnBProductSearchResults": "FnBProductSearchResultsScreen",
       "FnBOrderStatus": "FnBOrderStatusScreen",
       "FnBPaymentSuccess": "FnBPaymentSuccessScreen",
       "FnBOrderTracking": "FnBOrderTrackingScreen",
@@ -186,6 +188,30 @@
       ],
       "meta": {
         "title": "Riwayat Order",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBProductSearch",
+      "path": "/fnb/search",
+      "component": "FnBProductSearchScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Cari Menu",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBProductSearchResults",
+      "path": "/fnb/search/results",
+      "component": "FnBProductSearchResultsScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Hasil Pencarian",
         "showInMenu": false
       }
     }

@@ -15,6 +15,8 @@ interface UseFnBCartReturn {
   cartItems: import('../context/FnBCartContext').CartItem[];
   itemCount: number;
   subtotal: number;
+  activeStoreId: string | null;
+  activeStoreName: string | null;
   addItem: (
     item: import('../models').FnBItem,
     quantity: number,
@@ -37,6 +39,9 @@ interface UseFnBCartReturn {
     addons?: import('../models').FnBAddon[],
     notes?: string
   ) => void;
+  setActiveStore: (storeId: string, storeName: string) => void;
+  resetAndSwitchStore: (storeId: string, storeName: string) => void;
+  isStoreConflict: (storeId: string) => boolean;
 }
 
 export const useFnBCart = (entryPoint: EntryPoint = 'browse'): UseFnBCartReturn => {
@@ -57,3 +62,4 @@ export const useFnBCart = (entryPoint: EntryPoint = 'browse'): UseFnBCartReturn 
     availableOrderTypes,
   };
 };
+

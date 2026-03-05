@@ -3,7 +3,7 @@
  * Main screen for FnB marketplace with menu grid, category tabs, and floating cart
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -13,14 +13,21 @@ import {
   TouchableOpacity,
   TextInput,
   Animated,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { SearchNormal, CloseCircle } from 'iconsax-react-nativejs';
-import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
-import { useTheme } from '@core/theme';
-import { useTranslation } from '@core/i18n';
-import { useFnBData, useFnBCart, useFnBFavorites } from '../../hooks';
+  Alert,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { SearchNormal, CloseCircle } from "iconsax-react-nativejs";
+import {
+  scale,
+  moderateVerticalScale,
+  getHorizontalPadding,
+  FontFamily,
+  ScreenHeader,
+} from "@core/config";
+import { useTheme } from "@core/theme";
+import { useTranslation } from "@core/i18n";
+import { useFnBData, useFnBCart, useFnBFavorites } from "../../hooks";
 import {
   FnBItemCard,
   FnBCategoryTabs,
@@ -31,8 +38,14 @@ import {
   FnBItemCardSkeleton,
   FnBCategoryTabsSkeleton,
   MerchantHeaderSkeleton,
-} from '../shared';
-import type { FnBItem, FnBVariant, FnBAddon, FnBOrderItem, EntryPoint } from '../../models';
+} from "../shared";
+import type {
+  FnBItem,
+  FnBVariant,
+  FnBAddon,
+  FnBOrderItem,
+  EntryPoint,
+} from "../../models";
 
 interface CartItem extends FnBOrderItem {
   cartId: string;
@@ -42,9 +55,9 @@ interface FnBMerchantDetailScreenProps {
   entryPoint?: EntryPoint;
 }
 
-export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = ({
-  entryPoint = 'browse',
-}) => {
+export const FnBMerchantDetailScreen: React.FC<
+  FnBMerchantDetailScreenProps
+> = ({ entryPoint = "browse" }) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
@@ -53,7 +66,9 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
   const horizontalPadding = getHorizontalPadding();
 
   // Get params from route
-  const params = route.params as { entryPoint?: EntryPoint; storeId?: string } | undefined;
+  const params = route.params as
+    | { entryPoint?: EntryPoint; storeId?: string }
+    | undefined;
   const activeEntryPoint = params?.entryPoint || entryPoint;
   const storeId = params?.storeId;
 
@@ -80,6 +95,10 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
     getItemQuantity,
     incrementItem,
     decrementItem,
+    isStoreConflict,
+    setActiveStore,
+    resetAndSwitchStore,
+    activeStoreName,
   } = useFnBCart(activeEntryPoint);
 
   const { isFavorite, toggleFavorite } = useFnBFavorites();
@@ -90,7 +109,7 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
   const [showItemDetail, setShowItemDetail] = useState(false);
   const [showCartDetail, setShowCartDetail] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Filter items based on search query
   const searchedItems = useMemo(() => {
@@ -100,7 +119,7 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
     return filteredItems.filter(
       (item) =>
         item.name.toLowerCase().includes(query) ||
-        (item.description && item.description.toLowerCase().includes(query))
+        (item.description && item.description.toLowerCase().includes(query)),
     );
   }, [filteredItems, searchQuery]);
 
@@ -118,8 +137,37 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
 
   const handleAddItem = useCallback(
     (item: FnBItem) => {
-      // Prevent adding if store is closed
       if (!store?.isOpen) return;
+      const currentStoreId = storeId || store?.id || "";
+      const currentStoreName = store?.name || "";
+
+      // Check store conflict
+      if (isStoreConflict(currentStoreId)) {
+        Alert.alert(
+          "Ganti pesanan?",
+          `Anda sudah punya pesanan di ${activeStoreName || "toko lain"}. Pesanan lama akan dihapus jika Anda lanjut.`,
+          [
+            { text: "Batal", style: "cancel" },
+            {
+              text: "Ya, ganti",
+              style: "destructive",
+              onPress: () => {
+                resetAndSwitchStore(currentStoreId, currentStoreName);
+                if (item.variants && item.variants.length > 0) {
+                  setSelectedItem(item);
+                  setShowItemDetail(true);
+                } else {
+                  incrementItem(item);
+                }
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      // Set active store if not set yet
+      setActiveStore(currentStoreId, currentStoreName);
 
       if (item.variants && item.variants.length > 0) {
         setSelectedItem(item);
@@ -128,16 +176,25 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
         incrementItem(item);
       }
     },
-    [incrementItem, store?.isOpen]
+    [
+      incrementItem,
+      store?.isOpen,
+      store?.id,
+      store?.name,
+      storeId,
+      isStoreConflict,
+      activeStoreName,
+      resetAndSwitchStore,
+      setActiveStore,
+    ],
   );
 
   const handleRemoveItem = useCallback(
     (item: FnBItem) => {
-      // Prevent removing if store is closed
       if (!store?.isOpen) return;
       decrementItem(item.id);
     },
-    [decrementItem, store?.isOpen]
+    [decrementItem, store?.isOpen],
   );
 
   const handleAddToCart = useCallback(
@@ -146,8 +203,14 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
       quantity: number,
       variant?: FnBVariant,
       addons?: FnBAddon[],
-      notes?: string
+      notes?: string,
     ) => {
+      const currentStoreId = storeId || store?.id || "";
+      const currentStoreName = store?.name || "";
+
+      // Set active store if not set yet
+      setActiveStore(currentStoreId, currentStoreName);
+
       if (editingCartItem) {
         updateItem(editingCartItem.cartId, quantity, variant, addons, notes);
         setEditingCartItem(null);
@@ -155,7 +218,15 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
         addItem(item, quantity, variant, addons, notes);
       }
     },
-    [addItem, updateItem, editingCartItem]
+    [
+      addItem,
+      updateItem,
+      editingCartItem,
+      storeId,
+      store?.id,
+      store?.name,
+      setActiveStore,
+    ],
   );
 
   const handleCloseItemDetail = useCallback(() => {
@@ -182,11 +253,14 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
   const handleCartCheckout = useCallback(() => {
     setShowCartDetail(false);
     // @ts-ignore
-    navigation.navigate('FnBCheckout', { entryPoint, storeId: params?.storeId });
+    navigation.navigate("FnBCheckout", {
+      entryPoint,
+      storeId: params?.storeId,
+    });
   }, [navigation, entryPoint, params?.storeId]);
 
   const clearSearch = useCallback(() => {
-    setSearchQuery('');
+    setSearchQuery("");
   }, []);
 
   const renderItem = useCallback(
@@ -209,13 +283,13 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
       isFavorite,
       toggleFavorite,
       store?.isOpen,
-    ]
+    ],
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
-        title={store?.name || t('fnb.title') || 'Pesan Makanan'}
+        title={store?.name || t("fnb.title") || "Pesan Makanan"}
         onBackPress={() => navigation.goBack()}
         showBorder
         style={{ paddingTop: insets.top, backgroundColor: colors.surface }}
@@ -245,18 +319,29 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
             },
           ]}
         >
-          <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
+          <SearchNormal
+            size={scale(20)}
+            color={colors.textSecondary}
+            variant="Linear"
+          />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('fnb.searchMenu') || 'Cari menu...'}
+            placeholder={t("fnb.searchMenu") || "Cari menu..."}
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <CloseCircle size={scale(20)} color={colors.textSecondary} variant="Linear" />
+            <TouchableOpacity
+              onPress={clearSearch}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <CloseCircle
+                size={scale(20)}
+                color={colors.textSecondary}
+                variant="Linear"
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -320,9 +405,9 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 {searchQuery
-                  ? t('fnb.noMenuSearchFound', { query: searchQuery }) ||
+                  ? t("fnb.noMenuSearchFound", { query: searchQuery }) ||
                     `Tidak ada menu "${searchQuery}" ditemukan`
-                  : t('fnb.noMenuFound') || 'Tidak ada menu ditemukan'}
+                  : t("fnb.noMenuFound") || "Tidak ada menu ditemukan"}
               </Text>
             </View>
           )
@@ -346,7 +431,7 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
           style={[
             styles.closedBanner,
             {
-              backgroundColor: colors.error + '15',
+              backgroundColor: colors.error + "15",
               borderTopColor: colors.error,
               paddingBottom: scale(12),
               marginHorizontal: horizontalPadding,
@@ -362,7 +447,7 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
             onPress={() => refresh()}
           >
             <Text style={[styles.retryButtonText, { color: colors.surface }]}>
-              {t('common.retry') || 'Coba lagi'}
+              {t("common.retry") || "Coba lagi"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -374,15 +459,15 @@ export const FnBMerchantDetailScreen: React.FC<FnBMerchantDetailScreenProps> = (
           style={[
             styles.closedBanner,
             {
-              backgroundColor: colors.error + '15',
+              backgroundColor: colors.error + "15",
               borderTopColor: colors.error,
               paddingBottom: insets.bottom + scale(12),
             },
           ]}
         >
           <Text style={[styles.closedBannerText, { color: colors.error }]}>
-            {t('fnb.storeClosedMessage') ||
-              'Toko ini sedang tutup dan tidak dapat menerima pesanan saat ini.'}
+            {t("fnb.storeClosedMessage") ||
+              "Toko ini sedang tutup dan tidak dapat menerima pesanan saat ini."}
           </Text>
         </View>
       )}
@@ -421,13 +506,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   searchInputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: scale(14),
     height: scale(44),
     borderRadius: scale(12),
@@ -442,7 +527,7 @@ const styles = StyleSheet.create({
     paddingVertical: scale(10),
   },
   columnWrapper: {
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   listContent: {
     paddingTop: moderateVerticalScale(16),
@@ -453,8 +538,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingTop: moderateVerticalScale(60),
   },
   emptyText: {
@@ -462,7 +547,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.monasans.regular,
   },
   closedBanner: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -473,11 +558,11 @@ const styles = StyleSheet.create({
   closedBannerText: {
     fontSize: scale(13),
     fontFamily: FontFamily.monasans.medium,
-    textAlign: 'center',
+    textAlign: "center",
   },
   retryButton: {
     marginTop: scale(10),
-    alignSelf: 'center',
+    alignSelf: "center",
     paddingVertical: scale(10),
     paddingHorizontal: scale(20),
     borderRadius: scale(10),

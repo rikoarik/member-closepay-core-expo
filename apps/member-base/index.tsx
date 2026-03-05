@@ -37,7 +37,7 @@ import { TransactionHistoryScreen } from '@plugins/balance';
 // App screens (VirtualCard, VirtualCardDetail, AddVirtualCard come from card-transaction plugin routes)
 import { ProfileScreen } from '@core/account';
 import { PlaceholderScreen } from './src/screens/PlaceholderScreen';
-import { FnBCartProvider, FnBActiveOrderProvider } from '@plugins/marketplace-fnb';
+import { FnBCartProvider, FnBActiveOrderProvider, FnBLocationProvider } from '@plugins/marketplace-fnb';
 import { MarketplaceOrderProvider } from '@plugins/marketplace';
 import { appConfig } from './config/app.config';
 import { setQuickMenuIconProvider } from '@experience-core';
@@ -139,6 +139,7 @@ function MemberBaseAppContent(): React.JSX.Element {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <MarketplaceOrderProvider>
         <FnBCartProvider>
+          <FnBLocationProvider>
           <FnBActiveOrderProvider>
             {!configLoaded || !pluginsInitialized ? (
               <View
@@ -157,6 +158,7 @@ function MemberBaseAppContent(): React.JSX.Element {
               <AppNavigator />
             )}
           </FnBActiveOrderProvider>
+          </FnBLocationProvider>
         </FnBCartProvider>
       </MarketplaceOrderProvider>
       <Toast config={toastConfig} />

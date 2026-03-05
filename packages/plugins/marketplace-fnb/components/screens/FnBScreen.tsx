@@ -1,10 +1,10 @@
 /**
  * FnBScreen Component
- * FnB Home Discovery – layout matches reference (Delivering to, Search+Scan, Banners, Categories, Recommended Merchants).
+ * FnB Home Discovery – GoFood-style layout (Location pill, Search+Scan, Banners, Categories, Merchant list).
  * Flow: FnBMerchantDetail, FnBScan, FnBFavorites; FnBOrderFloatingWidget at bottom.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -14,17 +14,15 @@ import {
   Animated,
   Image,
   FlatList,
-  TextInput,
   Dimensions,
   Platform,
   RefreshControl,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import {
   SearchNormal,
-  ArrowDown2,
-  ArrowLeft2,
+  CloseCircle,
   Heart,
   Star1,
   Location,
@@ -38,131 +36,117 @@ import {
   DocumentText,
   Clock,
   Note,
-} from 'iconsax-react-nativejs';
+  People,
+  PercentageSquare,
+  TruckFast,
+} from "iconsax-react-nativejs";
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
-} from '@core/config';
-import { useTheme } from '@core/theme';
-import { useTranslation } from '@core/i18n';
-import type { EntryPoint } from '../../models';
-import { useFnBStoreFavorites } from '../../hooks';
-import { FnBOrderFloatingWidget } from '../widgets/FnBOrderFloatingWidget';
+} from "@core/config";
+import { useTheme } from "@core/theme";
+import { useTranslation } from "@core/i18n";
+import type { EntryPoint } from "../../models";
+import { useFnBStoreFavorites, useFnBCart } from "../../hooks";
+import { useFnBLocation } from "../../context/FnBLocationContext";
+import { FNBDISCOVERY_MERCHANTS } from "../../data/fnbDiscoveryMerchants";
+import { FnBOrderFloatingWidget } from "../widgets/FnBOrderFloatingWidget";
+import { FnBCartBar } from "../shared/FnBCartBar";
+import { FnBLocationPickerSheet } from "../shared/FnBLocationPickerSheet";
+import { FnBLocationPickerModal } from "../shared/FnBLocationPickerModal";
 
 interface FnBScreenProps {
   entryPoint?: EntryPoint;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-type FnBBottomTab = 'jelajahi' | 'qr' | 'aktivitas';
+type FnBBottomTab = "jelajahi" | "aktivitas" | "favorit";
+type AktivitasSubTab = "riwayat" | "dalam_proses" | "draf";
 
-// --- Data (match reference copy & structure) ---
+// --- Data ---
 
+type BadgeBgKey = "primary" | "warning";
 const BANNERS = [
   {
-    id: '1',
+    id: "1",
     imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuBWyem3VPeIeVGlwdhRc47bzmSwB9pKrdWT7a0Rc1AP4VzSRhtMC2E-TjmfyCsWj7V1udDJ3gdmZVzy9lFWwd-ImUFUqlhQIM6lmhbAVU-aSjETyAeOsaSZOVrdyENacXoOgDeff2kiVFLQ0tsKo6Fr3w_9Gh9-Qe4Cy5jVkgfeiLkblLoAMq2HW6QLLwBgqQ4GJtaXVc1F3vARUearq6k7jQsosh8voVpOJS9tLYrmLo3KGeUBIGCD0fISkJawRfO7A-JkWd9Zq0d3',
-    badge: 'PROMO',
-    badgeBg: 'primary',
-    title: '50% OFF\nSelected Items',
-    subtitle: 'Valid until 25 Oct',
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBWyem3VPeIeVGlwdhRc47bzmSwB9pKrdWT7a0Rc1AP4VzSRhtMC2E-TjmfyCsWj7V1udDJ3gdmZVzy9lFWwd-ImUFUqlhQIM6lmhbAVU-aSjETyAeOsaSZOVrdyENacXoOgDeff2kiVFLQ0tsKo6Fr3w_9Gh9-Qe4Cy5jVkgfeiLkblLoAMq2HW6QLLwBgqQ4GJtaXVc1F3vARUearq6k7jQsosh8voVpOJS9tLYrmLo3KGeUBIGCD0fISkJawRfO7A-JkWd9Zq0d3",
+    badgeKey: "fnb.badgePromo" as const,
+    badgeBg: "primary" as BadgeBgKey,
+    titleKey: "fnb.banner1Title" as const,
+    subtitleKey: "fnb.banner1Subtitle" as const,
   },
   {
-    id: '2',
+    id: "2",
     imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCHfyBwgQ8ElUtgZsMyKMenLipEecXBlPorwQrZI7N7VfOno-H56q33nAkrO6EyyhSWlj142RYUvIDVUIs1LSvlSDX9pAKgBqkA-xQZRDz8SxweVglQmqzb2Z4Z1y1rF2fL0jM2t7ZqqP-ElMV5eWJ4u0R0ZZDRtjpF1y975rhxaDfAid_jJYHpIwyrXtKL0-PZoMCFg2Ls9advSszDtI24scMVO7eZLh5OFIima-PP2S6gxrwIDqxpERF67oldhdlC2MDHbvBtqgrR',
-    badge: 'NEW',
-    badgeBg: 'orange',
-    title: 'Healthy Bowls\nFree Delivery',
-    subtitle: 'Min order $15',
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCHfyBwgQ8ElUtgZsMyKMenLipEecXBlPorwQrZI7N7VfOno-H56q33nAkrO6EyyhSWlj142RYUvIDVUIs1LSvlSDX9pAKgBqkA-xQZRDz8SxweVglQmqzb2Z4Z1y1rF2fL0jM2t7ZqqP-ElMV5eWJ4u0R0ZZDRtjpF1y975rhxaDfAid_jJYHpIwyrXtKL0-PZoMCFg2Ls9advSszDtI24scMVO7eZLh5OFIima-PP2S6gxrwIDqxpERF67oldhdlC2MDHbvBtqgrR",
+    badgeKey: "fnb.badgeNew" as const,
+    badgeBg: "warning" as BadgeBgKey,
+    titleKey: "fnb.banner2Title" as const,
+    subtitleKey: "fnb.banner2Subtitle" as const,
+  },
+  {
+    id: "3",
+    imageUrl:
+      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&h=400&fit=crop",
+    badgeKey: "fnb.badgeBestSeller" as const,
+    badgeBg: "primary" as BadgeBgKey,
+    titleKey: "fnb.banner3Title" as const,
+    subtitleKey: "fnb.banner3Subtitle" as const,
+  },
+  {
+    id: "4",
+    imageUrl:
+      "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=800&h=400&fit=crop",
+    badgeKey: "fnb.badgeFreeDelivery" as const,
+    badgeBg: "primary" as BadgeBgKey,
+    titleKey: "fnb.banner4Title" as const,
+    subtitleKey: "fnb.banner4Subtitle" as const,
   },
 ];
 
+type CategoryColorKey = "primary" | "warning" | "info" | "error";
 const CATEGORIES = [
-  { id: '1', name: 'Rice', Icon: Shop },
-  { id: '2', name: 'Noodles', Icon: Discover },
-  { id: '3', name: 'Drinks', Icon: Coffee },
-  { id: '4', name: 'Snacks', Icon: Cake },
+  { id: "1", nameKey: "fnb.categoryResto" as const, Icon: Shop, colorKey: "primary" as CategoryColorKey },
+  { id: "2", nameKey: "fnb.categoryOngkir" as const, Icon: TruckFast, colorKey: "warning" as CategoryColorKey },
+  { id: "3", nameKey: "fnb.categoryGroupOrder" as const, Icon: People, colorKey: "info" as CategoryColorKey },
+  { id: "4", nameKey: "fnb.categorySerbaPromo" as const, Icon: PercentageSquare, colorKey: "error" as CategoryColorKey },
 ];
 
-const MERCHANTS = [
-  {
-    id: 'store-001',
-    name: 'Burger King & Queen',
-    time: '25-35 min',
-    description: 'American • Burgers • Fast Food',
-    rating: 4.8,
-    distance: '1.2 km',
-    promoLabel: 'Free Delivery',
-    promoHighlight: '20% off over $30',
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCvkxFChGMIqGhKSSuFDoQgJ2kTNdu_eGm55B4msAG62ce9SCHkmheTU1GEoy6teblqJHTFPz-h8uCtcc6n06L16xhqpVhDfBp16uyghpTCZALvhThQ9ekCqJuPAf4PJZc7YZzjaYf7o_H5SCCdEbR0bKxvTGi9uJa8PnoF5UuEEp7j_joFAyxKhZ5Mwd_cAwxSzlyBsitipgJwkOm6FFjB5xiZKIRhRc9M7pLTX0mIOdaiL-9vUalNb_jPIOw2mfRq02PvKiul0gl7',
-  },
-  {
-    id: 'store-002',
-    name: 'Golden Dragon Dimsum',
-    time: '40-50 min',
-    description: 'Chinese • Dimsum • Noodles',
-    rating: 4.5,
-    distance: '3.5 km',
-    promoLabel: null,
-    promoHighlight: null,
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAJaihUMJ4cZeYMR-9IWZL8AM_zRIJLjvp2s62UvSXG9QUFQCbm9eObPadR_-hGnDFmc9PVw8Vc4zxvPuQmw7LxZIfGe73vXYhvd_X5C4JT6HByLMFdwe6xb989DiSIWxeP8EIzO6FhdtMVF626GKoWZzIB7HuTog9e1Bz9KgcuLWfJVYaE5eJair6WyAdiafC_MLARKzuPLYfXZJfgz9c49TDdgptro0tRCKBihg_30LdQapMyViPRu9uoq1AM3OJQSBgb6paCHuiP',
-  },
-  {
-    id: 'store-003',
-    name: 'Daily Dose Coffee',
-    time: '15-25 min',
-    description: 'Cafe • Beverages • Pastry',
-    rating: 4.9,
-    distance: '0.8 km',
-    promoLabel: 'Buy 1 Get 1',
-    promoHighlight: 'Promo Available',
-    imageUrl:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCYcqwHU48mVBh7AMArNvi92S8ilr-WnvpkB7erlrK1UtCvU-L-1QABzNc6FYK65BFE8BiFNq6_gNHNZ-aVi_-zTIk25zygmQPHPCKl5PkuR53lXJPjkfVRJXxOdK26CqUMeINaTi9_hbseDh_G_Y5DE4gCUJpz47X42IRxVn4nK0rpFU4dAJ7FO0cmV9-TgoK3lXZNzgBkjnTOR5rsWF3nuL1b2TYN3M3-a03iCDMWDqEinmID7tqjQs0YdWky4CK0csnq4qOHc-ad',
-  },
-];
+const MERCHANTS = FNBDISCOVERY_MERCHANTS;
 
 const BORDER_RADIUS = scale(16);
 const BORDER_RADIUS_LG = scale(20);
 const BANNER_CARD_WIDTH = SCREEN_WIDTH;
-const PARALLAX_HERO_HEIGHT = scale(200);
-const SEARCH_STICKY_THRESHOLD = 100;
+const PARALLAX_HERO_HEIGHT = scale(280);
+const HEADER_HEIGHT = scale(56);
 
-export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) => {
+export const FnBScreen: React.FC<FnBScreenProps> = ({
+  entryPoint = "browse",
+}) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<FnBBottomTab>('jelajahi');
+  const [activeTab, setActiveTab] = useState<FnBBottomTab>("jelajahi");
+  const [aktivitasSubTab, setAktivitasSubTab] =
+    useState<AktivitasSubTab>("riwayat");
   const [refreshing, setRefreshing] = useState(false);
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
+  const [mapModalVisible, setMapModalVisible] = useState(false);
+  const { deliveryAddress, setDeliveryAddress } = useFnBLocation();
   const scrollY = useRef(new Animated.Value(0)).current;
-  const [stickySearchVisible, setStickySearchVisible] = useState(false);
-  const stickyRef = useRef(false);
   const bannerListRef = useRef<FlatList>(null);
   const bannerIndexRef = useRef(0);
   const CAROUSEL_INTERVAL = 4000;
   const bannerItemWidth = BANNER_CARD_WIDTH;
-  const scrollListener = useRef(
-    scrollY.addListener(({ value }) => {
-      const next = value > SEARCH_STICKY_THRESHOLD;
-      if (next !== stickyRef.current) {
-        stickyRef.current = next;
-        setStickySearchVisible(next);
-      }
-    })
-  ).current;
-  React.useEffect(() => () => scrollY.removeListener(scrollListener), [scrollY, scrollListener]);
 
   useEffect(() => {
-    if (activeTab !== 'jelajahi') return;
+    if (activeTab !== "jelajahi") return;
     const id = setInterval(() => {
       const next = (bannerIndexRef.current + 1) % BANNERS.length;
       bannerIndexRef.current = next;
@@ -176,144 +160,401 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
 
   const handleMerchantPress = useCallback(
     (storeId: string) => {
-      const cleanId = storeId.replace(/-dup$/, '');
-      (navigation as any).navigate('FnBMerchantDetail', { entryPoint, storeId: cleanId });
+      const cleanId = storeId.replace(/-dup$/, "");
+      (navigation as any).navigate("FnBMerchantDetail", {
+        entryPoint,
+        storeId: cleanId,
+      });
     },
-    [navigation, entryPoint]
+    [navigation, entryPoint],
   );
 
   const handleScanPress = useCallback(() => {
-    (navigation as any).navigate('FnBScan');
+    (navigation as any).navigate("FnBScan");
   }, [navigation]);
 
   const handleFavoritesPress = useCallback(() => {
-    (navigation as any).navigate('FnBFavorites');
+    (navigation as any).navigate("FnBFavorites");
   }, [navigation]);
 
   const { isFavoriteStore, toggleStoreFavorite } = useFnBStoreFavorites();
 
+  const {
+    itemCount: cartItemCount,
+    subtotal: cartSubtotal,
+    activeStoreId: cartStoreId,
+    activeStoreName: cartStoreName,
+  } = useFnBCart(entryPoint);
+
   const handleSeeAllPress = useCallback(() => {
-    (navigation as any).navigate('FnBFavorites');
+    (navigation as any).navigate("FnBFavorites");
   }, [navigation]);
 
-  const handleRiwayatOrderPress = useCallback(() => {
-    (navigation as any).navigate('FnBOrderHistory');
+  const handleSearchPress = useCallback(() => {
+    (navigation as any).navigate("FnBProductSearch");
   }, [navigation]);
 
-  const handleMauLagiPress = useCallback(() => setActiveTab('jelajahi'), []);
+  const handleMauLagiPress = useCallback(() => setActiveTab("jelajahi"), []);
+
+  const handleCartBarPress = useCallback(() => {
+    if (cartStoreId) {
+      (navigation as any).navigate("FnBMerchantDetail", {
+        entryPoint,
+        storeId: cartStoreId,
+      });
+    }
+  }, [navigation, entryPoint, cartStoreId]);
+
+  const handleCartCheckout = useCallback(() => {
+    if (cartStoreId) {
+      (navigation as any).navigate("FnBCheckout", {
+        entryPoint,
+        storeId: cartStoreId,
+      });
+    }
+  }, [navigation, entryPoint, cartStoreId]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1200);
   }, []);
 
-  const searchBarComponent = (
-    <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
-      <TextInput
-        style={[styles.searchInput, { color: colors.text }]}
-        placeholder={t('fnb.searchCraving') || 'What are you craving?'}
-        placeholderTextColor={colors.textSecondary}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
-    </View>
-  );
-
-  const headerOpacitySurface = scrollY.interpolate({
-    inputRange: [60, 130],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-  const headerOpacityDark = scrollY.interpolate({
-    inputRange: [60, 130],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  // --- Header: interpolasi lebar range agar smooth; hanya opacity/transform supaya native driver bisa ---
+  const HEADER_TRANSITION_END = 110;
   const headerBgOpacity = scrollY.interpolate({
-    inputRange: [70, 135],
+    inputRange: [0, HEADER_TRANSITION_END],
     outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-  const headerSearchOpacity = scrollY.interpolate({
-    inputRange: [80, 140],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
-  // --- Header overlay; animasi crossfade teks/ikon + background rounded ---
+  const headerIconOpacityLight = scrollY.interpolate({
+    inputRange: [0, HEADER_TRANSITION_END],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  const headerIconOpacityDark = scrollY.interpolate({
+    inputRange: [0, HEADER_TRANSITION_END],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const stickyStart = 100;
+  const stickyEnd = 165;
+  const stickySearchOpacity = scrollY.interpolate({
+    inputRange: [stickyStart, stickyEnd],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const stickySearchTranslateY = scrollY.interpolate({
+    inputRange: [stickyStart, stickyEnd],
+    outputRange: [-scale(8), 0],
+    extrapolate: "clamp",
+  });
+
   const header = (
     <View
-      style={[styles.headerOverlay, { paddingTop: insets.top + scale(8), paddingBottom: scale(12), paddingHorizontal: horizontalPadding }]}
+      style={[
+        styles.headerOverlay,
+        {
+          paddingTop: insets.top + scale(8),
+          paddingBottom: scale(8),
+          paddingHorizontal: horizontalPadding,
+        },
+      ]}
       pointerEvents="box-none"
     >
       <Animated.View
         style={[
           styles.headerOverlayBg,
-          { backgroundColor: colors.surface, opacity: headerBgOpacity },
+          {
+            backgroundColor: colors.surface,
+            opacity: headerBgOpacity,
+            borderBottomLeftRadius: BORDER_RADIUS_LG,
+            borderBottomRightRadius: BORDER_RADIUS_LG,
+            shadowColor: colors.text,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          },
         ]}
         pointerEvents="none"
       />
-      <View style={[styles.headerTopRow, styles.headerTopRowAnimated]}>
-        <TouchableOpacity
-          onPress={() => (navigation as any).goBack()}
-          style={styles.backButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Animated.View style={[styles.headerIconLayer, { opacity: headerOpacitySurface }]}>
-            <ArrowLeft2 size={scale(24)} color={colors.surface} variant="Linear" />
-          </Animated.View>
-          <Animated.View style={[styles.headerIconLayer, styles.headerIconLayerDark, { opacity: headerOpacityDark }]}>
-            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
-          </Animated.View>
-        </TouchableOpacity>
-        <View style={styles.addressCol}>
-          <View style={styles.headerTextWrap}>
-            <Animated.Text
-              style={[styles.deliveringTo, { color: colors.surface }, { opacity: headerOpacitySurface }]}
-              numberOfLines={1}
+
+      <View
+        style={{ flex: 1, zIndex: 10, elevation: 4 }}
+        pointerEvents="box-none"
+      >
+        {/* Baris atas: Close + Location pill + action icons */}
+        <View style={styles.headerTopRow}>
+          {/* Close button: overlay opacity (bisa native driver) */}
+          <View style={[styles.headerCircleBtnWrap, { borderRadius: scale(20) }]}>
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFillObject,
+                styles.headerBtnOverlayDark,
+                { opacity: headerIconOpacityLight, borderRadius: scale(20) },
+              ]}
+            />
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFillObject,
+                styles.headerBtnOverlayLight,
+                { opacity: headerIconOpacityDark, borderRadius: scale(20) },
+              ]}
+            />
+            <TouchableOpacity
+              onPress={() => (navigation as any).goBack()}
+              style={styles.headerCircleBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              {t('fnb.deliveringTo') || 'Delivering to'}
-            </Animated.Text>
-            <Animated.Text
-              style={[styles.deliveringTo, styles.headerTextLayerDark, { color: colors.textSecondary }, { opacity: headerOpacityDark }]}
-              numberOfLines={1}
-            >
-              {t('fnb.deliveringTo') || 'Delivering to'}
-            </Animated.Text>
+              <View
+                style={{
+                  width: scale(22),
+                  height: scale(22),
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Animated.View
+                  style={{
+                    position: "absolute",
+                    opacity: headerIconOpacityLight,
+                  }}
+                >
+                  <CloseCircle
+                    size={scale(22)}
+                    color={colors.surface}
+                    variant="Linear"
+                  />
+                </Animated.View>
+                <Animated.View
+                  style={{
+                    position: "absolute",
+                    opacity: headerIconOpacityDark,
+                  }}
+                >
+                  <CloseCircle
+                    size={scale(22)}
+                    color={colors.text}
+                    variant="Linear"
+                  />
+                </Animated.View>
+              </View>
+            </TouchableOpacity>
           </View>
-          <View style={styles.addressValueRow}>
-            <View style={styles.headerTextWrap}>
-              <Animated.Text
-                style={[styles.addressValue, { color: colors.surface }, { opacity: headerOpacitySurface }]}
-                numberOfLines={1}
+
+          {/* Location pill */}
+          <TouchableOpacity
+            style={[styles.locationPill, { backgroundColor: colors.primary }]}
+            activeOpacity={0.8}
+            onPress={() => setLocationSheetVisible(true)}
+          >
+            <Location size={scale(14)} color={colors.surface} variant="Bold" />
+            <Text
+              style={[styles.locationPillText, { color: colors.surface }]}
+              numberOfLines={1}
+            >
+              {deliveryAddress
+                ? (deliveryAddress.split(",")[0]?.trim() || deliveryAddress)
+                : t("fnb.currentLocationShort")}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Right action icons */}
+          <View style={styles.headerRightIcons}>
+            <View style={[styles.headerCircleBtnWrap, { borderRadius: scale(20) }]}>
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  styles.headerBtnOverlayDark,
+                  { opacity: headerIconOpacityLight, borderRadius: scale(20) },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  styles.headerBtnOverlayLight,
+                  { opacity: headerIconOpacityDark, borderRadius: scale(20) },
+                ]}
+              />
+              <TouchableOpacity
+                style={styles.headerCircleBtn}
+                onPress={handleFavoritesPress}
               >
-                Home • 123 Main St, Apt 4B
-              </Animated.Text>
-              <Animated.Text
-                style={[styles.addressValue, styles.headerTextLayerDark, { color: colors.text }, { opacity: headerOpacityDark }]}
-                numberOfLines={1}
+                <View
+                  style={{
+                    width: scale(20),
+                    height: scale(20),
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Animated.View
+                    style={{
+                      position: "absolute",
+                      opacity: headerIconOpacityLight,
+                    }}
+                  >
+                    <Heart
+                      size={scale(20)}
+                      color={colors.surface}
+                      variant="Linear"
+                    />
+                  </Animated.View>
+                  <Animated.View
+                    style={{
+                      position: "absolute",
+                      opacity: headerIconOpacityDark,
+                    }}
+                  >
+                    <Heart
+                      size={scale(20)}
+                      color={colors.text}
+                      variant="Linear"
+                    />
+                  </Animated.View>
+                </View>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.headerCircleBtnWrap, { borderRadius: scale(20) }]}>
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  styles.headerBtnOverlayDark,
+                  { opacity: headerIconOpacityLight, borderRadius: scale(20) },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  styles.headerBtnOverlayLight,
+                  { opacity: headerIconOpacityDark, borderRadius: scale(20) },
+                ]}
+              />
+              <TouchableOpacity
+                style={styles.headerCircleBtn}
+                onPress={() => setActiveTab("aktivitas")}
               >
-                Home • 123 Main St, Apt 4B
-              </Animated.Text>
-            </View>
-            <View style={styles.headerIconWrap}>
-              <Animated.View style={{ opacity: headerOpacitySurface }}>
-                <ArrowDown2 size={scale(20)} color={colors.surface} variant="Linear" />
-              </Animated.View>
-              <Animated.View style={[styles.headerArrowOverlay, { opacity: headerOpacityDark }]}>
-                <ArrowDown2 size={scale(20)} color={colors.primary} variant="Linear" />
-              </Animated.View>
-            </View>
+                <View
+                  style={{
+                    width: scale(20),
+                    height: scale(20),
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Animated.View
+                    style={{
+                      position: "absolute",
+                      opacity: headerIconOpacityLight,
+                    }}
+                  >
+                    <DocumentText
+                      size={scale(20)}
+                      color={colors.surface}
+                      variant="Linear"
+                    />
+                  </Animated.View>
+                  <Animated.View
+                    style={{
+                      position: "absolute",
+                      opacity: headerIconOpacityDark,
+                    }}
+                  >
+                    <DocumentText
+                      size={scale(20)}
+                      color={colors.text}
+                    variant="Linear"
+                  />
+                </Animated.View>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
-      <Animated.View
-        style={[styles.headerSearchWrap, { opacity: headerSearchOpacity }]}
-        pointerEvents={stickySearchVisible ? 'auto' : 'none'}
+
+        {/* Search bar di bawah baris Close + Location + icons */}
+        <Animated.View
+          style={{
+            opacity: stickySearchOpacity,
+            transform: [{ translateY: stickySearchTranslateY }],
+            marginTop: scale(12),
+          }}
+          pointerEvents="box-none"
+        >
+          <View
+            style={[
+              styles.searchWrap,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.searchInputTouchable}
+              onPress={handleSearchPress}
+              activeOpacity={0.7}
+            >
+              <SearchNormal
+                size={scale(20)}
+                color={colors.textSecondary}
+                variant="Linear"
+              />
+              <Text
+                style={[styles.searchPlaceholder, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                {t("fnb.searchCraving")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleScanPress}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <ScanBarcode
+                size={scale(22)}
+                color={colors.primary}
+                variant="Bold"
+              />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </View>
+  );
+
+  // --- Search bar with scan icon (tap opens FnBProductSearch) ---
+  const searchBarComponent = (
+    <View
+      style={[
+        styles.searchWrap,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
+      <TouchableOpacity
+        style={styles.searchInputTouchable}
+        onPress={handleSearchPress}
+        activeOpacity={0.7}
       >
-        {searchBarComponent}
-      </Animated.View>
+        <SearchNormal
+          size={scale(20)}
+          color={colors.textSecondary}
+          variant="Linear"
+        />
+        <Text
+          style={[styles.searchPlaceholder, { color: colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          {t("fnb.searchCraving")}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={handleScanPress}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <ScanBarcode size={scale(22)} color={colors.primary} variant="Bold" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -323,7 +564,11 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
       style={[styles.bannerCard, { width: BANNER_CARD_WIDTH }]}
       activeOpacity={0.95}
     >
-      <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} resizeMode="cover" />
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={styles.bannerImage}
+        resizeMode="cover"
+      />
       <View style={styles.bannerGradient} />
       <View style={styles.bannerContent}>
         <View
@@ -331,68 +576,59 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
             styles.bannerBadge,
             {
               backgroundColor:
-                item.badgeBg === 'orange' ? '#f97316' : colors.primary,
+                item.badgeBg === "warning" ? colors.warning : colors.primary,
             },
           ]}
         >
-          <Text style={styles.bannerBadgeText}>{item.badge}</Text>
+          <Text style={styles.bannerBadgeText}>{t(item.badgeKey)}</Text>
         </View>
-        <Text style={styles.bannerTitle}>{item.title}</Text>
-        <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+        <Text style={styles.bannerTitle}>{t(item.titleKey)}</Text>
+        <Text style={styles.bannerSubtitle}>{t(item.subtitleKey)}</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const categoryColors = [colors.primary, '#fb923c', '#60a5fa', '#f472b6'];
-
-  const renderCategory = ({ item, index }: { item: (typeof CATEGORIES)[0]; index: number }) => {
+  // --- Category item (circular) ---
+  const renderCategory = ({ item }: { item: (typeof CATEGORIES)[0] }) => {
     const IconComponent = item.Icon;
+    const catColor = colors[item.colorKey] ?? colors.primary;
     return (
       <TouchableOpacity style={styles.categoryItem} activeOpacity={0.7}>
         <View
           style={[
-            styles.categoryIconBox,
+            styles.categoryCircle,
             {
-              backgroundColor: colors.surface,
-              borderColor: colors.border
+              backgroundColor: catColor + "15",
+              borderColor: catColor + "30",
             },
           ]}
         >
-          <IconComponent
-            size={scale(28)}
-            color={categoryColors[index % categoryColors.length]}
-            variant="Bold"
-          />
+          <IconComponent size={scale(28)} color={catColor} variant="Bold" />
         </View>
-        <Text style={[styles.categoryLabel, { color: colors.text }]}>{item.name}</Text>
+        <Text style={[styles.categoryLabel, { color: colors.text }]}>
+          {t(item.nameKey)}
+        </Text>
       </TouchableOpacity>
     );
   };
 
-  // --- Merchant card (Recommended) ---
+  // --- Merchant card (horizontal layout like GoFood) ---
   const renderMerchant = ({ item }: { item: (typeof MERCHANTS)[0] }) => (
     <TouchableOpacity
       style={[
         styles.merchantCard,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border
-        },
+        { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
       onPress={() => handleMerchantPress(item.id)}
       activeOpacity={0.8}
     >
+      {/* Left: square image */}
       <View style={styles.merchantImageWrap}>
-        <Image source={{ uri: item.imageUrl }} style={styles.merchantImage} resizeMode="cover" />
-        <View style={[styles.ratingBadge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-          <Star1 size={scale(14)} color="#eab308" variant="Bold" />
-          <Text style={[styles.ratingBadgeText, { color: colors.text }]}>{item.rating}</Text>
-        </View>
-        {item.promoLabel ? (
-          <View style={[styles.promoBadgeTop, { backgroundColor: colors.primary }]}>
-            <Text style={styles.promoBadgeTopText}>{item.promoLabel}</Text>
-          </View>
-        ) : null}
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.merchantImage}
+          resizeMode="cover"
+        />
         <TouchableOpacity
           style={styles.favButton}
           onPress={(e) => {
@@ -401,145 +637,249 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
           }}
         >
           <Heart
-            size={scale(22)}
-            color={isFavoriteStore(item.id) ? '#ef4444' : '#fff'}
-            variant={isFavoriteStore(item.id) ? 'Bold' : 'Linear'}
+            size={scale(16)}
+            color={
+              isFavoriteStore(item.id) ? colors.primary : "rgba(255,255,255,0.8)"
+            }
+            variant={isFavoriteStore(item.id) ? "Bold" : "Linear"}
           />
         </TouchableOpacity>
       </View>
+
+      {/* Right: details */}
       <View style={styles.merchantBody}>
-        <View style={styles.merchantTitleRow}>
-          <Text style={[styles.merchantName, { color: colors.text }]} numberOfLines={1}>
-            {item.name}
+        <Text
+          style={[styles.merchantName, { color: colors.text }]}
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+        <View style={styles.merchantRatingRow}>
+          <Star1 size={scale(14)} color={colors.warning} variant="Bold" />
+          <Text style={[styles.merchantRatingText, { color: colors.text }]}>
+            {item.rating}
+          </Text>
+          <Text
+            style={[
+              styles.merchantRatingCount,
+              { color: colors.textSecondary },
+            ]}
+          >
+            ({item.ratingCount})
+          </Text>
+          <Text style={[styles.merchantDot, { color: colors.textSecondary }]}>
+            •
           </Text>
           <Text style={[styles.merchantTime, { color: colors.textSecondary }]}>
             {item.time}
           </Text>
         </View>
         <Text
-          style={[styles.merchantDescription, { color: colors.textSecondary }]}
+          style={[styles.merchantDelivery, { color: colors.textSecondary }]}
           numberOfLines={1}
         >
-          {item.description}
+          {item.deliveryFee}
         </Text>
-        <View style={styles.merchantMetaRow}>
-          <View style={styles.metaItem}>
-            <Location size={scale(14)} color={colors.textSecondary} variant="Linear" />
-            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-              {item.distance}
-            </Text>
-          </View>
-          {item.promoHighlight ? (
-            <View style={styles.metaItem}>
-              <DiscountShape size={scale(14)} color={colors.primary} variant="Bold" />
-              <Text style={[styles.metaText, { color: colors.primary }]} numberOfLines={1}>
-                {item.promoHighlight}
-              </Text>
-            </View>
-          ) : null}
-        </View>
+        {item.promoLabel ? (
+          <Text
+            style={[styles.merchantPromo, { color: colors.primary }]}
+            numberOfLines={1}
+          >
+            {item.promoLabel}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
 
-  // --- Aktivitas content (Riwayat pesanan, Dalam proses, Draf + Mau lagi) ---
+  // --- Aktivitas sub-tabs ---
+  const aktivitasSubTabs: { key: AktivitasSubTab; labelKey: string }[] = [
+    { key: "riwayat", labelKey: "fnb.tabRiwayat" },
+    { key: "dalam_proses", labelKey: "fnb.tabDalamProses" },
+    { key: "draf", labelKey: "fnb.tabDraf" },
+  ];
+
   const renderAktivitasContent = () => (
     <ScrollView
       style={styles.aktivitasScroll}
       contentContainerStyle={[
         styles.aktivitasScrollContent,
-        { paddingTop: insets.top + scale(72), paddingBottom: insets.bottom + scale(120), paddingHorizontal: horizontalPadding },
+        {
+          paddingTop: insets.top + scale(72),
+          paddingBottom: insets.bottom + scale(120),
+          paddingHorizontal: horizontalPadding,
+        },
       ]}
       showsVerticalScrollIndicator={false}
     >
+      {/* Sub-tab bar */}
+      <View
+        style={[
+          styles.aktivitasTabBar,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+      >
+        {aktivitasSubTabs.map(({ key, labelKey }) => (
+          <TouchableOpacity
+            key={key}
+            style={[
+              styles.aktivitasTabItem,
+              aktivitasSubTab === key && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => setAktivitasSubTab(key)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.aktivitasTabLabel,
+                {
+                  color:
+                    aktivitasSubTab === key
+                      ? colors.surface
+                      : colors.textSecondary,
+                },
+              ]}
+            >
+              {t(labelKey)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Riwayat */}
       <TouchableOpacity
-        style={[styles.aktivitasCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={() => (navigation as any).navigate('FnBOrderHistory')}
+        style={[
+          styles.aktivitasCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+        onPress={() => (navigation as any).navigate("FnBOrderHistory")}
         activeOpacity={0.8}
       >
         <ReceiptItem size={scale(24)} color={colors.primary} variant="Bold" />
         <View style={styles.aktivitasCardTextWrap}>
-          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>Riwayat pesanan</Text>
-          <Text style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}>
-            Lihat semua pesanan Anda
+          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>
+            {t("fnb.orderHistory")}
+          </Text>
+          <Text
+            style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}
+          >
+            {t("fnb.orderHistorySubtitle")}
           </Text>
         </View>
       </TouchableOpacity>
+
+      {/* Dalam proses */}
       <TouchableOpacity
-        style={[styles.aktivitasCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={() => (navigation as any).navigate('FnBOrderHistory', { filter: 'in_progress' })}
+        style={[
+          styles.aktivitasCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+        onPress={() =>
+          (navigation as any).navigate("FnBOrderHistory", {
+            filter: "in_progress",
+          })
+        }
         activeOpacity={0.8}
       >
         <Clock size={scale(24)} color={colors.primary} variant="Bold" />
         <View style={styles.aktivitasCardTextWrap}>
-          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>Dalam proses</Text>
-          <Text style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}>
-            Pesanan yang sedang diproses
+          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>
+            {t("fnb.inProgressTitle")}
+          </Text>
+          <Text
+            style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}
+          >
+            {t("fnb.inProgressSubtitle")}
           </Text>
         </View>
       </TouchableOpacity>
+
+      {/* Draf */}
       <TouchableOpacity
-        style={[styles.aktivitasCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={() => (navigation as any).navigate('FnBOrderHistory', { filter: 'draft' })}
+        style={[
+          styles.aktivitasCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+        onPress={() =>
+          (navigation as any).navigate("FnBOrderHistory", { filter: "draft" })
+        }
         activeOpacity={0.8}
       >
         <Note size={scale(24)} color={colors.primary} variant="Bold" />
         <View style={styles.aktivitasCardTextWrap}>
-          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>Draf</Text>
-          <Text style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}>
-            Pesanan yang belum diselesaikan
+          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>
+            {t("fnb.draftTitle")}
+          </Text>
+          <Text
+            style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}
+          >
+            {t("fnb.draftSubtitle")}
           </Text>
         </View>
       </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.mauLagiButton, { backgroundColor: colors.primary }]}
         onPress={handleMauLagiPress}
         activeOpacity={0.85}
       >
-        <Discover size={scale(20)} color="#fff" variant="Bold" />
-        <Text style={styles.mauLagiButtonText}>Mau lagi</Text>
+        <Discover size={scale(20)} color={colors.surface} variant="Bold" />
+        <Text style={[styles.mauLagiButtonText, { color: colors.surface }]}>
+          {t("fnb.mauLagi")}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
 
-  // --- QR tab content ---
-  const renderQrContent = () => (
-    <View style={[styles.qrTabWrap, { paddingHorizontal: horizontalPadding, paddingTop: insets.top + scale(72) }]}>
-      <TouchableOpacity
-        style={[styles.qrCtaCard, { backgroundColor: colors.surface }]}
-        onPress={handleScanPress}
-        activeOpacity={0.9}
+  // --- Favorit content ---
+  const renderFavoritContent = () => (
+    <ScrollView
+      style={styles.aktivitasScroll}
+      contentContainerStyle={[
+        styles.aktivitasScrollContent,
+        {
+          paddingTop: insets.top + scale(72),
+          paddingBottom: insets.bottom + scale(120),
+          paddingHorizontal: horizontalPadding,
+        },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: colors.text, marginBottom: scale(16) },
+        ]}
       >
-        <ScanBarcode size={scale(64)} color={colors.primary} variant="Bold" />
-        <Text style={[styles.qrCtaTitle, { color: colors.text }]}>Scan QR</Text>
-        <Text style={[styles.qrCtaSub, { color: colors.textSecondary }]}>
-          Scan untuk pesan atau bayar di merchant
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {t("fnb.sectionFavorit")}
+      </Text>
+      <View style={styles.merchantList}>
+        {MERCHANTS.map((m) => (
+          <View key={m.id} style={styles.merchantCardWrap}>
+            {renderMerchant({ item: m })}
+          </View>
+        ))}
+      </View>
+    </ScrollView>
   );
-
-  const bottomNavItems: { key: FnBBottomTab; label: string; Icon: typeof Discover }[] = [
-    { key: 'jelajahi', label: 'Jelajahi', Icon: Discover },
-    { key: 'qr', label: 'QR', Icon: ScanBarcode },
-    { key: 'aktivitas', label: 'Aktivitas', Icon: DocumentText },
-  ];
-
-  const bottomNavHeight = scale(56);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {header}
 
-      {activeTab === 'jelajahi' && (
+      {activeTab === "jelajahi" && (
         <Animated.ScrollView
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: false }
+            { useNativeDriver: true },
           )}
           scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
           }
           contentContainerStyle={[
             styles.scrollContent,
@@ -547,83 +887,69 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Banner carousel promo di atas (ganti yang ijo), parallax */}
-          <Animated.View
-            style={[
-              styles.parallaxHeroWrap,
-              { height: PARALLAX_HERO_HEIGHT + insets.top, paddingTop: insets.top },
-            ]}
-          >
-            <Animated.View
-              style={[
-                styles.parallaxHeroInner,
-                {
-                  transform: [
-                    {
-                      translateY: scrollY.interpolate({
-                        inputRange: [0, PARALLAX_HERO_HEIGHT],
-                        outputRange: [0, -PARALLAX_HERO_HEIGHT * 0.4],
-                        extrapolate: 'clamp',
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <FlatList
-                ref={bannerListRef}
-                data={BANNERS}
-                renderItem={renderBanner}
-                keyExtractor={(o) => o.id}
-                horizontal
-                pagingEnabled={false}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.bannerListContent}
-                snapToInterval={bannerItemWidth}
-                snapToAlignment="start"
-                decelerationRate="fast"
-                onMomentumScrollEnd={(e) => {
-                  const idx = Math.round(e.nativeEvent.contentOffset.x / bannerItemWidth);
-                  bannerIndexRef.current = Math.min(idx, BANNERS.length - 1);
-                }}
-              />
-            </Animated.View>
-          </Animated.View>
+          {/* Hero banner */}
+          <View style={[styles.bannerHeroWrap, { paddingTop: 0 }]}>
+            <FlatList
+              ref={bannerListRef}
+              data={BANNERS}
+              renderItem={renderBanner}
+              keyExtractor={(o) => o.id}
+              horizontal
+              pagingEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={bannerItemWidth}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(
+                  e.nativeEvent.contentOffset.x / bannerItemWidth,
+                );
+                bannerIndexRef.current = Math.min(idx, BANNERS.length - 1);
+              }}
+            />
+          </View>
 
-          <Animated.View
+          {/* Search bar */}
+          <View
             style={[
-              styles.contentSearchWrap,
-              {
-                marginTop: -scale(24),
-                paddingHorizontal: horizontalPadding,
-                opacity: scrollY.interpolate({
-                  inputRange: [SEARCH_STICKY_THRESHOLD - 20, SEARCH_STICKY_THRESHOLD + 20],
-                  outputRange: [1, 0],
-                  extrapolate: 'clamp',
-                }),
-              },
+              styles.searchSection,
+              { paddingHorizontal: horizontalPadding },
             ]}
           >
             {searchBarComponent}
-          </Animated.View>
-
-          <View style={[styles.categoriesSection, { paddingHorizontal: horizontalPadding, marginTop: scale(16) }]}>
-            <View style={styles.categoriesGrid}>
-              {CATEGORIES.map((item, index) => (
-                <View key={item.id} style={styles.categoryItemWrapper}>
-                  {renderCategory({ item, index })}
-                </View>
-              ))}
-            </View>
           </View>
-          <View style={[styles.section, { paddingHorizontal: horizontalPadding }]}>
+
+          {/* Categories horizontal scroll */}
+          <View style={styles.categoriesSection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.categoriesScroll,
+                { paddingHorizontal: horizontalPadding },
+              ]}
+            >
+              {CATEGORIES.map((item) => (
+                <View key={item.id}>{renderCategory({ item })}</View>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Recommended merchants */}
+          <View
+            style={[styles.section, { paddingHorizontal: horizontalPadding }]}
+          >
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('fnb.recommendedMerchants') || 'Recommended Merchants'}
+                {t("fnb.sectionPilihanFamiliar")}
               </Text>
-              <TouchableOpacity onPress={handleSeeAllPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={[styles.seeAll, { color: colors.primary }]}>
-                  {t('common.seeAll') || 'See All'}
+              <TouchableOpacity
+                onPress={handleSeeAllPress}
+                style={[styles.seeAllBtn, { borderColor: colors.primary }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>
+                  {t("fnb.seeAll")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -635,63 +961,90 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
               ))}
             </View>
           </View>
+
+          {/* Other Merchants */}
+          <View
+            style={[styles.section, { paddingHorizontal: horizontalPadding }]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t("fnb.sectionMerchantLain")}
+              </Text>
+              <TouchableOpacity
+                onPress={handleSeeAllPress}
+                style={[styles.seeAllBtn, { borderColor: colors.primary }]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>
+                  {t("fnb.seeAll")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.merchantList}>
+              {MERCHANTS.map((m) => (
+                <View key={`other-${m.id}`} style={styles.merchantCardWrap}>
+                  {renderMerchant({ item: m })}
+                </View>
+              ))}
+            </View>
+          </View>
           <View style={{ height: scale(24) }} />
         </Animated.ScrollView>
       )}
 
-      {activeTab === 'qr' && renderQrContent()}
-      {activeTab === 'aktivitas' && renderAktivitasContent()}
+      {activeTab === "favorit" && renderFavoritContent()}
+      {activeTab === "aktivitas" && renderAktivitasContent()}
 
-      {/* Bottom nav (full width, tidak floating) */}
-      <View
-        style={[
-          styles.bottomNavWrapper,
-          {
-            paddingBottom: insets.bottom,
-            paddingHorizontal: horizontalPadding,
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-          },
-        ]}
-      >
-        <View style={styles.bottomNavFloating}>
-          {bottomNavItems.map(({ key, label, Icon }) => (
-          <TouchableOpacity
-            key={key}
-            style={[
-              styles.bottomNavItem,
-              activeTab === key && { backgroundColor: colors.primary + '18' },
-            ]}
-            onPress={() => (key === 'qr' ? handleScanPress() : setActiveTab(key))}
-            activeOpacity={0.7}
-          >
-            <Icon
-              size={scale(22)}
-              color={activeTab === key ? colors.primary : colors.textSecondary}
-              variant={activeTab === key ? 'Bold' : 'Linear'}
-            />
-            <Text
-              style={[
-                styles.bottomNavLabel,
-                { color: activeTab === key ? colors.primary : colors.textSecondary },
-              ]}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* Floating Cart Bar */}
+      {cartItemCount > 0 && (
+        <View
+          style={[
+            styles.cartBarContainer,
+            { bottom: insets.bottom + scale(4) },
+          ]}
+        >
+          <FnBCartBar
+            itemCount={cartItemCount}
+            total={cartSubtotal}
+            onPress={handleCartBarPress}
+            onCheckout={handleCartCheckout}
+            visible={cartItemCount > 0}
+          />
         </View>
-      </View>
+      )}
 
-      <View
-        style={[
-          styles.fnbFloatingWidgetContainer,
-          { bottom: insets.bottom + scale(20) + bottomNavHeight + scale(8) },
-        ]}
+        <View
+          style={[
+            styles.fnbFloatingWidgetContainer,
+            {
+              bottom: insets.bottom + scale(cartItemCount > 0 ? 80 : 8),
+            },
+          ]}
         pointerEvents="box-none"
       >
         <FnBOrderFloatingWidget />
       </View>
+
+      <FnBLocationPickerSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        onSelectAddress={(address) => {
+          setDeliveryAddress(address);
+          setLocationSheetVisible(false);
+        }}
+        onRequestMapPicker={() => {
+          setLocationSheetVisible(false);
+          setMapModalVisible(true);
+        }}
+      />
+      <FnBLocationPickerModal
+        visible={mapModalVisible}
+        onClose={() => setMapModalVisible(false)}
+        onSelectAddress={(address) => {
+          setDeliveryAddress(address);
+          setMapModalVisible(false);
+        }}
+      />
     </View>
   );
 };
@@ -700,8 +1053,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // --- Header ---
   headerOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -709,162 +1063,104 @@ const styles = StyleSheet.create({
   },
   headerOverlayBg: {
     ...StyleSheet.absoluteFillObject,
-    borderBottomLeftRadius: BORDER_RADIUS_LG,
-    borderBottomRightRadius: BORDER_RADIUS_LG,
-  },
-  header: {
-    borderBottomLeftRadius: BORDER_RADIUS_LG,
-    borderBottomRightRadius: BORDER_RADIUS_LG,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
-    zIndex: 10,
   },
   headerTopRow: {
-    marginBottom: scale(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(12),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(10),
   },
-  headerTopRowAnimated: {
-    position: 'relative',
-  },
-  headerIconLayer: {
-    position: 'absolute',
-    left: scale(6),
-    top: scale(6),
-  },
-  headerIconLayerDark: {
-    position: 'absolute',
-    left: scale(6),
-    top: scale(6),
-  },
-  headerTextWrap: {
-    position: 'relative',
-    minHeight: scale(14),
-  },
-  headerTextLayerDark: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  headerIconWrap: {
-    position: 'relative',
-    width: scale(24),
-    height: scale(24),
-  },
-  headerArrowOverlay: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-  },
-  backButton: {
+  headerCircleBtnWrap: {
+    position: "relative",
     width: scale(36),
     height: scale(36),
-    justifyContent: 'center',
-    marginLeft: scale(-4),
-    position: 'relative',
   },
-  headerSearchWrap: {
-    borderRadius: scale(12),
-    marginTop: scale(8),
+  headerBtnOverlayDark: {
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
-  addressCol: {
-    flex: 1,
-    minWidth: 0,
+  headerBtnOverlayLight: {
+    backgroundColor: "rgba(0,0,0,0.05)",
   },
-  deliveringTo: {
-    fontSize: scale(11),
-    fontFamily: FontFamily.monasans.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: scale(2),
+  headerCircleBtn: {
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
+    justifyContent: "center",
+    alignItems: "center",
   },
-  addressValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(4),
+  locationPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
   },
-  addressValue: {
-    fontSize: scale(15),
+  locationPillText: {
     fontFamily: FontFamily.monasans.bold,
-    flex: 1,
+    fontSize: scale(13),
+  },
+  headerRightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(8),
+    marginLeft: "auto",
+  },
+  // --- Search ---
+  searchSection: {
+    marginTop: scale(-18),
+    marginBottom: scale(8),
   },
   searchWrap: {
     height: scale(48),
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    
-    paddingLeft: scale(12),
-    paddingRight: scale(12),
-    borderRadius: scale(12),
+    paddingLeft: scale(14),
+    paddingRight: scale(14),
+    borderRadius: scale(24),
+    gap: scale(8),
   },
-  searchInput: {
+  searchInputTouchable: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(8),
+  },
+  searchPlaceholder: {
     flex: 1,
     fontFamily: FontFamily.monasans.regular,
     fontSize: scale(14),
-    marginLeft: scale(8),
-    paddingVertical: 0,
   },
+  // --- Scroll content ---
   scrollContent: {
     paddingTop: 0,
   },
-  parallaxHeroWrap: {
-    overflow: 'hidden',
+  // --- Banner ---
+  bannerHeroWrap: {
+    overflow: "hidden",
   },
-  parallaxHeroInner: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingBottom: scale(24),
-  },
-  parallaxHeroContent: {},
-  parallaxHeroTitle: {
-    fontFamily: FontFamily.monasans.bold,
-    fontSize: scale(18),
-    color: '#fff',
-  },
-  parallaxHeroSub: {
-    fontFamily: FontFamily.monasans.regular,
-    fontSize: scale(13),
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: scale(4),
-  },
-  contentSearchWrap: {
-    zIndex: 2,
-  },
-  bannerSection: {
-    marginBottom: moderateVerticalScale(24),
-  },
-  bannerListContent: {},
   bannerCard: {
-    height: scale(190),
-    overflow: 'hidden',
-    position: 'relative',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
-      android: { elevation: 3 },
-    }),
+    height: scale(280),
+    overflow: "hidden",
+    position: "relative",
   },
   bannerImage: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   bannerGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   bannerContent: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     padding: scale(20),
   },
   bannerBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     paddingHorizontal: scale(8),
     paddingVertical: scale(4),
     borderRadius: scale(6),
@@ -873,179 +1169,197 @@ const styles = StyleSheet.create({
   bannerBadgeText: {
     fontFamily: FontFamily.monasans.bold,
     fontSize: scale(11),
-    color: '#102220',
+    color: "#fff",
   },
   bannerTitle: {
     fontFamily: FontFamily.monasans.bold,
     fontSize: scale(20),
-    color: '#fff',
+    color: "#fff",
     lineHeight: scale(26),
   },
   bannerSubtitle: {
     fontFamily: FontFamily.monasans.regular,
     fontSize: scale(12),
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.85)",
     marginTop: scale(4),
   },
+  // --- Categories (horizontal circular) ---
   categoriesSection: {
-    marginBottom: moderateVerticalScale(24),
+    marginBottom: scale(20),
   },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  categoryItemWrapper: {
-    width: '24%',
-    marginBottom: scale(12),
+  categoriesScroll: {
+    gap: scale(16),
+    paddingVertical: scale(4),
   },
   categoryItem: {
-    alignItems: 'center',
-    gap: scale(8),
+    alignItems: "center",
+    width: scale(72),
   },
-  categoryIconBox: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: BORDER_RADIUS,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
+  categoryCircle: {
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    marginBottom: scale(6),
   },
   categoryLabel: {
-    fontSize: scale(12),
-    fontFamily: FontFamily.monasans.medium,
-    textAlign: 'center',
+    fontSize: scale(11),
+    fontFamily: FontFamily.monasans.semiBold,
+    textAlign: "center",
+    lineHeight: scale(14),
   },
+  // --- Section ---
   section: {
     marginBottom: moderateVerticalScale(16),
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: scale(16),
   },
   sectionTitle: {
-    fontSize: scale(18),
+    fontSize: scale(16),
+    fontFamily: FontFamily.monasans.bold,
+    flex: 1,
+  },
+  seeAllBtn: {
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(6),
+    borderRadius: scale(20),
+    borderWidth: 1.5,
+  },
+  seeAllText: {
+    fontSize: scale(12),
     fontFamily: FontFamily.monasans.bold,
   },
-  seeAll: {
-    fontSize: scale(14),
-    fontFamily: FontFamily.monasans.semiBold,
-  },
+  // --- Merchant cards (horizontal layout) ---
   merchantList: {
-    gap: scale(16),
+    gap: scale(12),
   },
   merchantCardWrap: {
     marginBottom: 0,
   },
   merchantCard: {
+    flexDirection: "row",
     borderRadius: BORDER_RADIUS,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4 },
-      android: { elevation: 2 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: { elevation: 1 },
     }),
   },
   merchantImageWrap: {
-    height: scale(144),
-    width: '100%',
-    position: 'relative',
+    width: scale(100),
+    height: scale(100),
+    position: "relative",
   },
   merchantImage: {
-    width: '100%',
-    height: '100%',
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: scale(12),
-    left: scale(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(4),
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(4),
-    borderRadius: scale(8),
-  },
-  ratingBadgeText: {
-    fontFamily: FontFamily.monasans.bold,
-    fontSize: scale(12),
-  },
-  promoBadgeTop: {
-    position: 'absolute',
-    top: scale(12),
-    right: scale(12),
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(4),
-    borderRadius: scale(8),
-  },
-  promoBadgeTopText: {
-    fontFamily: FontFamily.monasans.bold,
-    fontSize: scale(11),
-    color: '#102220',
+    width: "100%",
+    height: "100%",
   },
   favButton: {
-    position: 'absolute',
-    bottom: scale(12),
-    right: scale(12),
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: "absolute",
+    top: scale(6),
+    right: scale(6),
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
+    backgroundColor: "rgba(0,0,0,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   merchantBody: {
-    padding: scale(16),
-  },
-  merchantTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flex: 1,
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(12),
+    justifyContent: "center",
+    gap: scale(2),
   },
   merchantName: {
     fontFamily: FontFamily.monasans.bold,
-    fontSize: scale(16),
-    flex: 1,
-    marginRight: scale(8),
-  },
-  merchantTime: {
-    fontFamily: FontFamily.monasans.medium,
-    fontSize: scale(12),
-  },
-  merchantDescription: {
-    fontFamily: FontFamily.monasans.regular,
     fontSize: scale(14),
-    marginTop: scale(4),
+    marginBottom: scale(2),
   },
-  merchantMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(12),
-    marginTop: scale(8),
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  merchantRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: scale(4),
   },
-  metaText: {
-    fontFamily: FontFamily.monasans.medium,
+  merchantRatingText: {
+    fontFamily: FontFamily.monasans.semiBold,
     fontSize: scale(12),
   },
+  merchantRatingCount: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(11),
+  },
+  merchantDot: {
+    fontSize: scale(10),
+  },
+  merchantTime: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(11),
+  },
+  merchantDelivery: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(12),
+    marginTop: scale(2),
+  },
+  merchantPromo: {
+    fontFamily: FontFamily.monasans.semiBold,
+    fontSize: scale(12),
+    marginTop: scale(2),
+  },
+  // --- Floating widget ---
   fnbFloatingWidgetContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 99999,
   },
+  cartBarContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 9998,
+  },
+  // --- Aktivitas ---
   aktivitasScroll: { flex: 1 },
   aktivitasScrollContent: { paddingTop: scale(24), gap: scale(12) },
+  aktivitasTabBar: {
+    flexDirection: "row",
+    borderRadius: scale(12),
+    borderWidth: 1,
+    padding: scale(4),
+    gap: scale(4),
+  },
+  aktivitasTabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
+  },
+  aktivitasTabLabel: {
+    fontFamily: FontFamily.monasans.semiBold,
+    fontSize: scale(13),
+  },
+  aktivitasTabContent: {
+    gap: scale(12),
+  },
   aktivitasCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: scale(16),
     borderRadius: BORDER_RADIUS,
     borderWidth: 1,
@@ -1061,10 +1375,23 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     marginTop: scale(2),
   },
+  // --- Favorit ---
+  favoritEmptyWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: scale(48),
+    gap: scale(12),
+  },
+  favoritEmptyText: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(14),
+    textAlign: "center",
+  },
+  // --- Mau lagi ---
   mauLagiButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: scale(14),
     borderRadius: scale(12),
     gap: scale(8),
@@ -1073,11 +1400,11 @@ const styles = StyleSheet.create({
   mauLagiButtonText: {
     fontFamily: FontFamily.monasans.bold,
     fontSize: scale(15),
-    color: '#fff',
   },
-  qrTabWrap: { flex: 1, justifyContent: 'center', paddingVertical: scale(48) },
+  // --- QR tab ---
+  qrTabWrap: { flex: 1, justifyContent: "center", paddingVertical: scale(48) },
   qrCtaCard: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: scale(32),
     borderRadius: BORDER_RADIUS_LG,
     gap: scale(12),
@@ -1089,31 +1416,37 @@ const styles = StyleSheet.create({
   qrCtaSub: {
     fontFamily: FontFamily.monasans.regular,
     fontSize: scale(14),
-    textAlign: 'center',
+    textAlign: "center",
   },
+  // --- Bottom Nav ---
   bottomNavWrapper: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     borderTopWidth: 1,
     zIndex: 9999,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
       android: { elevation: 4 },
     }),
   },
   bottomNavFloating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-evenly",
     paddingVertical: scale(10),
     paddingHorizontal: scale(4),
   },
   bottomNavItem: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: scale(10),
     paddingHorizontal: scale(8),
     borderRadius: scale(20),

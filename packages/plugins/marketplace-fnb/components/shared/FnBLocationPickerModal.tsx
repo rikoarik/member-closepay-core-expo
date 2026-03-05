@@ -260,8 +260,10 @@ export const FnBLocationPickerModal: React.FC<FnBLocationPickerModalProps> = ({
                 {isGeocoding ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
-                  <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={2}>
-                    {addressText || (t('fnb.loadingAddress') || 'Memuat alamat...')}
+                  <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={1}>
+                    {addressText
+                      ? (addressText.split(",")[0]?.trim() || addressText)
+                      : (t("fnb.loadingAddress") || "Memuat alamat...")}
                   </Text>
                 )}
               </View>

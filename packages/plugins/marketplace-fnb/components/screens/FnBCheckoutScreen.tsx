@@ -29,8 +29,10 @@ import { useFnBData, useFnBCart } from '../../hooks';
 import { getAvailableOrderTypes } from '../../models';
 import type { OrderType, EntryPoint, FnBOrder, FnBOrderItem } from '../../models';
 import { useFnBActiveOrder } from '../../context/FnBActiveOrderContext';
+import { useFnBLocation } from '../../context/FnBLocationContext';
 import { getLastDelivery, setLastDelivery } from '../../utils/deliveryStorage';
 import { FnBLocationPickerModal } from '../shared/FnBLocationPickerModal';
+import { FnBLocationPickerSheet } from '../shared/FnBLocationPickerSheet';
 
 const formatPrice = (price: number): string => {
   return `Rp ${price.toLocaleString('id-ID')}`;
@@ -61,6 +63,7 @@ export const FnBCheckoutScreen: React.FC = () => {
   const { store } = useFnBData(entryPoint, storeId);
   const { cartItems, subtotal, itemCount, clearCart, getTotal } = useFnBCart(entryPoint);
   const { setActiveOrder } = useFnBActiveOrder();
+  const { deliveryAddress: contextAddress, setDeliveryAddress: setContextAddress } = useFnBLocation();
   const { balance } = useBalance();
 
   // Empty cart guard: show message and back button if user landed without items
@@ -83,6 +86,7 @@ export const FnBCheckoutScreen: React.FC = () => {
   const [pickupTime, setPickupTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
   const [kitchenNotes, setKitchenNotes] = useState('');
 
   // Pre-fill: only run once per "delivery" session so we don't overwrite user edits
@@ -96,20 +100,24 @@ export const FnBCheckoutScreen: React.FC = () => {
     hasPrefilledNameRef.current = true;
   }, [selectedOrderType, user?.name]);
 
-  // Load last delivery (phone + address) from storage when user selects delivery
+  // Load last delivery (phone + address) from storage or context when user selects delivery
   useEffect(() => {
     if (selectedOrderType !== 'delivery' || lastDeliveryLoadedRef.current) return;
     let cancelled = false;
     getLastDelivery().then((info) => {
-      if (cancelled || !info) return;
-      setPhoneNumber((prev) => (prev.trim() ? prev : info.phoneNumber));
-      setDeliveryAddress((prev) => (prev.trim() ? prev : info.deliveryAddress));
+      if (cancelled) return;
+      if (info) {
+        setPhoneNumber((prev) => (prev.trim() ? prev : info.phoneNumber));
+      }
+      setDeliveryAddress((prev) =>
+        prev.trim() ? prev : (info?.deliveryAddress || contextAddress || '')
+      );
       lastDeliveryLoadedRef.current = true;
     });
     return () => {
       cancelled = true;
     };
-  }, [selectedOrderType]);
+  }, [selectedOrderType, contextAddress]);
 
   // Order type options
   const orderTypeOptions: OrderTypeOption[] = useMemo(() => {
@@ -302,15 +310,6 @@ export const FnBCheckoutScreen: React.FC = () => {
     deliveryAddress,
     store?.delivery,
   ]);
-
-  // Open in-app map picker (Grab-style); on web show toast
-  const handlePickLocationOnMap = useCallback(() => {
-    if (Platform.OS === 'web') {
-      Toast.show({ type: 'info', text1: t('fnb.locationNotSupportedWeb') || 'Pilih lokasi tidak tersedia di web.' });
-      return;
-    }
-    setLocationPickerVisible(true);
-  }, [t]);
 
   // Empty cart: show message and back button only
   if (isCartEmpty) {
@@ -649,11 +648,17 @@ export const FnBCheckoutScreen: React.FC = () => {
                     borderColor: colors.border,
                   },
                 ]}
-                onPress={handlePickLocationOnMap}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    Toast.show({ type: 'info', text1: t('fnb.locationNotSupportedWeb') });
+                    return;
+                  }
+                  setLocationSheetVisible(true);
+                }}
               >
                 <LocationIcon size={scale(20)} color={colors.primary} variant="Bold" />
                 <Text style={[styles.pickLocationLabel, { color: colors.primary }]}>
-                  {t('fnb.pickLocationOnMap') || 'Pilih lokasi di peta'}
+                  {t('fnb.locationPickerTitle') || 'Pilih lokasi'}
                 </Text>
               </TouchableOpacity>
             </>
@@ -789,11 +794,25 @@ export const FnBCheckoutScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
       </View>
+      <FnBLocationPickerSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        onSelectAddress={(addr) => {
+          setDeliveryAddress(addr);
+          setContextAddress(addr);
+          setLocationSheetVisible(false);
+        }}
+        onRequestMapPicker={() => {
+          setLocationSheetVisible(false);
+          setLocationPickerVisible(true);
+        }}
+      />
       <FnBLocationPickerModal
         visible={locationPickerVisible}
         onClose={() => setLocationPickerVisible(false)}
         onSelectAddress={(addr) => {
           setDeliveryAddress(addr);
+          setContextAddress(addr);
           setLocationPickerVisible(false);
         }}
       />

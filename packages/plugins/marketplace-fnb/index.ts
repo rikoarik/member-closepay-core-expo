@@ -25,6 +25,7 @@ export { getAvailableOrderTypes, isStoreOpen, parseFnBQRCode } from './models';
 
 // Context (required for shared cart and active order)
 export { FnBCartProvider, FnBCartContext } from './context/FnBCartContext';
+export { FnBLocationProvider, useFnBLocation } from './context/FnBLocationContext';
 export { FnBActiveOrderProvider, useFnBActiveOrder } from './context/FnBActiveOrderContext';
 
 // Hooks
@@ -40,7 +41,7 @@ export {
 } from './components/shared';
 
 // Screens
-export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBPaymentSuccessScreen, FnBOrderHistoryScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
+export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBPaymentSuccessScreen, FnBOrderHistoryScreen, FnBScanScreen, FnBFavoritesScreen, FnBProductSearchScreen, FnBProductSearchResultsScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
 
 const manifest = require('./plugin.manifest.json');
 
@@ -59,6 +60,8 @@ const componentLoaders: Record<string, () => Promise<any>> = {
   FnBOrderStatusScreen: () => import('./components/screens/FnBOrderStatusScreen'),
   FnBPaymentSuccessScreen: () => import('./components/screens/FnBPaymentSuccessScreen'),
   FnBOrderHistoryScreen: () => import('./components/screens/FnBOrderHistoryScreen'),
+  FnBProductSearchScreen: () => import('./components/screens/FnBProductSearchScreen'),
+  FnBProductSearchResultsScreen: () => import('./components/screens/FnBProductSearchResultsScreen'),
   FnBOrderTrackingScreen: () => import('./components/screens/FnBOrderTrackingScreen'),
   FnBChatDriverScreen: () => import('./components/screens/FnBChatDriverScreen'),
   FnBTab: () => import('./components/tabs/FnBTab'),
