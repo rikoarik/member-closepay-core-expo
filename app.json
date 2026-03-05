@@ -2,6 +2,7 @@
   "expo": {
     "name": "member-closepay-expo",
     "slug": "member-closepay-expo",
+    "projectId": "828900b1-74b1-40f8-85ae-3eba6a407514",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -44,6 +45,23 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "API_BASE_URL": "",
+      "API_STG_BASE_URL": "",
+      "API_PROD_BASE_URL": "",
+      "ENV": "development",
+      "ANDROID_CERTIFICATE_HASH": "",
+      "IOS_APP_TEAM_ID": "",
+      "TALSEC_WATCHER_MAIL": "",
+      "SUPPORT_WHATSAPP_NUMBER": "",
+      "SUPPORT_EMAIL": "",
+      "ANDROID_PACKAGE_NAME": "",
+      "IOS_BUNDLE_ID": "",
+      "eas": {
+        "projectId": "7caefdd5-0ce4-46e4-a30d-8662f2ed1504"
+      }
+    },
+    "owner": "rikoarik"
   }
 }

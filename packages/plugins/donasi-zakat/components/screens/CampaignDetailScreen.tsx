@@ -11,7 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   Heart,
   Share,
@@ -39,8 +39,10 @@ export const CampaignDetailScreen = () => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const route = useRoute<{ params?: { id?: string } }>();
   const insets = useSafeAreaInsets();
 
+  const campaignId = route.params?.id;
   const horizontalPadding = getHorizontalPadding();
 
   const scrollY = React.useRef(new Animated.Value(0)).current;
@@ -251,7 +253,7 @@ export const CampaignDetailScreen = () => {
               <TouchableOpacity
                 onPress={() =>
                   (navigation as any).navigate('DonorList', {
-                    campaignId: '123',
+                    campaignId: campaignId ?? '123',
                     campaignTitle: 'Bantu Renovasi Sekolah Dasar di Pelosok Desa',
                   })
                 }
@@ -354,6 +356,7 @@ export const CampaignDetailScreen = () => {
           ]}
           onPress={() =>
             (navigation as any).navigate('DonationInput', {
+              campaignId: campaignId ?? undefined,
               campaign: {
                 title: 'Bantu Renovasi Sekolah Dasar di Pelosok Desa',
                 org: 'Yayasan Peduli Anak',

@@ -9,6 +9,7 @@ import {
   StatusBar,
   Alert,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -35,6 +36,10 @@ const formatIDR = (amount: number) => {
   return new Intl.NumberFormat('id-ID').format(amount);
 };
 
+const parseAmount = (value: string): number => {
+  return parseInt(value.replace(/\D/g, ''), 10) || 0;
+};
+
 export const ZakatInputScreen = () => {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -43,12 +48,19 @@ export const ZakatInputScreen = () => {
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
 
-  const initialAmount = route.params?.amount || '0';
+  const rawAmount = route.params?.amount;
+  const initialAmount =
+    typeof rawAmount === 'number'
+      ? formatIDR(rawAmount)
+      : typeof rawAmount === 'string'
+      ? rawAmount
+      : '0';
   const initialType = route.params?.category || 'maal';
 
   const [amount, setAmount] = useState(initialAmount);
   const [zakatType, setZakatType] = useState(initialType);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAmountChange = (value: string) => {
     const numeric = value.replace(/[^0-9]/g, '');
@@ -60,9 +72,9 @@ export const ZakatInputScreen = () => {
   };
 
   const zakatTypes = [
-    { label: 'Zakat Maal (Harta)', value: 'maal' },
-    { label: 'Zakat Fitrah', value: 'fitrah' },
-    { label: 'Zakat Profesi (Penghasilan)', value: 'profesi' },
+    { label: t('donasiZakat.zakatMaalHarta'), value: 'maal' },
+    { label: t('donasiZakat.zakatFitrah'), value: 'fitrah' },
+    { label: t('donasiZakat.zakatProfesiIncome'), value: 'profesi' },
   ];
 
   return (
@@ -70,7 +82,7 @@ export const ZakatInputScreen = () => {
       <StatusBar barStyle="dark-content" />
 
       <ScreenHeader
-        title="Bayar Zakat"
+        title={t('donasiZakat.payZakatTitle')}
         rightComponent={
           <TouchableOpacity onPress={() => (navigation as any).navigate('DonationHistory')}>
             <Clock size={scale(22)} color={colors.text} />
@@ -83,10 +95,10 @@ export const ZakatInputScreen = () => {
         <View style={[styles.banner, { backgroundColor: colors.primary + '10' }]}>
           <View style={styles.bannerTextContainer}>
             <Text style={[styles.bannerTitle, { color: colors.primary }]}>
-              Suci Hartamu, Tenangkan Jiwamu
+              {t('donasiZakat.bannerTitle')}
             </Text>
             <Text style={[styles.bannerDesc, { color: colors.textSecondary }]}>
-              Zakat memberdayakan ummat dan mensucikan rezeki.
+              {t('donasiZakat.bannerDesc')}
             </Text>
           </View>
           <View style={[styles.patternCircle, { backgroundColor: colors.primary + '08' }]} />
@@ -95,23 +107,25 @@ export const ZakatInputScreen = () => {
         <View style={[styles.form, { paddingHorizontal: horizontalPadding }]}>
           {/* Jenis Zakat */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Jenis Zakat</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('donasiZakat.zakatTypeLabel')}</Text>
             <TouchableOpacity
               style={[styles.selector, { backgroundColor: colors.surfaceSecondary }]}
               onPress={() => {
-                // Simplified selection
                 Alert.alert(
-                  'Pilih Jenis Zakat',
+                  t('donasiZakat.selectZakatType'),
                   '',
-                  zakatTypes.map((t) => ({
-                    text: t.label,
-                    onPress: () => setZakatType(t.value),
-                  }))
+                  [
+                    { text: t('common.cancel'), style: 'cancel' as const },
+                    ...zakatTypes.map((opt) => ({
+                      text: opt.label,
+                      onPress: () => setZakatType(opt.value),
+                    })),
+                  ]
                 );
               }}
             >
               <Text style={[styles.selectorText, { color: colors.text }]}>
-                {zakatTypes.find((t) => t.value === zakatType)?.label}
+                {zakatTypes.find((opt) => opt.value === zakatType)?.label}
               </Text>
               <ArrowDown2 size={scale(20)} color={colors.primary} />
             </TouchableOpacity>
@@ -124,7 +138,7 @@ export const ZakatInputScreen = () => {
               { backgroundColor: colors.primary + '05', borderColor: colors.primary + '15' },
             ]}
           >
-            <Text style={[styles.amountLabel, { color: colors.primary }]}>Nominal Zakat</Text>
+            <Text style={[styles.amountLabel, { color: colors.primary }]}>{t('donasiZakat.zakatAmountLabel')}</Text>
             <View style={styles.amountInputRow}>
               <Text style={[styles.currencyPrefix, { color: colors.textTertiary }]}>Rp</Text>
               <TextInput
@@ -143,16 +157,16 @@ export const ZakatInputScreen = () => {
               >
                 <InfoCircle size={scale(14)} color={colors.primary} variant="Outline" />
                 <Text style={[styles.nisabLinkText, { color: colors.primary }]}>
-                  Cek Nishab & Ketentuan
+                  {t('donasiZakat.checkNisabLink')}
                 </Text>
               </TouchableOpacity>
-              <Text style={[styles.rateLabel, { color: colors.textTertiary }]}>WAJIB 2.5%</Text>
+              <Text style={[styles.rateLabel, { color: colors.textTertiary }]}>{t('donasiZakat.wajibPercent')}</Text>
             </View>
           </View>
 
           {/* Niat Card */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Niat Zakat</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('donasiZakat.niatZakat')}</Text>
             <View
               style={[
                 styles.niatCard,
@@ -179,10 +193,10 @@ export const ZakatInputScreen = () => {
               </View>
               <View>
                 <Text style={[styles.toggleTitle, { color: colors.text }]}>
-                  Tunaikan sebagai Anonim
+                  {t('donasiZakat.payAsAnonymous')}
                 </Text>
                 <Text style={[styles.toggleSub, { color: colors.textTertiary }]}>
-                  NAMA TIDAK AKAN DITAMPILKAN
+                  {t('donasiZakat.nameNotDisplayed')}
                 </Text>
               </View>
             </View>
@@ -209,18 +223,38 @@ export const ZakatInputScreen = () => {
         ]}
       >
         <View style={styles.totalRow}>
-          <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Total Pembayaran</Text>
+          <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>{t('donasiZakat.totalPayment')}</Text>
           <Text style={[styles.totalAmount, { color: colors.text }]}>Rp {amount}</Text>
         </View>
         <TouchableOpacity
           style={[
             styles.submitBtn,
-            { backgroundColor: colors.primary, shadowColor: colors.primary },
+            {
+              backgroundColor: (parseAmount(amount) > 0 || submitting) ? colors.primary : colors.borderLight,
+              shadowColor: (parseAmount(amount) > 0 || submitting) ? colors.primary : 'transparent',
+            },
           ]}
-          onPress={() => Alert.alert('Payment coming soon')}
+          onPress={() => {
+            if (parseAmount(amount) <= 0 || submitting) return;
+            setSubmitting(true);
+            // Simulate submit; replace with API call and handle loading/error in .then/.catch
+            setTimeout(() => {
+              setSubmitting(false);
+              Alert.alert(
+                t('donasiZakat.success'),
+                t('donasiZakat.paymentProcessed'),
+                [{ text: 'OK', onPress: () => (navigation as any).navigate('DonationHistory') }]
+              );
+            }, 400);
+          }}
+          disabled={parseAmount(amount) <= 0 || submitting}
         >
-          <Wallet size={scale(20)} color="#FFF" variant="Bold" />
-          <Text style={styles.submitBtnText}>Bayar Zakat Sekarang</Text>
+          {submitting ? (
+            <ActivityIndicator size="small" color="#FFF" style={styles.submitSpinner} />
+          ) : (
+            <Wallet size={scale(20)} color="#FFF" variant="Bold" />
+          )}
+          <Text style={styles.submitBtnText}>{t('donasiZakat.payZakatNow')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -426,6 +460,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  submitSpinner: {
+    marginRight: scale(8),
   },
   submitBtnText: {
     color: '#FFF',

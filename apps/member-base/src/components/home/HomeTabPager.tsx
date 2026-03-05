@@ -12,6 +12,11 @@ interface HomeTabPagerProps {
   layoutWidth: number;
   scrollX: Animated.Value;
   pagerRef: React.RefObject<any>;
+  /** Panggil saat pager terukur; pakai untuk layoutWidth supaya snap & scroll pas */
+  onPagerLayout?: (width: number) => void;
+  /** Cancel pending programmatic scroll when user starts dragging */
+  onScrollBeginDrag?: () => void;
+  onScrollEndDrag?: (event: any) => void;
   onMomentumScrollEnd: (event: any) => void;
   shouldRenderTab: (tabId: string, index: number) => boolean;
   renderTab: (tabId: string, index: number) => React.ReactNode;
@@ -23,10 +28,30 @@ export const HomeTabPager: React.FC<HomeTabPagerProps> = ({
   layoutWidth,
   scrollX,
   pagerRef,
+  onPagerLayout,
+  onScrollBeginDrag,
+  onScrollEndDrag,
   onMomentumScrollEnd,
   shouldRenderTab,
   renderTab,
 }) => {
+  const lastReportedWidthRef = React.useRef(0);
+  const handleLayout = React.useCallback(
+    (e: { nativeEvent: { layout: { width: number } } }) => {
+      const w = e.nativeEvent.layout.width;
+      if (w > 0 && w !== lastReportedWidthRef.current) {
+        lastReportedWidthRef.current = w;
+        onPagerLayout?.(w);
+      }
+    },
+    [onPagerLayout],
+  );
+
+  const snapOffsets =
+    layoutWidth > 0 && tabs.length > 0
+      ? tabs.map((_, i) => i * layoutWidth)
+      : undefined;
+
   return (
     <Animated.ScrollView
       ref={pagerRef}
@@ -37,27 +62,29 @@ export const HomeTabPager: React.FC<HomeTabPagerProps> = ({
       scrollEnabled={true}
       nestedScrollEnabled={true}
       decelerationRate="fast"
-      snapToInterval={layoutWidth}
+      snapToOffsets={snapOffsets}
+      snapToInterval={!snapOffsets && layoutWidth > 0 ? layoutWidth : undefined}
+      snapToAlignment="start"
       removeClippedSubviews={false}
+      onLayout={handleLayout}
       onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
         useNativeDriver: true,
       })}
+      onScrollBeginDrag={onScrollBeginDrag}
+      onScrollEndDrag={onScrollEndDrag}
       onMomentumScrollEnd={onMomentumScrollEnd}
       style={{ flex: 1 }}
       contentContainerStyle={{ flexGrow: 1 }}
     >
       {tabs.map((tab, index) => {
+        const pageStyle = { width: layoutWidth, minWidth: layoutWidth, flex: 1 };
         if (!shouldRenderTab(tab.id, index)) {
           return (
-            <View key={tab.id} style={{ width: layoutWidth, flex: 1 }} pointerEvents="none" />
+            <View key={tab.id} style={pageStyle} pointerEvents="box-none" />
           );
         }
         return (
-          <View
-            key={tab.id}
-            style={{ width: layoutWidth, flex: 1 }}
-            pointerEvents={activeTab === tab.id ? 'auto' : 'none'}
-          >
+          <View key={tab.id} style={pageStyle} pointerEvents="box-none">
             {renderTab(tab.id, index)}
           </View>
         );

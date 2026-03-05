@@ -165,6 +165,17 @@ member-closepay-expo/
 
 ## Build & deploy
 
+### EAS Build & Submit (iOS/Android)
+
+Proyek sudah terhubung ke EAS (project ID di `app.json`). Build dan submit ke app store via EAS:
+
+1. **Login** (sekali): `npx eas login`
+2. **Connect project** (jika belum): `npx eas-cli@latest init --id 828900b1-74b1-40f8-85ae-3eba6a407514`
+3. **Build**: `npx eas build --platform all`
+4. **Build + submit ke store**: `npx eas build --platform all --auto-submit`
+
+Credentials (Apple ID, Google Play service account) diatur di [expo.dev](https://expo.dev) → Project → Credentials. Untuk Android: upload keystore `closepay-member-keystore.keystore` di dashboard (alias: `closepaymember77`, store/key password: sesuai yang dipakai tim). Lihat [EAS Build](https://docs.expo.dev/build/introduction/) dan [EAS Submit](https://docs.expo.dev/submit/introduction/).
+
 ### Web (static)
 
 ```bash

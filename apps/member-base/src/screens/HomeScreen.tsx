@@ -152,12 +152,14 @@ const HomeScreenComponent = () => {
   const tabRefreshFunctionsRef = useRef<{ [key: string]: () => void }>({});
   const scrollPageIndexRef = useRef<number>(-1);
 
-  // Di web pakai max lebar 414 (sama seperti HP) agar layout/gambar tidak nge-scale
+  // Lebar pager pakai ukuran terukur (onLayout) supaya snap & hitungan scroll pas; fallback ke screen width
   const MOBILE_VIEWPORT_WIDTH = 414;
-  const layoutWidth =
+  const fallbackWidth =
     Platform.OS === "web"
       ? Math.min(screenWidth, MOBILE_VIEWPORT_WIDTH)
       : screenWidth;
+  const [pagerMeasuredWidth, setPagerMeasuredWidth] = useState(0);
+  const layoutWidth = pagerMeasuredWidth > 0 ? pagerMeasuredWidth : fallbackWidth;
 
   // Hide QR FAB when FnB order floating widget is visible (avoid overlap)
   const shouldShowFab =
@@ -166,32 +168,19 @@ const HomeScreenComponent = () => {
     !isFnBWidgetVisible;
 
   useTabSync({ tabs, activeTab, setActiveTab });
-  const { handleTabChange } = usePagerSync({
+  const { handleTabChange, cancelPendingScroll } = usePagerSync({
     tabs,
     activeTab,
     setActiveTab,
     pagerRef,
     layoutWidth,
     scrollX,
+    pagerReady: pagerMeasuredWidth > 0,
   });
   useDoubleBackExit({ tabs, activeTab, setActiveTab, pagerRef, layoutWidth });
 
-  // Sync activeTab with scroll position during swipe so isVisible/isActive become true earlier and tab data loads during the gesture
-  useEffect(() => {
-    const listener = scrollX.addListener(({ value }) => {
-      const pageIndex = Math.round(value / layoutWidth);
-      const clampedIndex = Math.max(
-        0,
-        Math.min(tabs.length - 1, pageIndex),
-      );
-      const tabId = tabs[clampedIndex]?.id;
-      if (tabId && scrollPageIndexRef.current !== clampedIndex) {
-        scrollPageIndexRef.current = clampedIndex;
-        setActiveTab(tabId);
-      }
-    });
-    return () => scrollX.removeListener(listener);
-  }, [scrollX, layoutWidth, tabs]);
+  // activeTab hanya di-update saat scroll selesai (onScrollEndDrag / onMomentumScrollEnd), tidak saat geser.
+  // Jadi tidak ada setState tiap frame = tidak patah-patah. Indicator tetap ikut jari (scrollX di TabSwitcher).
 
   const registerTabRefresh = useCallback(
     (tabId: string, refreshFn: () => void) => {
@@ -255,23 +244,34 @@ const HomeScreenComponent = () => {
     [tabs, activeTab],
   );
 
-  const shouldRenderTab = useCallback(
-    (tabId: string, index: number) => {
-      return Math.abs(index - activeTabIndex) <= 2;
+  // Render semua tab supaya saat swipe ke kiri/kanan konten sudah ada (activeTab baru update pas scroll selesai).
+  const shouldRenderTab = useCallback((_tabId: string, _index: number) => true, []);
+
+  const syncActiveTabFromScroll = useCallback(
+    (offsetX: number) => {
+      if (layoutWidth <= 0) return;
+      const index = Math.round(offsetX / layoutWidth);
+      const clampedIndex = Math.max(0, Math.min(tabs.length - 1, index));
+      const tabId = tabs[clampedIndex]?.id;
+      if (!tabId || scrollPageIndexRef.current === clampedIndex) return;
+      scrollPageIndexRef.current = clampedIndex;
+      if (tabId !== activeTab) setActiveTab(tabId);
     },
-    [activeTabIndex],
+    [layoutWidth, tabs, activeTab],
   );
 
   const handlePagerMomentumEnd = useCallback(
     (event: any) => {
-      const offsetX = event.nativeEvent.contentOffset.x;
-      const index = Math.round(offsetX / layoutWidth);
-
-      if (tabs[index] && tabs[index].id !== activeTab) {
-        setActiveTab(tabs[index].id);
-      }
+      syncActiveTabFromScroll(event.nativeEvent.contentOffset.x);
     },
-    [layoutWidth, tabs, activeTab],
+    [syncActiveTabFromScroll],
+  );
+
+  const handlePagerScrollEndDrag = useCallback(
+    (event: any) => {
+      syncActiveTabFromScroll(event.nativeEvent.contentOffset.x);
+    },
+    [syncActiveTabFromScroll],
   );
 
   const { unreadCount, refresh: refreshNotifications } = useNotifications();
@@ -369,6 +369,9 @@ const HomeScreenComponent = () => {
             layoutWidth={layoutWidth}
             scrollX={scrollX}
             pagerRef={pagerRef}
+            onPagerLayout={(width: number) => setPagerMeasuredWidth(width)}
+            onScrollBeginDrag={cancelPendingScroll}
+            onScrollEndDrag={handlePagerScrollEndDrag}
             onMomentumScrollEnd={handlePagerMomentumEnd}
             shouldRenderTab={shouldRenderTab}
             renderTab={(tabId, index) => (

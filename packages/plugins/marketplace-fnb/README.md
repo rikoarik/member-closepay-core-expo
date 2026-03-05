@@ -82,20 +82,54 @@ packages/plugins/marketplace-fnb/
 ├── components/
 │   ├── screens/
 │   │   ├── FnBScreen.tsx
-│   │   └── FnBCheckoutScreen.tsx
-│   └── shared/
-│       ├── FnBItemCard.tsx
-│       ├── FnBCategoryTabs.tsx
-│       ├── FnBCartBar.tsx
-│       └── FnBItemDetailSheet.tsx
+│   │   ├── FnBMerchantDetailScreen.tsx
+│   │   ├── FnBCheckoutScreen.tsx
+│   │   ├── FnBScanScreen.tsx
+│   │   ├── FnBScanScreenExpo.tsx
+│   │   ├── FnBScanScreen.web.tsx
+│   │   ├── FnBFavoritesScreen.tsx
+│   │   ├── FnBOrderStatusScreen.tsx
+│   │   ├── FnBPaymentSuccessScreen.tsx
+│   │   ├── FnBOrderTrackingScreen.tsx
+│   │   ├── FnBChatDriverScreen.tsx
+│   │   └── FnBOrderHistoryScreen.tsx
+│   ├── shared/
+│   │   ├── FnBItemCard.tsx
+│   │   ├── FnBCategoryTabs.tsx
+│   │   ├── FnBCartBar.tsx
+│   │   ├── FnBItemDetailSheet.tsx
+│   │   ├── FnBCartDetailSheet.tsx
+│   │   ├── FnBLocationPickerModal.tsx
+│   │   ├── FnBLocationPickerModal.web.tsx
+│   │   ├── MerchantHeader.tsx
+│   │   └── (skeletons)
+│   ├── tabs/
+│   │   ├── FnBTab.tsx
+│   │   ├── FnBOrderTab.tsx
+│   │   ├── FnBHistoryTab.tsx
+│   │   └── FnBBalanceTab.tsx
+│   └── widgets/
+│       ├── FnBRecentOrders.tsx
+│       └── FnBOrderFloatingWidget.tsx
+├── context/
+│   ├── FnBCartContext.tsx
+│   └── FnBActiveOrderContext.tsx
 ├── hooks/
 │   ├── useFnBData.ts
-│   └── useFnBCart.ts
+│   ├── useFnBCart.ts
+│   ├── useFnBFavorites.ts
+│   └── useFnBStoreFavorites.ts
 ├── models/
 │   ├── FnBItem.ts
 │   ├── FnBCategory.ts
 │   ├── FnBOrder.ts
 │   └── FnBStore.ts
+├── utils/
+│   ├── activeOrderStorage.ts
+│   ├── deliveryStorage.ts
+│   └── chatTemplateStorage.ts
+├── data/
+│   └── fnbDummyData.ts
 ├── plugin.manifest.json
 ├── index.ts
 └── README.md

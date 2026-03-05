@@ -36,7 +36,7 @@ export function useDoubleBackExit(params: UseDoubleBackExitParams): void {
           if (homeIndex >= 0 && pagerRef.current) {
             pagerRef.current.scrollTo({
               x: homeIndex * layoutWidth,
-              animated: true,
+              animated: false,
             });
           }
           return true;

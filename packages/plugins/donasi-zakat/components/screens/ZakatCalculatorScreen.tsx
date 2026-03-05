@@ -156,8 +156,10 @@ export const ZakatCalculatorScreen = () => {
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
     else {
-      Alert.alert('Sukses', 'Pembayaran zakat Anda sedang diproses.');
-      navigation.goBack();
+      (navigation as any).navigate('ZakatInput', {
+        amount: formatIDR(zakatDue),
+        category: zakatType,
+      });
     }
   };
 

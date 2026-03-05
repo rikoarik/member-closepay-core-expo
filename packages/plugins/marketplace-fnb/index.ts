@@ -28,7 +28,7 @@ export { FnBCartProvider, FnBCartContext } from './context/FnBCartContext';
 export { FnBActiveOrderProvider, useFnBActiveOrder } from './context/FnBActiveOrderContext';
 
 // Hooks
-export { useFnBData, useFnBCart, useFnBFavorites } from './hooks';
+export { useFnBData, useFnBCart, useFnBFavorites, useFnBStoreFavorites } from './hooks';
 
 // Components
 export {
@@ -41,21 +41,6 @@ export {
 
 // Screens
 export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBPaymentSuccessScreen, FnBOrderHistoryScreen, FnBScanScreen, FnBFavoritesScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
-
-// Module definition
-export const FnBModule = {
-    id: 'marketplace-fnb',
-    name: 'F&B Marketplace',
-    screens: {
-        FnB: 'FnBScreen',
-        FnBMerchantDetail: 'FnBMerchantDetailScreen',
-        FnBCheckout: 'FnBCheckoutScreen',
-        FnBScan: 'FnBScanScreen',
-        FnBFavorites: 'FnBFavoritesScreen',
-    FnBPaymentSuccess: 'FnBPaymentSuccessScreen',
-    FnBOrderHistory: 'FnBOrderHistoryScreen',
-    },
-};
 
 const manifest = require('./plugin.manifest.json');
 

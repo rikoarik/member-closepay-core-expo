@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -32,6 +33,10 @@ import { useTranslation } from '@core/i18n';
 
 const formatIDR = (amount: number) => {
   return new Intl.NumberFormat('id-ID').format(amount);
+};
+
+const parseAmount = (value: string): number => {
+  return parseInt(value.replace(/\D/g, ''), 10) || 0;
 };
 
 export const DonationInputScreen = () => {
@@ -62,6 +67,7 @@ export const DonationInputScreen = () => {
   const [amount, setAmount] = useState(initialAmount);
   const [message, setMessage] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleAmountChange = (value: string) => {
     const numeric = value.replace(/[^0-9]/g, '');
@@ -73,6 +79,22 @@ export const DonationInputScreen = () => {
   };
 
   const quickAmounts = ['50.000', '100.000', '500.000', '1.000.000'];
+
+  const handleSubmit = () => {
+    const numericAmount = parseAmount(amount);
+    if (numericAmount <= 0 || submitting) {
+      return;
+    }
+    setSubmitting(true);
+    // Simulate submit; replace with API call and handle loading/error in .then/.catch
+    setTimeout(() => {
+      setSubmitting(false);
+      (navigation as any).navigate('DonationHistory');
+    }, 400);
+  };
+
+  const numericAmount = parseAmount(amount);
+  const canSubmit = numericAmount > 0 && !submitting;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.surface }]}>
@@ -90,7 +112,7 @@ export const DonationInputScreen = () => {
           <Image source={{ uri: campaign.image }} style={styles.campaignImage} />
           <View style={styles.campaignText}>
             <Text style={[styles.campaignLabel, { color: colors.primary }]}>
-              {type ? t('donasiZakat.totalDonation').toUpperCase() : 'DONASI UNTUK'}
+              {type ? t('donasiZakat.totalDonation').toUpperCase() : t('donasiZakat.donationFor')}
             </Text>
             <Text style={[styles.campaignTitle, { color: colors.text }]} numberOfLines={1}>
               {campaign.title}
@@ -103,7 +125,7 @@ export const DonationInputScreen = () => {
 
         {/* Amount Input */}
         <View style={styles.amountContainer}>
-          <Text style={[styles.amountLabel, { color: colors.textTertiary }]}>NOMINAL DONASI</Text>
+          <Text style={[styles.amountLabel, { color: colors.textTertiary }]}>{t('donasiZakat.donationAmountLabel')}</Text>
           <View style={styles.amountInputRow}>
             <Text style={[styles.currencyPrefix, { color: colors.textTertiary }]}>Rp</Text>
             <TextInput
@@ -122,7 +144,7 @@ export const DonationInputScreen = () => {
 
         {/* Predefined Amount Chips Grid */}
         <View style={[styles.chipsGrid, { paddingHorizontal: horizontalPadding }]}>
-          {quickAmounts.concat(['Lainnya']).map((q) => (
+          {quickAmounts.concat([t('donasiZakat.other')]).map((q) => (
             <TouchableOpacity
               key={q}
               style={[
@@ -131,7 +153,7 @@ export const DonationInputScreen = () => {
                   ? { backgroundColor: colors.surface, borderColor: colors.primary }
                   : { borderColor: 'transparent', backgroundColor: colors.primary + '08' },
               ]}
-              onPress={() => q !== 'Lainnya' && setAmount(q)}
+              onPress={() => q !== t('donasiZakat.other') && setAmount(q)}
             >
               <Text
                 style={[
@@ -139,7 +161,7 @@ export const DonationInputScreen = () => {
                   amount === q ? { color: colors.primary } : { color: colors.textSecondary },
                 ]}
               >
-                {q === 'Lainnya' ? q : `Rp${q.replace('.000', 'rb')}`}
+                {q === t('donasiZakat.other') ? q : `Rp${q.replace('.000', 'rb')}`}
               </Text>
             </TouchableOpacity>
           ))}
@@ -148,14 +170,14 @@ export const DonationInputScreen = () => {
         {/* Message Area */}
         <View style={[styles.messageSection, { paddingHorizontal: horizontalPadding }]}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-            Pesan / Doa Baik (Opsional)
+            {t('donasiZakat.messagePrayerOptional')}
           </Text>
           <TextInput
             style={[
               styles.messageInput,
               { backgroundColor: colors.surfaceSecondary, color: colors.text },
             ]}
-            placeholder="Semoga bermanfaat dan menjadi berkah bagi sesama..."
+            placeholder={t('donasiZakat.messagePlaceholder')}
             placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={3}
@@ -181,10 +203,10 @@ export const DonationInputScreen = () => {
             </View>
             <View>
               <Text style={[styles.toggleTitle, { color: colors.text }]}>
-                Donasi sebagai anonim
+                {t('donasiZakat.donateAsAnonymousLabel')}
               </Text>
               <Text style={[styles.toggleSub, { color: colors.textTertiary }]}>
-                Nama Anda tidak akan ditampilkan
+                {t('donasiZakat.nameNotShown')}
               </Text>
             </View>
           </View>
@@ -202,7 +224,11 @@ export const DonationInputScreen = () => {
       <View
         style={[
           styles.footer,
-          { paddingBottom: insets.bottom + scale(12), borderTopColor: colors.borderLight },
+          {
+            backgroundColor: colors.surface,
+            paddingBottom: insets.bottom + scale(12),
+            borderTopColor: colors.borderLight,
+          },
         ]}
       >
         <View style={styles.totalRow}>
@@ -214,11 +240,25 @@ export const DonationInputScreen = () => {
         <TouchableOpacity
           style={[
             styles.submitBtn,
-            { backgroundColor: colors.primary, shadowColor: colors.primary },
+            {
+              backgroundColor: canSubmit || submitting ? colors.primary : colors.borderLight,
+              shadowColor: canSubmit || submitting ? colors.primary : 'transparent',
+            },
           ]}
+          onPress={handleSubmit}
+          disabled={!canSubmit}
         >
-          <Text style={styles.submitBtnText}>Kirim Donasi</Text>
-          <Heart size={scale(18)} color="#FFF" variant="Bold" />
+          {submitting ? (
+            <>
+              <ActivityIndicator size="small" color="#FFF" style={styles.submitSpinner} />
+              <Text style={styles.submitBtnText}>{t('donasiZakat.processing')}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.submitBtnText}>{t('donasiZakat.submitDonation')}</Text>
+              <Heart size={scale(18)} color="#FFF" variant="Bold" />
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -419,6 +459,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  submitSpinner: {
+    marginRight: scale(8),
   },
   submitBtnText: {
     color: '#FFF',

@@ -4,24 +4,27 @@
  * Flow: FnBMerchantDetail, FnBScan, FnBFavorites; FnBOrderFloatingWidget at bottom.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
   ScrollView,
+  Animated,
   Image,
   FlatList,
   TextInput,
   Dimensions,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
   SearchNormal,
   ArrowDown2,
+  ArrowLeft2,
   Heart,
   Star1,
   Location,
@@ -32,6 +35,9 @@ import {
   Coffee,
   Discover,
   ReceiptItem,
+  DocumentText,
+  Clock,
+  Note,
 } from 'iconsax-react-nativejs';
 import {
   scale,
@@ -50,6 +56,8 @@ interface FnBScreenProps {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+type FnBBottomTab = 'jelajahi' | 'qr' | 'aktivitas';
 
 // --- Data (match reference copy & structure) ---
 
@@ -122,7 +130,9 @@ const MERCHANTS = [
 
 const BORDER_RADIUS = scale(16);
 const BORDER_RADIUS_LG = scale(20);
-const BANNER_CARD_WIDTH = SCREEN_WIDTH * 0.85;
+const BANNER_CARD_WIDTH = SCREEN_WIDTH;
+const PARALLAX_HERO_HEIGHT = scale(200);
+const SEARCH_STICKY_THRESHOLD = 100;
 
 export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) => {
   const { colors } = useTheme();
@@ -131,6 +141,38 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<FnBBottomTab>('jelajahi');
+  const [refreshing, setRefreshing] = useState(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [stickySearchVisible, setStickySearchVisible] = useState(false);
+  const stickyRef = useRef(false);
+  const bannerListRef = useRef<FlatList>(null);
+  const bannerIndexRef = useRef(0);
+  const CAROUSEL_INTERVAL = 4000;
+  const bannerItemWidth = BANNER_CARD_WIDTH;
+  const scrollListener = useRef(
+    scrollY.addListener(({ value }) => {
+      const next = value > SEARCH_STICKY_THRESHOLD;
+      if (next !== stickyRef.current) {
+        stickyRef.current = next;
+        setStickySearchVisible(next);
+      }
+    })
+  ).current;
+  React.useEffect(() => () => scrollY.removeListener(scrollListener), [scrollY, scrollListener]);
+
+  useEffect(() => {
+    if (activeTab !== 'jelajahi') return;
+    const id = setInterval(() => {
+      const next = (bannerIndexRef.current + 1) % BANNERS.length;
+      bannerIndexRef.current = next;
+      bannerListRef.current?.scrollToOffset({
+        offset: next * bannerItemWidth,
+        animated: true,
+      });
+    }, CAROUSEL_INTERVAL);
+    return () => clearInterval(id);
+  }, [activeTab, bannerItemWidth]);
 
   const handleMerchantPress = useCallback(
     (storeId: string) => {
@@ -158,71 +200,120 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
     (navigation as any).navigate('FnBOrderHistory');
   }, [navigation]);
 
-  // --- Header ---
+  const handleMauLagiPress = useCallback(() => setActiveTab('jelajahi'), []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1200);
+  }, []);
+
+  const searchBarComponent = (
+    <View style={[styles.searchWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
+      <TextInput
+        style={[styles.searchInput, { color: colors.text }]}
+        placeholder={t('fnb.searchCraving') || 'What are you craving?'}
+        placeholderTextColor={colors.textSecondary}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
+    </View>
+  );
+
+  const headerOpacitySurface = scrollY.interpolate({
+    inputRange: [60, 130],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const headerOpacityDark = scrollY.interpolate({
+    inputRange: [60, 130],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const headerBgOpacity = scrollY.interpolate({
+    inputRange: [70, 135],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const headerSearchOpacity = scrollY.interpolate({
+    inputRange: [80, 140],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // --- Header overlay; animasi crossfade teks/ikon + background rounded ---
   const header = (
     <View
-      style={[
-        styles.header,
-        {
-          backgroundColor: colors.surface,
-          paddingTop: insets.top + moderateVerticalScale(8),
-          paddingBottom: moderateVerticalScale(12),
-          paddingHorizontal: horizontalPadding,
-        },
-      ]}
+      style={[styles.headerOverlay, { paddingTop: insets.top + scale(8), paddingBottom: scale(12), paddingHorizontal: horizontalPadding }]}
+      pointerEvents="box-none"
     >
-      {/* Row 1: Delivering to + Address + Notification */}
-      <View style={styles.addressRow}>
+      <Animated.View
+        style={[
+          styles.headerOverlayBg,
+          { backgroundColor: colors.surface, opacity: headerBgOpacity },
+        ]}
+        pointerEvents="none"
+      />
+      <View style={[styles.headerTopRow, styles.headerTopRowAnimated]}>
+        <TouchableOpacity
+          onPress={() => (navigation as any).goBack()}
+          style={styles.backButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Animated.View style={[styles.headerIconLayer, { opacity: headerOpacitySurface }]}>
+            <ArrowLeft2 size={scale(24)} color={colors.surface} variant="Linear" />
+          </Animated.View>
+          <Animated.View style={[styles.headerIconLayer, styles.headerIconLayerDark, { opacity: headerOpacityDark }]}>
+            <ArrowLeft2 size={scale(24)} color={colors.text} variant="Linear" />
+          </Animated.View>
+        </TouchableOpacity>
         <View style={styles.addressCol}>
-          <Text
-            style={[styles.deliveringTo, { color: colors.textSecondary }]}
-            numberOfLines={1}
-          >
-            {t('fnb.deliveringTo') || 'Delivering to'}
-          </Text>
-          <View style={styles.addressValueRow}>
-            <Text
-              style={[styles.addressValue, { color: colors.text }]}
+          <View style={styles.headerTextWrap}>
+            <Animated.Text
+              style={[styles.deliveringTo, { color: colors.surface }, { opacity: headerOpacitySurface }]}
               numberOfLines={1}
             >
-              Home • 123 Main St, Apt 4B
-            </Text>
-            <ArrowDown2 size={scale(20)} color={colors.primary} variant="Linear" />
+              {t('fnb.deliveringTo') || 'Delivering to'}
+            </Animated.Text>
+            <Animated.Text
+              style={[styles.deliveringTo, styles.headerTextLayerDark, { color: colors.textSecondary }, { opacity: headerOpacityDark }]}
+              numberOfLines={1}
+            >
+              {t('fnb.deliveringTo') || 'Delivering to'}
+            </Animated.Text>
+          </View>
+          <View style={styles.addressValueRow}>
+            <View style={styles.headerTextWrap}>
+              <Animated.Text
+                style={[styles.addressValue, { color: colors.surface }, { opacity: headerOpacitySurface }]}
+                numberOfLines={1}
+              >
+                Home • 123 Main St, Apt 4B
+              </Animated.Text>
+              <Animated.Text
+                style={[styles.addressValue, styles.headerTextLayerDark, { color: colors.text }, { opacity: headerOpacityDark }]}
+                numberOfLines={1}
+              >
+                Home • 123 Main St, Apt 4B
+              </Animated.Text>
+            </View>
+            <View style={styles.headerIconWrap}>
+              <Animated.View style={{ opacity: headerOpacitySurface }}>
+                <ArrowDown2 size={scale(20)} color={colors.surface} variant="Linear" />
+              </Animated.View>
+              <Animated.View style={[styles.headerArrowOverlay, { opacity: headerOpacityDark }]}>
+                <ArrowDown2 size={scale(20)} color={colors.primary} variant="Linear" />
+              </Animated.View>
+            </View>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.riwayatOrderButton, { backgroundColor: colors.primary + '1A' }]}
-          onPress={handleRiwayatOrderPress}
-          activeOpacity={0.7}
-        >
-          <ReceiptItem size={scale(18)} color={colors.primary} variant="Bold" />
-          <Text style={[styles.riwayatOrderText, { color: colors.primary }]} numberOfLines={1}>
-            {t('fnb.riwayatOrder') || 'Riwayat Order'}
-          </Text>
-        </TouchableOpacity>
       </View>
-
-      {/* Row 2: Search + Scan */}
-      <View style={styles.searchScanRow}>
-        <View style={[styles.searchWrap, { backgroundColor: colors.background }]}>
-          <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t('fnb.searchCraving') || 'What are you craving?'}
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-        <TouchableOpacity
-          style={[styles.scanButtonHeader, { backgroundColor: colors.primary }]}
-          onPress={handleScanPress}
-          activeOpacity={0.85}
-        >
-          <ScanBarcode size={scale(22)} color="#fff" variant="Bold" />
-          <Text style={styles.scanButtonText}>Scan</Text>
-        </TouchableOpacity>
-      </View>
+      <Animated.View
+        style={[styles.headerSearchWrap, { opacity: headerSearchOpacity }]}
+        pointerEvents={stickySearchVisible ? 'auto' : 'none'}
+      >
+        {searchBarComponent}
+      </Animated.View>
     </View>
   );
 
@@ -263,7 +354,7 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
             styles.categoryIconBox,
             {
               backgroundColor: colors.surface,
-              borderColor: colors.border || 'rgba(0,0,0,0.06)',
+              borderColor: colors.border
             },
           ]}
         >
@@ -285,7 +376,7 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
         styles.merchantCard,
         {
           backgroundColor: colors.surface,
-          borderColor: colors.border || 'rgba(0,0,0,0.06)',
+          borderColor: colors.border
         },
       ]}
       onPress={() => handleMerchantPress(item.id)}
@@ -351,68 +442,254 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
     </TouchableOpacity>
   );
 
+  // --- Aktivitas content (Riwayat pesanan, Dalam proses, Draf + Mau lagi) ---
+  const renderAktivitasContent = () => (
+    <ScrollView
+      style={styles.aktivitasScroll}
+      contentContainerStyle={[
+        styles.aktivitasScrollContent,
+        { paddingTop: insets.top + scale(72), paddingBottom: insets.bottom + scale(120), paddingHorizontal: horizontalPadding },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <TouchableOpacity
+        style={[styles.aktivitasCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        onPress={() => (navigation as any).navigate('FnBOrderHistory')}
+        activeOpacity={0.8}
+      >
+        <ReceiptItem size={scale(24)} color={colors.primary} variant="Bold" />
+        <View style={styles.aktivitasCardTextWrap}>
+          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>Riwayat pesanan</Text>
+          <Text style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}>
+            Lihat semua pesanan Anda
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.aktivitasCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        onPress={() => (navigation as any).navigate('FnBOrderHistory', { filter: 'in_progress' })}
+        activeOpacity={0.8}
+      >
+        <Clock size={scale(24)} color={colors.primary} variant="Bold" />
+        <View style={styles.aktivitasCardTextWrap}>
+          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>Dalam proses</Text>
+          <Text style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}>
+            Pesanan yang sedang diproses
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.aktivitasCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        onPress={() => (navigation as any).navigate('FnBOrderHistory', { filter: 'draft' })}
+        activeOpacity={0.8}
+      >
+        <Note size={scale(24)} color={colors.primary} variant="Bold" />
+        <View style={styles.aktivitasCardTextWrap}>
+          <Text style={[styles.aktivitasCardTitle, { color: colors.text }]}>Draf</Text>
+          <Text style={[styles.aktivitasCardSub, { color: colors.textSecondary }]}>
+            Pesanan yang belum diselesaikan
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.mauLagiButton, { backgroundColor: colors.primary }]}
+        onPress={handleMauLagiPress}
+        activeOpacity={0.85}
+      >
+        <Discover size={scale(20)} color="#fff" variant="Bold" />
+        <Text style={styles.mauLagiButtonText}>Mau lagi</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
+  // --- QR tab content ---
+  const renderQrContent = () => (
+    <View style={[styles.qrTabWrap, { paddingHorizontal: horizontalPadding, paddingTop: insets.top + scale(72) }]}>
+      <TouchableOpacity
+        style={[styles.qrCtaCard, { backgroundColor: colors.surface }]}
+        onPress={handleScanPress}
+        activeOpacity={0.9}
+      >
+        <ScanBarcode size={scale(64)} color={colors.primary} variant="Bold" />
+        <Text style={[styles.qrCtaTitle, { color: colors.text }]}>Scan QR</Text>
+        <Text style={[styles.qrCtaSub, { color: colors.textSecondary }]}>
+          Scan untuk pesan atau bayar di merchant
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const bottomNavItems: { key: FnBBottomTab; label: string; Icon: typeof Discover }[] = [
+    { key: 'jelajahi', label: 'Jelajahi', Icon: Discover },
+    { key: 'qr', label: 'QR', Icon: ScanBarcode },
+    { key: 'aktivitas', label: 'Aktivitas', Icon: DocumentText },
+  ];
+
+  const bottomNavHeight = scale(56);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {header}
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + scale(100) },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Promo Banners Carousel */}
-        <View style={styles.bannerSection}>
-          <FlatList
-            data={BANNERS}
-            renderItem={renderBanner}
-            keyExtractor={(o) => o.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.bannerListContent, { paddingLeft: horizontalPadding }]}
-            ItemSeparatorComponent={() => <View style={{ width: scale(16) }} />}
-            snapToInterval={BANNER_CARD_WIDTH + scale(16)}
-            decelerationRate="fast"
-          />
-        </View>
+      {activeTab === 'jelajahi' && (
+        <Animated.ScrollView
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + scale(120) },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Banner carousel promo di atas (ganti yang ijo), parallax */}
+          <Animated.View
+            style={[
+              styles.parallaxHeroWrap,
+              { height: PARALLAX_HERO_HEIGHT + insets.top, paddingTop: insets.top },
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.parallaxHeroInner,
+                {
+                  transform: [
+                    {
+                      translateY: scrollY.interpolate({
+                        inputRange: [0, PARALLAX_HERO_HEIGHT],
+                        outputRange: [0, -PARALLAX_HERO_HEIGHT * 0.4],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <FlatList
+                ref={bannerListRef}
+                data={BANNERS}
+                renderItem={renderBanner}
+                keyExtractor={(o) => o.id}
+                horizontal
+                pagingEnabled={false}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.bannerListContent}
+                snapToInterval={bannerItemWidth}
+                snapToAlignment="start"
+                decelerationRate="fast"
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / bannerItemWidth);
+                  bannerIndexRef.current = Math.min(idx, BANNERS.length - 1);
+                }}
+              />
+            </Animated.View>
+          </Animated.View>
 
-        {/* Categories Grid */}
-        <View style={[styles.categoriesSection, { paddingHorizontal: horizontalPadding }]}>
-          <View style={styles.categoriesGrid}>
-            {CATEGORIES.map((item, index) => (
-              <View key={item.id} style={styles.categoryItemWrapper}>
-                {renderCategory({ item, index })}
-              </View>
-            ))}
+          <Animated.View
+            style={[
+              styles.contentSearchWrap,
+              {
+                marginTop: -scale(24),
+                paddingHorizontal: horizontalPadding,
+                opacity: scrollY.interpolate({
+                  inputRange: [SEARCH_STICKY_THRESHOLD - 20, SEARCH_STICKY_THRESHOLD + 20],
+                  outputRange: [1, 0],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ]}
+          >
+            {searchBarComponent}
+          </Animated.View>
+
+          <View style={[styles.categoriesSection, { paddingHorizontal: horizontalPadding, marginTop: scale(16) }]}>
+            <View style={styles.categoriesGrid}>
+              {CATEGORIES.map((item, index) => (
+                <View key={item.id} style={styles.categoryItemWrapper}>
+                  {renderCategory({ item, index })}
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-
-        {/* Recommended Merchants */}
-        <View style={[styles.section, { paddingHorizontal: horizontalPadding }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('fnb.recommendedMerchants') || 'Recommended Merchants'}
-            </Text>
-            <TouchableOpacity onPress={handleSeeAllPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={[styles.seeAll, { color: colors.primary }]}>
-                {t('common.seeAll') || 'See All'}
+          <View style={[styles.section, { paddingHorizontal: horizontalPadding }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('fnb.recommendedMerchants') || 'Recommended Merchants'}
               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={handleSeeAllPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>
+                  {t('common.seeAll') || 'See All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.merchantList}>
+              {MERCHANTS.map((m) => (
+                <View key={m.id} style={styles.merchantCardWrap}>
+                  {renderMerchant({ item: m })}
+                </View>
+              ))}
+            </View>
           </View>
-          <View style={styles.merchantList}>
-            {MERCHANTS.map((m) => (
-              <View key={m.id} style={styles.merchantCardWrap}>
-                {renderMerchant({ item: m })}
-              </View>
-            ))}
-          </View>
+          <View style={{ height: scale(24) }} />
+        </Animated.ScrollView>
+      )}
+
+      {activeTab === 'qr' && renderQrContent()}
+      {activeTab === 'aktivitas' && renderAktivitasContent()}
+
+      {/* Bottom nav (full width, tidak floating) */}
+      <View
+        style={[
+          styles.bottomNavWrapper,
+          {
+            paddingBottom: insets.bottom,
+            paddingHorizontal: horizontalPadding,
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
+        <View style={styles.bottomNavFloating}>
+          {bottomNavItems.map(({ key, label, Icon }) => (
+          <TouchableOpacity
+            key={key}
+            style={[
+              styles.bottomNavItem,
+              activeTab === key && { backgroundColor: colors.primary + '18' },
+            ]}
+            onPress={() => (key === 'qr' ? handleScanPress() : setActiveTab(key))}
+            activeOpacity={0.7}
+          >
+            <Icon
+              size={scale(22)}
+              color={activeTab === key ? colors.primary : colors.textSecondary}
+              variant={activeTab === key ? 'Bold' : 'Linear'}
+            />
+            <Text
+              style={[
+                styles.bottomNavLabel,
+                { color: activeTab === key ? colors.primary : colors.textSecondary },
+              ]}
+            >
+              {label}
+            </Text>
+          </TouchableOpacity>
+        ))}
         </View>
+      </View>
 
-        <View style={{ height: scale(24) }} />
-      </ScrollView>
-
-      <View style={styles.fnbFloatingWidgetContainer} pointerEvents="box-none">
+      <View
+        style={[
+          styles.fnbFloatingWidgetContainer,
+          { bottom: insets.bottom + scale(20) + bottomNavHeight + scale(8) },
+        ]}
+        pointerEvents="box-none"
+      >
         <FnBOrderFloatingWidget />
       </View>
     </View>
@@ -422,6 +699,18 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({ entryPoint = 'browse' }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerOverlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderBottomLeftRadius: BORDER_RADIUS_LG,
+    borderBottomRightRadius: BORDER_RADIUS_LG,
   },
   header: {
     borderBottomLeftRadius: BORDER_RADIUS_LG,
@@ -433,12 +722,54 @@ const styles = StyleSheet.create({
     elevation: 4,
     zIndex: 10,
   },
-  addressRow: {
+  headerTopRow: {
+    marginBottom: scale(12),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: scale(12),
-    marginBottom: scale(12),
+  },
+  headerTopRowAnimated: {
+    position: 'relative',
+  },
+  headerIconLayer: {
+    position: 'absolute',
+    left: scale(6),
+    top: scale(6),
+  },
+  headerIconLayerDark: {
+    position: 'absolute',
+    left: scale(6),
+    top: scale(6),
+  },
+  headerTextWrap: {
+    position: 'relative',
+    minHeight: scale(14),
+  },
+  headerTextLayerDark: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  headerIconWrap: {
+    position: 'relative',
+    width: scale(24),
+    height: scale(24),
+  },
+  headerArrowOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  backButton: {
+    width: scale(36),
+    height: scale(36),
+    justifyContent: 'center',
+    marginLeft: scale(-4),
+    position: 'relative',
+  },
+  headerSearchWrap: {
+    borderRadius: scale(12),
+    marginTop: scale(8),
   },
   addressCol: {
     flex: 1,
@@ -461,36 +792,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.monasans.bold,
     flex: 1,
   },
-  notifButton: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  riwayatOrderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(6),
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(8),
-    borderRadius: scale(20),
-  },
-  riwayatOrderText: {
-    fontSize: scale(12),
-    fontFamily: FontFamily.monasans.semiBold,
-    maxWidth: scale(90),
-  },
-  searchScanRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(12),
-  },
   searchWrap: {
-    flex: 1,
     height: scale(48),
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    
     paddingLeft: scale(12),
     paddingRight: scale(12),
     borderRadius: scale(12),
@@ -502,41 +809,38 @@ const styles = StyleSheet.create({
     marginLeft: scale(8),
     paddingVertical: 0,
   },
-  scanButtonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: scale(48),
-    paddingHorizontal: scale(16),
-    borderRadius: scale(12),
-    gap: scale(8),
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-      },
-      android: { elevation: 4 },
-    }),
+  scrollContent: {
+    paddingTop: 0,
   },
-  scanButtonText: {
+  parallaxHeroWrap: {
+    overflow: 'hidden',
+  },
+  parallaxHeroInner: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: scale(24),
+  },
+  parallaxHeroContent: {},
+  parallaxHeroTitle: {
     fontFamily: FontFamily.monasans.bold,
-    fontSize: scale(14),
+    fontSize: scale(18),
     color: '#fff',
   },
-  scrollContent: {
-    paddingTop: moderateVerticalScale(16),
+  parallaxHeroSub: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(13),
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: scale(4),
+  },
+  contentSearchWrap: {
+    zIndex: 2,
   },
   bannerSection: {
     marginBottom: moderateVerticalScale(24),
   },
-  bannerListContent: {
-    paddingRight: getHorizontalPadding(),
-  },
+  bannerListContent: {},
   bannerCard: {
-    height: scale(160),
-    borderRadius: BORDER_RADIUS,
+    height: scale(190),
     overflow: 'hidden',
     position: 'relative',
     ...Platform.select({
@@ -546,6 +850,7 @@ const styles = StyleSheet.create({
   },
   bannerImage: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   bannerGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -735,6 +1040,89 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 99999,
+  },
+  aktivitasScroll: { flex: 1 },
+  aktivitasScrollContent: { paddingTop: scale(24), gap: scale(12) },
+  aktivitasCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: scale(16),
+    borderRadius: BORDER_RADIUS,
+    borderWidth: 1,
+    gap: scale(12),
+  },
+  aktivitasCardTextWrap: { flex: 1, minWidth: 0 },
+  aktivitasCardTitle: {
+    fontFamily: FontFamily.monasans.semiBold,
+    fontSize: scale(15),
+  },
+  aktivitasCardSub: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(12),
+    marginTop: scale(2),
+  },
+  mauLagiButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
+    gap: scale(8),
+    marginTop: scale(8),
+  },
+  mauLagiButtonText: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(15),
+    color: '#fff',
+  },
+  qrTabWrap: { flex: 1, justifyContent: 'center', paddingVertical: scale(48) },
+  qrCtaCard: {
+    alignItems: 'center',
+    padding: scale(32),
+    borderRadius: BORDER_RADIUS_LG,
+    gap: scale(12),
+  },
+  qrCtaTitle: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(18),
+  },
+  qrCtaSub: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(14),
+    textAlign: 'center',
+  },
+  bottomNavWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
+    zIndex: 9999,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
+  },
+  bottomNavFloating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(4),
+  },
+  bottomNavItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(8),
+    borderRadius: scale(20),
+    gap: scale(4),
+  },
+  bottomNavLabel: {
+    fontFamily: FontFamily.monasans.medium,
+    fontSize: scale(12),
+    marginTop: scale(4),
   },
 });
 

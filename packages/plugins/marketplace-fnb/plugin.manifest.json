@@ -32,7 +32,9 @@
     },
     "hooks": [
       "useFnBData",
-      "useFnBCart"
+      "useFnBCart",
+      "useFnBFavorites",
+      "useFnBStoreFavorites"
     ],
     "models": [
       "FnBItem",

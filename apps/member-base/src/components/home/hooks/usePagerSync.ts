@@ -9,10 +9,14 @@ export interface UsePagerSyncParams {
   pagerRef: React.RefObject<any>;
   layoutWidth: number;
   scrollX: Animated.Value;
+  /** Set true when pager has laid out so initial scroll can run (avoids ref timing) */
+  pagerReady?: boolean;
 }
 
 export interface UsePagerSyncReturn {
   handleTabChange: (tabId: string) => void;
+  /** Call when user starts dragging so pending programmatic scroll is cancelled */
+  cancelPendingScroll: () => void;
 }
 
 /**
@@ -20,7 +24,7 @@ export interface UsePagerSyncReturn {
  * handleTabChange with debounce, and cleanup.
  */
 export function usePagerSync(params: UsePagerSyncParams): UsePagerSyncReturn {
-  const { tabs, activeTab, setActiveTab, pagerRef, layoutWidth, scrollX } = params;
+  const { tabs, activeTab, setActiveTab, pagerRef, layoutWidth, scrollX, pagerReady = true } = params;
   const hasInitialScrollRef = useRef(false);
   const tabChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,26 +33,45 @@ export function usePagerSync(params: UsePagerSyncParams): UsePagerSyncReturn {
     [tabs]
   );
 
-  // Initial scroll to match activeTab (once, after useTabSync sets default)
+  const cancelPendingScroll = useCallback(() => {
+    if (tabChangeTimeoutRef.current) {
+      clearTimeout(tabChangeTimeoutRef.current);
+      tabChangeTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Initial scroll to match activeTab (once, when pager is ready)
   useEffect(() => {
-    if (hasInitialScrollRef.current || tabs.length === 0 || !pagerRef.current) return;
+    if (hasInitialScrollRef.current || tabs.length === 0 || layoutWidth <= 0 || !pagerReady || !pagerRef.current) return;
     const index = tabs.findIndex((t) => t.id === activeTab);
     if (index < 0) return;
     hasInitialScrollRef.current = true;
-    scrollX.setValue(index * layoutWidth);
+    const x = index * layoutWidth;
+    scrollX.setValue(x);
     requestAnimationFrame(() => {
-      pagerRef.current?.scrollTo({ x: index * layoutWidth, animated: false });
+      pagerRef.current?.scrollTo({ x, animated: false });
     });
-  }, [activeTab, tabs, layoutWidth, scrollX, pagerRef]);
+  }, [activeTab, tabs, layoutWidth, scrollX, pagerRef, pagerReady]);
 
-  // handleTabChange with debounce + cleanup timeout on unmount
+  // Saat layoutWidth berubah (mis. setelah onLayout pager), sync posisi scroll
+  const prevLayoutWidthRef = useRef(layoutWidth);
+  useEffect(() => {
+    if (tabs.length === 0 || layoutWidth <= 0 || !pagerRef.current) return;
+    if (prevLayoutWidthRef.current === layoutWidth) return;
+    prevLayoutWidthRef.current = layoutWidth;
+    const index = Math.min(Math.max(0, tabs.findIndex((t) => t.id === activeTab)), tabs.length - 1);
+    const x = index * layoutWidth;
+    scrollX.setValue(x);
+    pagerRef.current.scrollTo({ x, animated: false });
+  }, [layoutWidth, tabs, activeTab, scrollX, pagerRef]);
+
+  // handleTabChange with debounce; cancel on drag so tap-then-swipe is not overridden
   const handleTabChange = useCallback(
     (tabId: string) => {
-      if (tabChangeTimeoutRef.current) {
-        clearTimeout(tabChangeTimeoutRef.current);
-      }
+      cancelPendingScroll();
       setActiveTab(tabId);
       tabChangeTimeoutRef.current = setTimeout(() => {
+        tabChangeTimeoutRef.current = null;
         if (pagerRef.current) {
           const index = getTabIndex(tabId);
           if (index >= 0) {
@@ -60,7 +83,7 @@ export function usePagerSync(params: UsePagerSyncParams): UsePagerSyncReturn {
         }
       }, 50);
     },
-    [layoutWidth, getTabIndex, setActiveTab, pagerRef]
+    [layoutWidth, getTabIndex, setActiveTab, pagerRef, cancelPendingScroll]
   );
 
   useEffect(() => {
@@ -71,5 +94,5 @@ export function usePagerSync(params: UsePagerSyncParams): UsePagerSyncReturn {
     };
   }, []);
 
-  return { handleTabChange };
+  return { handleTabChange, cancelPendingScroll };
 }
