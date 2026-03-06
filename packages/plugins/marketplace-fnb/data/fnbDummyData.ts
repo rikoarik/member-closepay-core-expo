@@ -10,6 +10,38 @@ import type { FnBStore } from '../models/FnBStore';
 export const DEFAULT_STORE_ID = 'store-001';
 
 // ---------------------------------------------------------------------------
+// Dummy QR code untuk testing Dine-in (scan → entryPoint: 'scan-qr' → opsi dine-in)
+// Format URL: parseFnBQRCode() akan parse dan navigate ke FnB dengan storeId + entryPoint: 'scan-qr'
+// ---------------------------------------------------------------------------
+export const FNBDUMMY_QR_DINE_IN = {
+  /** Warung Makan Sederhana */
+  store001: 'closepay://fnb/store-001',
+  /** Burger King Clone */
+  store002: 'closepay://fnb/store-002',
+  /** Bakso Pak Kumis */
+  store003: 'closepay://fnb/store-003',
+} as const;
+
+/** JSON format (bisa dipakai untuk input manual / deep link): include storeName */
+export const FNBDUMMY_QR_JSON_DINE_IN = {
+  store001: JSON.stringify({
+    type: 'fnb-store',
+    storeId: 'store-001',
+    storeName: 'Warung Makan Sederhana',
+  }),
+  store002: JSON.stringify({
+    type: 'fnb-store',
+    storeId: 'store-002',
+    storeName: 'Burger King Clone',
+  }),
+  store003: JSON.stringify({
+    type: 'fnb-store',
+    storeId: 'store-003',
+    storeName: 'Bakso Pak Kumis',
+  }),
+} as const;
+
+// ---------------------------------------------------------------------------
 // Kategori
 // ---------------------------------------------------------------------------
 export const FNBDUMMY_CATEGORIES: FnBCategory[] = [

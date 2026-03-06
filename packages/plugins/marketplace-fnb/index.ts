@@ -16,11 +16,15 @@ export type {
     OrderType,
     EntryPoint,
     OrderStatus,
+    FnBPaymentMethod,
+    FnBBalanceType,
     FnBStore,
     FnBQRData,
     OperatingHour,
     DeliverySettings,
 } from './models';
+export { getFnBCompanyConfig, setFnBCompanyConfig } from './config/fnbCompanyConfig';
+export type { FnBCompanyConfig } from './config/fnbCompanyConfig';
 export { getAvailableOrderTypes, isStoreOpen, parseFnBQRCode } from './models';
 
 // Context (required for shared cart and active order)
@@ -41,7 +45,7 @@ export {
 } from './components/shared';
 
 // Screens
-export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBPaymentSuccessScreen, FnBOrderHistoryScreen, FnBScanScreen, FnBFavoritesScreen, FnBProductSearchScreen, FnBProductSearchResultsScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
+export { FnBScreen, FnBMerchantDetailScreen, FnBCheckoutScreen, FnBOrderStatusScreen, FnBPaymentSuccessScreen, FnBOrderHistoryScreen, FnBScanScreen, FnBFavoritesScreen, FnBProductSearchScreen, FnBProductSearchResultsScreen, FnBNearbyScreen, FnBCheapDeliveryScreen, FnBAllMerchantsScreen, FnBOrderTrackingScreen, FnBChatDriverScreen } from './components/screens';
 
 const manifest = require('./plugin.manifest.json');
 
@@ -62,6 +66,9 @@ const componentLoaders: Record<string, () => Promise<any>> = {
   FnBOrderHistoryScreen: () => import('./components/screens/FnBOrderHistoryScreen'),
   FnBProductSearchScreen: () => import('./components/screens/FnBProductSearchScreen'),
   FnBProductSearchResultsScreen: () => import('./components/screens/FnBProductSearchResultsScreen'),
+  FnBNearbyScreen: () => import('./components/screens/FnBNearbyScreen'),
+  FnBCheapDeliveryScreen: () => import('./components/screens/FnBCheapDeliveryScreen'),
+  FnBAllMerchantsScreen: () => import('./components/screens/FnBAllMerchantsScreen'),
   FnBOrderTrackingScreen: () => import('./components/screens/FnBOrderTrackingScreen'),
   FnBChatDriverScreen: () => import('./components/screens/FnBChatDriverScreen'),
   FnBTab: () => import('./components/tabs/FnBTab'),

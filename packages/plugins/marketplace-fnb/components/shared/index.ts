@@ -9,6 +9,8 @@ export { FnBItemDetailSheet } from './FnBItemDetailSheet';
 export { FnBCartDetailSheet } from './FnBCartDetailSheet';
 export { FnBLocationPickerModal } from './FnBLocationPickerModal';
 export { FnBLocationPickerSheet } from './FnBLocationPickerSheet';
+export { FnBScanTableModal } from './FnBScanTableModal';
+export { FnBTutorialModal } from './FnBTutorialModal';
 export { MerchantHeader } from './MerchantHeader';
 
 // Skeleton loading components

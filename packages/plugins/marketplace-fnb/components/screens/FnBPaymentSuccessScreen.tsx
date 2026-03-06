@@ -46,6 +46,8 @@ export const FnBPaymentSuccessScreen: React.FC = () => {
     orderType?: 'dine-in' | 'take-away' | 'delivery';
     pickupTime?: string;
     deliveryAddress?: string;
+    paymentMethod?: 'pay_at_counter' | 'pay_later' | 'balance';
+    balanceType?: string;
   } | undefined;
 
   const orderType = params?.orderType || 'dine-in';
@@ -58,6 +60,19 @@ export const FnBPaymentSuccessScreen: React.FC = () => {
   const storeName = params?.storeName || (t('fnb.merchantName') as string) || 'Merchant';
   const total = params?.total ?? 0;
   const tableNumber = params?.tableNumber || '—';
+  const paymentMethod = params?.paymentMethod;
+  const balanceType = params?.balanceType;
+  const paymentMethodLabel =
+    paymentMethod === 'pay_at_counter'
+      ? (t('fnb.payAtCounter') || 'Bayar di kasir')
+      : paymentMethod === 'pay_later'
+        ? (t('fnb.payLater') || 'Bayar nanti')
+        : paymentMethod === 'balance'
+          ? (t('fnb.payWithBalance') || 'Bayar dengan Saldo') +
+            (balanceType
+              ? ` (${balanceType === 'saldo-makan' ? (t('fnb.balanceTypeMeal') || 'Saldo Makanan') : balanceType === 'saldo-utama' ? (t('fnb.balanceTypeMain') || 'Saldo Utama') : (t('fnb.balanceTypePlafon') || 'Saldo Plafon')})`
+              : '')
+          : (t('fnb.paymentMethod') || 'Payment Method');
 
   const handleBackToHome = () => {
     (navigation as any).navigate('FnB');
@@ -180,7 +195,7 @@ export const FnBPaymentSuccessScreen: React.FC = () => {
               </Text>
               <View style={styles.detailValueRow}>
                 <Card size={scale(18)} color={colors.textSecondary} variant="Linear" />
-                <Text style={[styles.detailValue, { color: colors.text }]}>•••• Balance</Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>{paymentMethodLabel}</Text>
               </View>
             </View>
           </View>

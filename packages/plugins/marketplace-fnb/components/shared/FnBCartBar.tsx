@@ -52,12 +52,28 @@ export const FnBCartBar: React.FC<FnBCartBarProps> = ({
             style={[
                 styles.container,
                 {
-                    backgroundColor: colors.primary,
-                    paddingHorizontal: horizontalPadding,
+                    paddingBottom: moderateVerticalScale(12),
                     transform: [{ translateY }],
                 },
             ]}
         >
+            <View
+                style={[
+                    styles.pill,
+                    {
+                        backgroundColor: colors.primary,
+                        minHeight: PILL_HEIGHT,
+                        paddingVertical: moderateVerticalScale(10),
+                        paddingHorizontal: horizontalPadding,
+                        borderRadius: PILL_HEIGHT / 2,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 12,
+                        elevation: 10,
+                    },
+                ]}
+            >
             <View style={styles.content}>
                 {/* Left - Cart info (Opens detail sheet) */}
                 <TouchableOpacity
@@ -92,30 +108,32 @@ export const FnBCartBar: React.FC<FnBCartBarProps> = ({
                     </Text>
                 </TouchableOpacity>
             </View>
+            </View>
         </Animated.View>
     );
 };
 
+const PILL_HEIGHT = scale(56);
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        paddingTop: moderateVerticalScale(12),
-        paddingBottom: moderateVerticalScale(24),
-        borderTopLeftRadius: scale(20),
-        borderTopRightRadius: scale(20),
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 10,
+        alignItems: 'center',
+        paddingHorizontal: getHorizontalPadding(),
+    },
+    pill: {
+        flexDirection: 'row',
+        width: '100%',
+        alignItems: 'center',
+        overflow: 'hidden',
     },
     content: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flex: 1,
     },
     leftContent: {
         flexDirection: 'row',
@@ -125,7 +143,7 @@ const styles = StyleSheet.create({
     iconContainer: {
         width: scale(40),
         height: scale(40),
-        borderRadius: scale(10),
+        borderRadius: scale(20),
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: scale(12),
@@ -161,7 +179,7 @@ const styles = StyleSheet.create({
     orderButton: {
         paddingHorizontal: scale(24),
         paddingVertical: scale(12),
-        borderRadius: scale(10),
+        borderRadius: scale(20),
     },
     orderButtonText: {
         fontSize: scale(14),

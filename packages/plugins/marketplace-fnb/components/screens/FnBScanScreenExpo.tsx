@@ -50,10 +50,10 @@ export const FnBScanScreenExpo: React.FC = () => {
 
       const fnbData = parseFnBQRCode(data);
       if (fnbData) {
-        (navigation as any).navigate('FnB', {
+        (navigation as any).navigate('FnBMerchantDetail', {
           storeId: fnbData.storeId,
-          storeName: fnbData.storeName,
           entryPoint: 'scan-qr',
+          tableNumber: fnbData.tableNumber,
         });
       } else {
         Alert.alert(

@@ -17,6 +17,7 @@ import {
   Dimensions,
   Platform,
   RefreshControl,
+  InteractionManager,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -36,8 +37,6 @@ import {
   DocumentText,
   Clock,
   Note,
-  People,
-  PercentageSquare,
   TruckFast,
 } from "iconsax-react-nativejs";
 import {
@@ -54,8 +53,11 @@ import { useFnBLocation } from "../../context/FnBLocationContext";
 import { FNBDISCOVERY_MERCHANTS } from "../../data/fnbDiscoveryMerchants";
 import { FnBOrderFloatingWidget } from "../widgets/FnBOrderFloatingWidget";
 import { FnBCartBar } from "../shared/FnBCartBar";
+import { FnBCartDetailSheet } from "../shared/FnBCartDetailSheet";
 import { FnBLocationPickerSheet } from "../shared/FnBLocationPickerSheet";
 import { FnBLocationPickerModal } from "../shared/FnBLocationPickerModal";
+import { FnBTutorialModal, type TutorialTargetLayout } from "../shared/FnBTutorialModal";
+import { isFnBTutorialCompleted, setFnBTutorialCompleted } from "../../utils/fnbTutorialStorage";
 
 interface FnBScreenProps {
   entryPoint?: EntryPoint;
@@ -108,12 +110,10 @@ const BANNERS = [
   },
 ];
 
-type CategoryColorKey = "primary" | "warning" | "info" | "error";
+type CategoryColorKey = "primary" | "warning";
 const CATEGORIES = [
   { id: "1", nameKey: "fnb.categoryResto" as const, Icon: Shop, colorKey: "primary" as CategoryColorKey },
   { id: "2", nameKey: "fnb.categoryOngkir" as const, Icon: TruckFast, colorKey: "warning" as CategoryColorKey },
-  { id: "3", nameKey: "fnb.categoryGroupOrder" as const, Icon: People, colorKey: "info" as CategoryColorKey },
-  { id: "4", nameKey: "fnb.categorySerbaPromo" as const, Icon: PercentageSquare, colorKey: "error" as CategoryColorKey },
 ];
 
 const MERCHANTS = FNBDISCOVERY_MERCHANTS;
@@ -138,6 +138,15 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [locationSheetVisible, setLocationSheetVisible] = useState(false);
   const [mapModalVisible, setMapModalVisible] = useState(false);
+  const [cartDetailVisible, setCartDetailVisible] = useState(false);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0);
+  const [tutorialLayouts, setTutorialLayouts] = useState<(TutorialTargetLayout | null)[]>([]);
+  const refLocationPill = useRef<View>(null);
+  const refSearchBar = useRef<View>(null);
+  const refHeart = useRef<View>(null);
+  const refCategory = useRef<View>(null);
+  const refCartBar = useRef<View>(null);
   const { deliveryAddress, setDeliveryAddress } = useFnBLocation();
   const scrollY = useRef(new Animated.Value(0)).current;
   const bannerListRef = useRef<FlatList>(null);
@@ -157,6 +166,52 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
     }, CAROUSEL_INTERVAL);
     return () => clearInterval(id);
   }, [activeTab, bannerItemWidth]);
+
+  useEffect(() => {
+    let cancelled = false;
+    isFnBTutorialCompleted().then((completed) => {
+      if (!cancelled && !completed) setTutorialVisible(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!tutorialVisible) return;
+    const task = InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        // Step 0 = welcome (no target); steps 1–5 = searchBar, locationPill, heart, category, merchantList, cartBar
+        const refs = [
+          refSearchBar,
+          refLocationPill,
+          refHeart,
+          refCategory,
+          refCartBar,
+        ];
+        const results: (TutorialTargetLayout | null)[] = new Array(6);
+        results[0] = null; // welcome: full dim, callout centered
+        let pending = 5;
+        const maybeDone = () => {
+          pending -= 1;
+          if (pending === 0) setTutorialLayouts([...results]);
+        };
+        refs.forEach((ref, i) => {
+          const resultIdx = i + 1;
+          if (ref.current) {
+            ref.current.measureInWindow((x, y, width, height) => {
+              results[resultIdx] = width > 0 && height > 0 ? { x, y, width, height } : null;
+              maybeDone();
+            });
+          } else {
+            results[resultIdx] = null;
+            maybeDone();
+          }
+        });
+      }, 400);
+    });
+    return () => task.cancel();
+  }, [tutorialVisible]);
 
   const handleMerchantPress = useCallback(
     (storeId: string) => {
@@ -180,15 +235,28 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
   const { isFavoriteStore, toggleStoreFavorite } = useFnBStoreFavorites();
 
   const {
+    cartItems,
     itemCount: cartItemCount,
     subtotal: cartSubtotal,
     activeStoreId: cartStoreId,
     activeStoreName: cartStoreName,
+    updateQuantity,
+    removeItem,
   } = useFnBCart(entryPoint);
 
-  const handleSeeAllPress = useCallback(() => {
-    (navigation as any).navigate("FnBFavorites");
-  }, [navigation]);
+  const handleSeeAllPilihanPress = useCallback(() => {
+    (navigation as any).navigate("FnBAllMerchants", {
+      sectionKey: "pilihan",
+      entryPoint,
+    });
+  }, [navigation, entryPoint]);
+
+  const handleSeeAllLainPress = useCallback(() => {
+    (navigation as any).navigate("FnBAllMerchants", {
+      sectionKey: "lain",
+      entryPoint,
+    });
+  }, [navigation, entryPoint]);
 
   const handleSearchPress = useCallback(() => {
     (navigation as any).navigate("FnBProductSearch");
@@ -197,13 +265,25 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
   const handleMauLagiPress = useCallback(() => setActiveTab("jelajahi"), []);
 
   const handleCartBarPress = useCallback(() => {
-    if (cartStoreId) {
-      (navigation as any).navigate("FnBMerchantDetail", {
-        entryPoint,
-        storeId: cartStoreId,
-      });
-    }
-  }, [navigation, entryPoint, cartStoreId]);
+    setCartDetailVisible(true);
+  }, []);
+
+  const handleCloseCartDetail = useCallback(() => {
+    setCartDetailVisible(false);
+  }, []);
+
+  const handleEditCartItem = useCallback(
+    (cartItem: { cartId: string }) => {
+      setCartDetailVisible(false);
+      if (cartStoreId) {
+        (navigation as any).navigate("FnBMerchantDetail", {
+          entryPoint,
+          storeId: cartStoreId,
+        });
+      }
+    },
+    [navigation, entryPoint, cartStoreId]
+  );
 
   const handleCartCheckout = useCallback(() => {
     if (cartStoreId) {
@@ -347,25 +427,27 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
           </View>
 
           {/* Location pill */}
-          <TouchableOpacity
-            style={[styles.locationPill, { backgroundColor: colors.primary }]}
-            activeOpacity={0.8}
-            onPress={() => setLocationSheetVisible(true)}
-          >
-            <Location size={scale(14)} color={colors.surface} variant="Bold" />
-            <Text
-              style={[styles.locationPillText, { color: colors.surface }]}
-              numberOfLines={1}
+          <View ref={refLocationPill} collapsable={false}>
+            <TouchableOpacity
+              style={[styles.locationPill, { backgroundColor: colors.primary }]}
+              activeOpacity={0.8}
+              onPress={() => setLocationSheetVisible(true)}
             >
-              {deliveryAddress
-                ? (deliveryAddress.split(",")[0]?.trim() || deliveryAddress)
-                : t("fnb.currentLocationShort")}
-            </Text>
-          </TouchableOpacity>
+              <Location size={scale(14)} color={colors.surface} variant="Bold" />
+              <Text
+                style={[styles.locationPillText, { color: colors.surface }]}
+                numberOfLines={1}
+              >
+                {deliveryAddress
+                  ? (deliveryAddress.split(",")[0]?.trim() || deliveryAddress)
+                  : t("fnb.currentLocationShort")}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Right action icons */}
           <View style={styles.headerRightIcons}>
-            <View style={[styles.headerCircleBtnWrap, { borderRadius: scale(20) }]}>
+            <View ref={refHeart} collapsable={false} style={[styles.headerCircleBtnWrap, { borderRadius: scale(20) }]}>
               <Animated.View
                 style={[
                   StyleSheet.absoluteFillObject,
@@ -588,12 +670,24 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
     </TouchableOpacity>
   );
 
+  const handleCategoryPress = useCallback(
+    (categoryId: string) => {
+      if (categoryId === "1") (navigation as any).navigate("FnBNearby");
+      else if (categoryId === "2") (navigation as any).navigate("FnBCheapDelivery");
+    },
+    [navigation]
+  );
+
   // --- Category item (circular) ---
   const renderCategory = ({ item }: { item: (typeof CATEGORIES)[0] }) => {
     const IconComponent = item.Icon;
     const catColor = colors[item.colorKey] ?? colors.primary;
     return (
-      <TouchableOpacity style={styles.categoryItem} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.categoryItem}
+        activeOpacity={0.7}
+        onPress={() => handleCategoryPress(item.id)}
+      >
         <View
           style={[
             styles.categoryCircle,
@@ -911,6 +1005,8 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
 
           {/* Search bar */}
           <View
+            ref={refSearchBar}
+            collapsable={false}
             style={[
               styles.searchSection,
               { paddingHorizontal: horizontalPadding },
@@ -920,7 +1016,7 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
           </View>
 
           {/* Categories horizontal scroll */}
-          <View style={styles.categoriesSection}>
+          <View ref={refCategory} collapsable={false} style={styles.categoriesSection}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -944,7 +1040,7 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
                 {t("fnb.sectionPilihanFamiliar")}
               </Text>
               <TouchableOpacity
-                onPress={handleSeeAllPress}
+                onPress={handleSeeAllPilihanPress}
                 style={[styles.seeAllBtn, { borderColor: colors.primary }]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -971,7 +1067,7 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
                 {t("fnb.sectionMerchantLain")}
               </Text>
               <TouchableOpacity
-                onPress={handleSeeAllPress}
+                onPress={handleSeeAllLainPress}
                 style={[styles.seeAllBtn, { borderColor: colors.primary }]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -995,23 +1091,26 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
       {activeTab === "favorit" && renderFavoritContent()}
       {activeTab === "aktivitas" && renderAktivitasContent()}
 
-      {/* Floating Cart Bar */}
-      {cartItemCount > 0 && (
-        <View
-          style={[
-            styles.cartBarContainer,
-            { bottom: insets.bottom + scale(4) },
-          ]}
-        >
+      {/* Floating Cart Bar — wrapper always present for tutorial measure */}
+      <View
+        ref={refCartBar}
+        collapsable={false}
+        style={[
+          styles.cartBarContainer,
+          { bottom: insets.bottom + scale(4), minHeight: scale(56) },
+        ]}
+        pointerEvents={cartItemCount > 0 ? "auto" : "none"}
+      >
+        {cartItemCount > 0 && (
           <FnBCartBar
             itemCount={cartItemCount}
             total={cartSubtotal}
             onPress={handleCartBarPress}
             onCheckout={handleCartCheckout}
-            visible={cartItemCount > 0}
+            visible
           />
-        </View>
-      )}
+        )}
+      </View>
 
         <View
           style={[
@@ -1025,6 +1124,19 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
         <FnBOrderFloatingWidget />
       </View>
 
+      <FnBCartDetailSheet
+        visible={cartDetailVisible}
+        cartItems={cartItems}
+        subtotal={cartSubtotal}
+        onClose={handleCloseCartDetail}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeItem}
+        onEditItem={handleEditCartItem}
+        onCheckout={() => {
+          setCartDetailVisible(false);
+          handleCartCheckout();
+        }}
+      />
       <FnBLocationPickerSheet
         visible={locationSheetVisible}
         onClose={() => setLocationSheetVisible(false)}
@@ -1043,6 +1155,23 @@ export const FnBScreen: React.FC<FnBScreenProps> = ({
         onSelectAddress={(address) => {
           setDeliveryAddress(address);
           setMapModalVisible(false);
+        }}
+      />
+      <FnBTutorialModal
+        visible={tutorialVisible}
+        stepIndex={tutorialStepIndex}
+        targetLayout={tutorialLayouts[tutorialStepIndex] ?? null}
+        onComplete={() => {
+          setFnBTutorialCompleted();
+          setTutorialVisible(false);
+        }}
+        onNext={() => {
+          if (tutorialStepIndex >= 5) {
+            setFnBTutorialCompleted();
+            setTutorialVisible(false);
+          } else {
+            setTutorialStepIndex((s) => s + 1);
+          }
         }}
       />
     </View>

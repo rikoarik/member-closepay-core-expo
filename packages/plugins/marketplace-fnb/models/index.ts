@@ -10,6 +10,9 @@ export type {
     OrderType,
     EntryPoint,
     OrderStatus,
+    FnBPaymentMethod,
+    FnBBalanceType,
+    FnBOrderTypesConfig,
 } from './FnBOrder';
 export { getAvailableOrderTypes } from './FnBOrder';
 export type {
@@ -18,4 +21,4 @@ export type {
     OperatingHour,
     DeliverySettings,
 } from './FnBStore';
-export { isStoreOpen, parseFnBQRCode } from './FnBStore';
+export { isStoreOpen, parseFnBQRCode, parseFnBTableQRCode } from './FnBStore';

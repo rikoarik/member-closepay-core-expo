@@ -12,18 +12,20 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
-  Animated,
-  Alert,
+  Modal,
+  Pressable,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { SearchNormal, CloseCircle } from "iconsax-react-nativejs";
+import { SearchNormal, CloseCircle, Warning2 } from "iconsax-react-nativejs";
 import {
   scale,
   moderateVerticalScale,
   getHorizontalPadding,
   FontFamily,
   ScreenHeader,
+  getResponsiveFontSize,
 } from "@core/config";
 import { useTheme } from "@core/theme";
 import { useTranslation } from "@core/i18n";
@@ -67,7 +69,7 @@ export const FnBMerchantDetailScreen: React.FC<
 
   // Get params from route
   const params = route.params as
-    | { entryPoint?: EntryPoint; storeId?: string }
+    | { entryPoint?: EntryPoint; storeId?: string; tableNumber?: string }
     | undefined;
   const activeEntryPoint = params?.entryPoint || entryPoint;
   const storeId = params?.storeId;
@@ -110,6 +112,11 @@ export const FnBMerchantDetailScreen: React.FC<
   const [showItemDetail, setShowItemDetail] = useState(false);
   const [showCartDetail, setShowCartDetail] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [replaceCartDialog, setReplaceCartDialog] = useState<{
+    item: FnBItem;
+    storeId: string;
+    storeName: string;
+  } | null>(null);
 
   // Filter items based on search query
   const searchedItems = useMemo(() => {
@@ -143,26 +150,11 @@ export const FnBMerchantDetailScreen: React.FC<
 
       // Check store conflict
       if (isStoreConflict(currentStoreId)) {
-        Alert.alert(
-          "Ganti pesanan?",
-          `Anda sudah punya pesanan di ${activeStoreName || "toko lain"}. Pesanan lama akan dihapus jika Anda lanjut.`,
-          [
-            { text: "Batal", style: "cancel" },
-            {
-              text: "Ya, ganti",
-              style: "destructive",
-              onPress: () => {
-                resetAndSwitchStore(currentStoreId, currentStoreName);
-                if (item.variants && item.variants.length > 0) {
-                  setSelectedItem(item);
-                  setShowItemDetail(true);
-                } else {
-                  incrementItem(item);
-                }
-              },
-            },
-          ],
-        );
+        setReplaceCartDialog({
+          item,
+          storeId: currentStoreId,
+          storeName: currentStoreName,
+        });
         return;
       }
 
@@ -252,15 +244,33 @@ export const FnBMerchantDetailScreen: React.FC<
 
   const handleCartCheckout = useCallback(() => {
     setShowCartDetail(false);
-    // @ts-ignore
+    // @ts-expect-error - navigation type does not include plugin screens
     navigation.navigate("FnBCheckout", {
       entryPoint,
       storeId: params?.storeId,
+      tableNumber: params?.tableNumber,
     });
-  }, [navigation, entryPoint, params?.storeId]);
+  }, [navigation, entryPoint, params?.storeId, params?.tableNumber]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
+  }, []);
+
+  const handleConfirmReplaceCart = useCallback(() => {
+    if (!replaceCartDialog) return;
+    const { item, storeId, storeName } = replaceCartDialog;
+    resetAndSwitchStore(storeId, storeName);
+    if (item.variants && item.variants.length > 0) {
+      setSelectedItem(item);
+      setShowItemDetail(true);
+    } else {
+      incrementItem(item);
+    }
+    setReplaceCartDialog(null);
+  }, [replaceCartDialog, resetAndSwitchStore, incrementItem]);
+
+  const handleDismissReplaceCart = useCallback(() => {
+    setReplaceCartDialog(null);
   }, []);
 
   const renderItem = useCallback(
@@ -497,6 +507,62 @@ export const FnBMerchantDetailScreen: React.FC<
         onEditItem={handleEditCartItem}
         onCheckout={handleCartCheckout}
       />
+
+      {/* Replace cart confirmation dialog */}
+      <Modal
+        visible={!!replaceCartDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={handleDismissReplaceCart}
+      >
+        <Pressable
+          style={styles.replaceCartBackdrop}
+          onPress={handleDismissReplaceCart}
+        >
+          <Pressable
+            style={[
+              styles.replaceCartCard,
+              {
+                backgroundColor: colors.surface,
+                paddingHorizontal: horizontalPadding + scale(24),
+              }
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={[styles.replaceCartIconWrap, { backgroundColor: colors.warning + "20" }]}>
+              <Warning2 size={scale(40)} color={colors.warning} variant="Bold" />
+            </View>
+            <Text style={[styles.replaceCartTitle, { color: colors.text }]}>
+              {t("fnb.replaceCartTitle")}
+            </Text>
+            <Text style={[styles.replaceCartMessage, { color: colors.textSecondary }]}>
+              {t("fnb.replaceCartMessage", {
+                storeName: replaceCartDialog?.storeName ?? "",
+              })}
+            </Text>
+            <View style={styles.replaceCartButtons}>
+              <TouchableOpacity
+                style={[styles.replaceCartBtn, styles.replaceCartBtnCancel, { borderColor: colors.border }]}
+                onPress={handleDismissReplaceCart}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.replaceCartBtnText, { color: colors.text }]}>
+                  {t("common.cancel")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.replaceCartBtn, styles.replaceCartBtnConfirm, { backgroundColor: colors.primary }]}
+                onPress={handleConfirmReplaceCart}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.replaceCartBtnText, { color: colors.surface }]}>
+                  {t("fnb.replaceCartConfirm")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -569,6 +635,70 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  replaceCartBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: scale(24),
+  },
+  replaceCartCard: {
+    width: "100%",
+    maxWidth: scale(340),
+    borderRadius: scale(16),
+    paddingVertical: scale(24),
+    alignItems: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  replaceCartIconWrap: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: scale(32),
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: scale(16),
+  },
+  replaceCartTitle: {
+    fontSize: getResponsiveFontSize("large"),
+    fontFamily: FontFamily.monasans.bold,
+    textAlign: "center",
+    marginBottom: scale(8),
+  },
+  replaceCartMessage: {
+    fontSize: getResponsiveFontSize("medium"),
+    fontFamily: FontFamily.monasans.regular,
+    textAlign: "center",
+    lineHeight: scale(22),
+    marginBottom: scale(24),
+  },
+  replaceCartButtons: {
+    flexDirection: "row",
+    gap: scale(12),
+    width: "100%",
+  },
+  replaceCartBtn: {
+    flex: 1,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  replaceCartBtnCancel: {
+    borderWidth: 1,
+  },
+  replaceCartBtnConfirm: {},
+  replaceCartBtnText: {
+    fontSize: getResponsiveFontSize("medium"),
     fontFamily: FontFamily.monasans.semiBold,
   },
 });

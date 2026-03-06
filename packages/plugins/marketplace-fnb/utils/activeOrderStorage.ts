@@ -13,6 +13,7 @@ export async function getActiveOrder(): Promise<FnBOrder | null> {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as FnBOrder;
     if (!parsed?.id || !parsed?.storeId || !Array.isArray(parsed?.items)) return null;
+    if (!parsed.paymentMethod) (parsed as any).paymentMethod = 'pay_at_counter';
     return parsed;
   } catch {
     return null;

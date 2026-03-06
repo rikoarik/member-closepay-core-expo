@@ -13,9 +13,10 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
-  Platform,
   Animated,
   RefreshControl,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -28,6 +29,8 @@ import {
   CloseCircle,
   ScanBarcode,
 } from 'iconsax-react-nativejs';
+import { useFnBLocation } from '../../context/FnBLocationContext';
+import { FnBLocationPickerSheet } from '../shared/FnBLocationPickerSheet';
 import {
   scale,
   moderateVerticalScale,
@@ -37,7 +40,13 @@ import {
 } from '@core/config';
 import { useTheme } from '@core/theme';
 import { useTranslation } from '@core/i18n';
-import { FNBDUMMY_STORE_LIST_TAB, type FnBStoreListItem } from '../../data/fnbDummyData';
+import {
+  FNBDUMMY_STORE_LIST_TAB,
+  FNBDUMMY_STORE_ITEMS,
+  DEFAULT_STORE_ID,
+  type FnBStoreListItem,
+} from '../../data/fnbDummyData';
+import type { FnBItem } from '../../models/FnBItem';
 
 interface FnBTabProps {
   isActive: boolean;
@@ -47,6 +56,41 @@ interface FnBTabProps {
 
 // Filter options
 type StoreFilter = 'all' | 'food' | 'drink' | 'open' | 'rating';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+type BadgeBgKey = 'primary' | 'warning';
+const BANNERS = [
+  {
+    id: '1',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBWyem3VPeIeVGlwdhRc47bzmSwB9pKrdWT7a0Rc1AP4VzSRhtMC2E-TjmfyCsWj7V1udDJ3gdmZVzy9lFWwd-ImUFUqlhQIM6lmhbAVU-aSjETyAeOsaSZOVrdyENacXoOgDeff2kiVFLQ0tsKo6Fr3w_9Gh9-Qe4Cy5jVkgfeiLkblLoAMq2HW6QLLwBgqQ4GJtaXVc1F3vARUearq6k7jQsosh8voVpOJS9tLYrmLo3KGeUBIGCD0fISkJawRfO7A-JkWd9Zq0d3',
+    badgeKey: 'fnb.badgePromo' as const,
+    badgeBg: 'primary' as BadgeBgKey,
+    titleKey: 'fnb.banner1Title' as const,
+    subtitleKey: 'fnb.banner1Subtitle' as const,
+  },
+  {
+    id: '2',
+    imageUrl:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCHfyBwgQ8ElUtgZsMyKMenLipEecXBlPorwQrZI7N7VfOno-H56q33nAkrO6EyyhSWlj142RYUvIDVUIs1LSvlSDX9pAKgBqkA-xQZRDz8SxweVglQmqzb2Z4Z1y1rF2fL0jM2t7ZqqP-ElMV5eWJ4u0R0ZZDRtjpF1y975rhxaDfAid_jJYHpIwyrXtKL0-PZoMCFg2Ls9advSszDtI24scMVO7eZLh5OFIima-PP2S6gxrwIDqxpERF67oldhdlC2MDHbvBtqgrR',
+    badgeKey: 'fnb.badgeNew' as const,
+    badgeBg: 'warning' as BadgeBgKey,
+    titleKey: 'fnb.banner2Title' as const,
+    subtitleKey: 'fnb.banner2Subtitle' as const,
+  },
+  {
+    id: '3',
+    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&h=400&fit=crop',
+    badgeKey: 'fnb.badgeBestSeller' as const,
+    badgeBg: 'primary' as BadgeBgKey,
+    titleKey: 'fnb.banner3Title' as const,
+    subtitleKey: 'fnb.banner3Subtitle' as const,
+  },
+];
+const BANNER_PADDING_H = scale(16);
+const BANNER_CARD_WIDTH = SCREEN_WIDTH - BANNER_PADDING_H * 2;
+const BANNER_HEIGHT = scale(160);
+const BANNER_BORDER_RADIUS = scale(16);
 
 // Skeleton Loading Component with Shimmer Animation
 const StoreCardSkeleton: React.FC = () => {
@@ -194,7 +238,10 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
 
   // Cache untuk mencegah refetch saat tab switch
   const dataCache = useRef<{ stores: FnBStoreListItem[]; timestamp: number } | null>(null);
+  const bannerListRef = useRef<FlatList>(null);
+  const bannerIndexRef = useRef(0);
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const BANNER_AUTO_SCROLL_INTERVAL = 4000;
 
   // Local state
   const [stores, setStores] = useState<FnBStoreListItem[]>([]);
@@ -204,6 +251,23 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
+
+  const { deliveryAddress, setDeliveryAddress } = useFnBLocation();
+
+  useEffect(() => {
+    if (!isVisible || BANNERS.length <= 1) return;
+    const itemWidth = BANNER_CARD_WIDTH + scale(12);
+    const timer = setInterval(() => {
+      const next = (bannerIndexRef.current + 1) % BANNERS.length;
+      bannerIndexRef.current = next;
+      bannerListRef.current?.scrollToOffset({
+        offset: next * itemWidth,
+        animated: true,
+      });
+    }, BANNER_AUTO_SCROLL_INTERVAL);
+    return () => clearInterval(timer);
+  }, [isVisible]);
 
   const loadStores = useCallback(
     async (forceRefresh = false) => {
@@ -322,6 +386,23 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
     navigation.navigate('FnBScan');
   }, [navigation]);
 
+  const featuredProducts = useMemo(
+    () => FNBDUMMY_STORE_ITEMS[DEFAULT_STORE_ID] ?? [],
+    []
+  );
+
+  const handleProductPress = useCallback(
+    () => {
+      // @ts-ignore
+      navigation.navigate('FnBMerchantDetail', {
+        storeId: DEFAULT_STORE_ID,
+        storeName: 'Warung Makan Sederhana',
+        entryPoint: 'browse',
+      });
+    },
+    [navigation]
+  );
+
   const handleFilterPress = useCallback((filter: StoreFilter) => {
     setActiveFilter(filter);
     setShowFilters(false);
@@ -394,6 +475,126 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
     [colors, handleStorePress]
   );
 
+  const renderBanner = useCallback(
+    ({ item }: { item: (typeof BANNERS)[0] }) => (
+      <TouchableOpacity
+        style={[
+          styles.bannerCard,
+          {
+            width: BANNER_CARD_WIDTH,
+            height: BANNER_HEIGHT,
+            borderRadius: BANNER_BORDER_RADIUS,
+            marginRight: scale(12),
+          },
+        ]}
+        activeOpacity={0.95}
+      >
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+        <View style={styles.bannerGradient} />
+        <View style={styles.bannerContent}>
+          <View
+            style={[
+              styles.bannerBadge,
+              {
+                backgroundColor:
+                  item.badgeBg === 'warning' ? colors.warning : colors.primary,
+              },
+            ]}
+          >
+            <Text style={styles.bannerBadgeText}>{t(item.badgeKey)}</Text>
+          </View>
+          <Text style={styles.bannerTitle}>{t(item.titleKey)}</Text>
+          <Text style={styles.bannerSubtitle}>{t(item.subtitleKey)}</Text>
+        </View>
+      </TouchableOpacity>
+    ),
+    [colors, t]
+  );
+
+  const renderProductCard = useCallback(
+    ({ item }: { item: FnBItem }) => (
+      <TouchableOpacity
+        style={[styles.productCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        onPress={handleProductPress}
+        activeOpacity={0.8}
+      >
+        <View style={styles.productImageWrap}>
+          <Image
+            source={{ uri: item.imageUrl ?? '' }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+        </View>
+        <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={[styles.productPrice, { color: colors.primary }]}>
+          Rp {item.price.toLocaleString('id-ID')}
+        </Text>
+      </TouchableOpacity>
+    ),
+    [colors, handleProductPress]
+  );
+
+  const listHeaderComponent = useMemo(
+    () => (
+      <>
+        <View style={[styles.bannerHeroWrap, { height: BANNER_HEIGHT }]}>
+          <FlatList
+            ref={bannerListRef}
+            data={BANNERS}
+            renderItem={renderBanner}
+            keyExtractor={(o) => o.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={BANNER_CARD_WIDTH + scale(12)}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            contentContainerStyle={styles.bannerCarouselContent}
+            nestedScrollEnabled
+            scrollEnabled
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(
+                e.nativeEvent.contentOffset.x / (BANNER_CARD_WIDTH + scale(12))
+              );
+              bannerIndexRef.current = Math.min(idx, BANNERS.length - 1);
+            }}
+          />
+        </View>
+        {featuredProducts.length > 0 && (
+          <View style={[styles.productSection, { paddingHorizontal: horizontalPadding }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('fnb.menuPopuler') || 'Menu Populer'}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.productScrollContent}
+              nestedScrollEnabled
+              scrollEnabled
+              directionalLockEnabled
+            >
+              {featuredProducts.slice(0, 10).map((item) => (
+                <View key={item.id} style={styles.productCardWrap}>
+                  {renderProductCard({ item })}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        <Text style={[styles.sectionTitle, { color: colors.text, marginTop: scale(8) }]}>
+          {t('fnb.stores') || 'Toko'}
+        </Text>
+      </>
+    ),
+    [renderBanner, renderProductCard, featuredProducts, horizontalPadding, colors, t]
+  );
+
   if (!isVisible) {
     return null;
   }
@@ -436,17 +637,35 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
                     </TouchableOpacity>
                 </View> */}
 
-        <View style={styles.searchRow}>
-          <View
-            style={[
-              styles.searchBar,
-              { backgroundColor: colors.surface, borderColor: colors.border, flex: 1 },
-            ]}
+        {/* Location pill */}
+        <TouchableOpacity
+          style={[styles.locationPill, { backgroundColor: colors.primary }]}
+          activeOpacity={0.8}
+          onPress={() => setLocationSheetVisible(true)}
+        >
+          <Location size={scale(14)} color={colors.surface} variant="Bold" />
+          <Text
+            style={[styles.locationPillText, { color: colors.surface }]}
+            numberOfLines={1}
           >
+            {deliveryAddress
+              ? (deliveryAddress.split(',')[0]?.trim() || deliveryAddress)
+              : t('fnb.currentLocationShort')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Search + Scan in one bar (same as FnBScreen) */}
+        <View
+          style={[
+            styles.searchWrap,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <View style={styles.searchInputRow}>
             <SearchNormal size={scale(20)} color={colors.textSecondary} variant="Linear" />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('fnb.searchPlaceholder') || 'Cari restoran atau menu...'}
+              placeholder={t('fnb.searchCraving') || t('fnb.searchPlaceholder') || 'Cari restoran atau menu...'}
               placeholderTextColor={colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -461,10 +680,10 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
             )}
           </View>
           <TouchableOpacity
-            style={[styles.scanButton, { backgroundColor: colors.primary }]}
             onPress={handleScanPress}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ScanBarcode size={scale(34)} color={colors.surface} variant="Outline" />
+            <ScanBarcode size={scale(22)} color={colors.primary} variant="Bold" />
           </TouchableOpacity>
         </View>
 
@@ -505,6 +724,15 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
         </View>
       </View>
 
+      <FnBLocationPickerSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        onSelectAddress={(address) => {
+          setDeliveryAddress(address);
+          setLocationSheetVisible(false);
+        }}
+      />
+
       {/* Store List */}
       {shouldShowLoading ? (
         <View
@@ -527,6 +755,7 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
           data={filteredStores}
           renderItem={renderStoreCard}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={listHeaderComponent}
           contentContainerStyle={[
             styles.listContent,
             {
@@ -537,7 +766,7 @@ export const FnBTab: React.FC<FnBTabProps> = ({ isActive, isVisible, scrollEnabl
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={scrollEnabled}
-          nestedScrollEnabled={false}
+          nestedScrollEnabled
           scrollEventThrottle={16}
           bounces={true}
           alwaysBounceVertical={true}
@@ -594,6 +823,20 @@ const styles = StyleSheet.create({
   fixedHeader: {
     paddingBottom: moderateVerticalScale(12),
   },
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
+    marginBottom: scale(12),
+    alignSelf: 'flex-start',
+  },
+  locationPillText: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(13),
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,39 +860,124 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scanButton: {
-    width: scale(50),
-    height: scale(50),
-    borderRadius: scale(10),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   toggleIcon: {
     fontSize: scale(16),
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  searchRow: {
+  searchWrap: {
+    height: scale(48),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(10),
+    borderWidth: 1,
+    paddingLeft: scale(14),
+    paddingRight: scale(14),
+    borderRadius: scale(24),
+    gap: scale(8),
     marginBottom: scale(12),
   },
-  searchBar: {
+  searchInputRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(14),
-    borderRadius: scale(14),
-    borderWidth: 1.5,
+    gap: scale(8),
   },
   searchInput: {
     flex: 1,
-    height: 50,
     fontSize: scale(14),
     fontFamily: FontFamily.monasans.regular,
-    marginLeft: scale(10),
-    marginRight: scale(10),
     paddingVertical: 0,
+  },
+  bannerHeroWrap: {
+    overflow: 'hidden',
+    marginBottom: scale(16),
+  },
+  bannerCarouselContent: {
+    paddingHorizontal: BANNER_PADDING_H,
+  },
+  bannerCard: {
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  bannerImage: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  bannerGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  bannerContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: scale(20),
+  },
+  bannerBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(6),
+    marginBottom: scale(8),
+  },
+  bannerBadgeText: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(11),
+    color: '#fff',
+  },
+  bannerTitle: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(20),
+    color: '#fff',
+    lineHeight: scale(26),
+  },
+  bannerSubtitle: {
+    fontFamily: FontFamily.monasans.regular,
+    fontSize: scale(12),
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: scale(4),
+  },
+  productSection: {
+    marginBottom: scale(20),
+  },
+  sectionTitle: {
+    fontSize: scale(16),
+    fontFamily: FontFamily.monasans.bold,
+    marginBottom: scale(12),
+  },
+  productScrollContent: {
+    gap: scale(12),
+    paddingRight: scale(16),
+  },
+  productCardWrap: {
+    width: scale(140),
+  },
+  productCard: {
+    borderRadius: scale(12),
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  productImageWrap: {
+    width: '100%',
+    height: scale(100),
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  productName: {
+    fontFamily: FontFamily.monasans.semiBold,
+    fontSize: scale(13),
+    paddingHorizontal: scale(10),
+    paddingTop: scale(8),
+  },
+  productPrice: {
+    fontFamily: FontFamily.monasans.bold,
+    fontSize: scale(13),
+    paddingHorizontal: scale(10),
+    paddingBottom: scale(10),
   },
   filterRow: {
     marginBottom: scale(4),

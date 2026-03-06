@@ -61,10 +61,54 @@ Tanpa env, app tetap jalan dengan nilai default (string kosong / development).
 ```bash
 npm start          # Metro; pilih platform di CLI atau scan QR dengan Expo Go
 npm run web        # Buka di browser (mobile viewport)
-npm run android:go # Android via Expo Go (LAN)
+npm run android:go # Start Metro + buka di Android (Expo Go atau dev build)
 npm run android:tunnel  # Android via tunnel (HP beda WiFi pun bisa)
 npm run ios        # iOS (simulator / Expo Go)
 ```
+
+### Kenapa Android tidak jalan (padahal iOS bisa)?
+
+Di Mac, iOS sering langsung jalan (simulator/Expo Go). Android butuh **Android SDK** dan env **ANDROID_HOME**:
+
+1. **Pasang Android Studio** (atau minimal [Command line tools](https://developer.android.com/studio#command-tools)) dan pastikan SDK terpasang.
+
+2. **Set ANDROID_HOME** (dan PATH untuk `adb`):
+   ```bash
+   export ANDROID_HOME=$HOME/Library/Android/sdk
+   export PATH=$ANDROID_HOME/platform-tools:$PATH
+   ```
+   Simpan di `~/.zshrc` lalu `source ~/.zshrc`.
+
+3. **Buat `android/local.properties`** agar Gradle menemukan SDK (perlu sekali setelah clone):
+   ```bash
+   npm run android:setup
+   ```
+   Script ini menulis `sdk.dir` dari ANDROID_HOME. File `local.properties` sudah di-.gitignore.
+
+4. **Jalankan Android** (pilih salah satu):
+   - **Expo Go (tanpa build native):**  
+     `npm start` → tekan **a** di terminal, atau `npm run android:go`. Pastikan HP/emulator terhubung (USB debugging / emulator jalan) dan Expo Go terpasang.
+   - **Development build (pakai folder `android/`):**  
+     Pertama kali: `npm run android` (build + install). Setelah itu `npm start` → tekan **a** untuk connect ke app yang sudah terpasang.
+
+5. **Error "Failed to download remote update" (java.io.IOException) di Android:**  
+   Artinya device/emulator tidak bisa mengakses Metro di Mac. Pakai salah satu:
+   - **Emulator Android:** jalankan Metro dengan host yang bisa diakses emulator:
+     ```bash
+     npm run android:go:emu
+     ```
+     (Script ini set `REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2` — di emulator, 10.0.2.2 = localhost Mac.)
+   - **HP fisik (USB / WiFi):** pakai IP Mac agar HP bisa reach Metro:
+     ```bash
+     REACT_NATIVE_PACKAGER_HOSTNAME=$(ipconfig getifaddr en0) npm start
+     ```
+     Lalu di terminal tekan **a**, atau buka manual di HP (pastikan HP dan Mac satu WiFi).
+
+5. **Cek device/emulator:**  
+   ```bash
+   adb devices
+   ```  
+   Harus ada device atau emulator yang listed.
 
 ### Android di device fisik (USB)
 
@@ -124,7 +168,9 @@ APK release: `android/app/build/outputs/apk/release/app-release.apk`.
 | `start` | `expo start` | Metro; pilih platform di terminal |
 | `web` | `expo start --web` | Dev web |
 | `android` | `expo run:android` | Build & run native Android (prebuild) |
+| `android:setup` | `node scripts/android-setup.js` | Generate android/local.properties dari ANDROID_HOME (jalankan sekali setelah clone) |
 | `android:go` | `expo start --android` | Expo Go Android (LAN) |
+| `android:go:emu` | `REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 expo start --android` | Metro + Android (untuk emulator; hindari error "Failed to download remote update") |
 | `android:tunnel` | `expo start --android --tunnel` | Expo Go Android via tunnel |
 | `ios` | `expo run:ios` | Build & run iOS |
 | `build:web` | `expo export -p web` + workbox | Export web ke `dist/` |

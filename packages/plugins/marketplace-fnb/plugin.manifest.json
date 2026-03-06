@@ -26,6 +26,9 @@
       "FnBFavorites": "FnBFavoritesScreen",
       "FnBProductSearch": "FnBProductSearchScreen",
       "FnBProductSearchResults": "FnBProductSearchResultsScreen",
+      "FnBNearby": "FnBNearbyScreen",
+      "FnBCheapDelivery": "FnBCheapDeliveryScreen",
+      "FnBAllMerchants": "FnBAllMerchantsScreen",
       "FnBOrderStatus": "FnBOrderStatusScreen",
       "FnBPaymentSuccess": "FnBPaymentSuccessScreen",
       "FnBOrderTracking": "FnBOrderTrackingScreen",
@@ -212,6 +215,42 @@
       ],
       "meta": {
         "title": "Hasil Pencarian",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBNearby",
+      "path": "/fnb/nearby",
+      "component": "FnBNearbyScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Resto Terdekat",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBCheapDelivery",
+      "path": "/fnb/cheap-delivery",
+      "component": "FnBCheapDeliveryScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Ongkir Murah",
+        "showInMenu": false
+      }
+    },
+    {
+      "name": "FnBAllMerchants",
+      "path": "/fnb/all-merchants",
+      "component": "FnBAllMerchantsScreen",
+      "permissions": [
+        "read:fnb"
+      ],
+      "meta": {
+        "title": "Semua Merchant",
         "showInMenu": false
       }
     }

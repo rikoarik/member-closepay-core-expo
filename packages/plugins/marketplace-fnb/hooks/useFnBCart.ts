@@ -7,6 +7,7 @@
 import React, { useContext, useMemo } from 'react';
 import type { OrderType, EntryPoint } from '../models';
 import { getAvailableOrderTypes } from '../models';
+import { getFnBCompanyConfig } from '../config/fnbCompanyConfig';
 import { FnBCartContext } from '../context/FnBCartContext';
 
 export type { CartItem } from '../context/FnBCartContext';
@@ -53,7 +54,7 @@ export const useFnBCart = (entryPoint: EntryPoint = 'browse'): UseFnBCartReturn 
   }
 
   const availableOrderTypes = useMemo(
-    () => getAvailableOrderTypes(entryPoint),
+    () => getAvailableOrderTypes(entryPoint, getFnBCompanyConfig()),
     [entryPoint]
   );
 

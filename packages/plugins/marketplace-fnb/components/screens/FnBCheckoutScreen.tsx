@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, StackActions } from '@react-navigation/native';
-import { Shop, Truck, Box, Location as LocationIcon, Reserve, Edit2, ArrowRight2, ArrowLeft2 } from 'iconsax-react-nativejs';
+import { Shop, Truck, Box, Location as LocationIcon, Reserve, Edit2, ArrowRight2, ArrowLeft2, Wallet3, MoneyRecive, Clock, ScanBarcode } from 'iconsax-react-nativejs';
 import Toast from 'react-native-toast-message';
 import { scale, moderateVerticalScale, getHorizontalPadding, FontFamily, ScreenHeader } from '@core/config';
 import { useTheme } from '@core/theme';
@@ -27,12 +27,14 @@ import { useBalance } from '@plugins/balance';
 import { paymentService } from '@plugins/payment';
 import { useFnBData, useFnBCart } from '../../hooks';
 import { getAvailableOrderTypes } from '../../models';
-import type { OrderType, EntryPoint, FnBOrder, FnBOrderItem } from '../../models';
+import type { OrderType, EntryPoint, FnBOrder, FnBOrderItem, FnBPaymentMethod, FnBBalanceType } from '../../models';
+import { getFnBCompanyConfig } from '../../config/fnbCompanyConfig';
 import { useFnBActiveOrder } from '../../context/FnBActiveOrderContext';
 import { useFnBLocation } from '../../context/FnBLocationContext';
 import { getLastDelivery, setLastDelivery } from '../../utils/deliveryStorage';
 import { FnBLocationPickerModal } from '../shared/FnBLocationPickerModal';
 import { FnBLocationPickerSheet } from '../shared/FnBLocationPickerSheet';
+import { FnBScanTableModal } from '../shared/FnBScanTableModal';
 
 const formatPrice = (price: number): string => {
   return `Rp ${price.toLocaleString('id-ID')}`;
@@ -53,10 +55,11 @@ export const FnBCheckoutScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const horizontalPadding = getHorizontalPadding();
 
-  // Get entry point and storeId from route params
-  const params = route.params as { entryPoint?: EntryPoint; storeId?: string } | undefined;
+  // Get entry point, storeId, tableNumber (from scan) from route params
+  const params = route.params as { entryPoint?: EntryPoint; storeId?: string; tableNumber?: string } | undefined;
   const entryPoint: EntryPoint = params?.entryPoint || 'browse';
   const storeId = params?.storeId;
+  const initialTableFromScan = params?.tableNumber;
 
   // Hooks
   const { user } = useAuth();
@@ -69,10 +72,15 @@ export const FnBCheckoutScreen: React.FC = () => {
   // Empty cart guard: show message and back button if user landed without items
   const isCartEmpty = cartItems.length === 0;
   const availableBalance = balance?.balance ?? 0;
-  const hasInsufficientBalance = subtotal > availableBalance;
+  const fnbConfig = useMemo(() => getFnBCompanyConfig(), []);
+  const allowedPaymentMethods = fnbConfig.allowedPaymentMethods;
+  const allowedBalanceTypes = fnbConfig.allowedBalanceTypes;
 
-  // Get available order types based on entry point
-  const availableOrderTypes = useMemo(() => getAvailableOrderTypes(entryPoint), [entryPoint]);
+  // Get available order types based on entry point and config
+  const availableOrderTypes = useMemo(
+    () => getAvailableOrderTypes(entryPoint, fnbConfig),
+    [entryPoint, fnbConfig]
+  );
 
   // Local state (typed as full OrderType so all conditionals type-check; runtime value is always in availableOrderTypes)
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(
@@ -88,10 +96,18 @@ export const FnBCheckoutScreen: React.FC = () => {
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [locationSheetVisible, setLocationSheetVisible] = useState(false);
   const [kitchenNotes, setKitchenNotes] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<FnBPaymentMethod>(
+    () => allowedPaymentMethods[0] ?? 'pay_at_counter'
+  );
+  const [selectedBalanceType, setSelectedBalanceType] = useState<FnBBalanceType | ''>(
+    () => (allowedBalanceTypes[0] as FnBBalanceType) ?? ''
+  );
+  const [scanTableModalVisible, setScanTableModalVisible] = useState(false);
 
   // Pre-fill: only run once per "delivery" session so we don't overwrite user edits
   const lastDeliveryLoadedRef = useRef(false);
   const hasPrefilledNameRef = useRef(false);
+  const hasPrefilledTableFromScanRef = useRef(false);
 
   // Pre-fill customer name from auth when delivery is selected
   useEffect(() => {
@@ -118,6 +134,13 @@ export const FnBCheckoutScreen: React.FC = () => {
       cancelled = true;
     };
   }, [selectedOrderType, contextAddress]);
+
+  // Pre-fill table number from scan only when entryPoint is scan-qr (not for browse)
+  useEffect(() => {
+    if (entryPoint !== 'scan-qr' || !initialTableFromScan?.trim() || hasPrefilledTableFromScanRef.current) return;
+    setTableNumber(initialTableFromScan.trim());
+    hasPrefilledTableFromScanRef.current = true;
+  }, [entryPoint, initialTableFromScan]);
 
   // Order type options
   const orderTypeOptions: OrderTypeOption[] = useMemo(() => {
@@ -172,6 +195,43 @@ export const FnBCheckoutScreen: React.FC = () => {
   const total = orderType === 'dine-in'
     ? subtotal + serviceFee + taxAmount
     : getTotal(deliveryFee, serviceFee);
+  const hasInsufficientBalance =
+    selectedPaymentMethod === 'balance' && total > availableBalance;
+
+  const paymentMethodOptions = useMemo(() => {
+    const opts: { id: FnBPaymentMethod; label: string; icon: React.ReactNode }[] = [];
+    if (allowedPaymentMethods.includes('pay_at_counter')) {
+      opts.push({
+        id: 'pay_at_counter',
+        label: t('fnb.payAtCounter') || 'Bayar di kasir',
+        icon: <MoneyRecive size={scale(22)} color={colors.textSecondary} variant="Bold" />,
+      });
+    }
+    if (allowedPaymentMethods.includes('pay_later')) {
+      opts.push({
+        id: 'pay_later',
+        label: t('fnb.payLater') || 'Bayar nanti',
+        icon: <Clock size={scale(22)} color={colors.textSecondary} variant="Bold" />,
+      });
+    }
+    if (allowedPaymentMethods.includes('balance')) {
+      opts.push({
+        id: 'balance',
+        label: t('fnb.payWithBalance') || 'Bayar dengan Saldo',
+        icon: <Wallet3 size={scale(22)} color={colors.textSecondary} variant="Bold" />,
+      });
+    }
+    return opts;
+  }, [allowedPaymentMethods, t, colors]);
+
+  const balanceTypeLabels: Record<FnBBalanceType, string> = useMemo(
+    () => ({
+      'saldo-makan': t('fnb.balanceTypeMeal') || 'Saldo Makanan',
+      'saldo-utama': t('fnb.balanceTypeMain') || 'Saldo Utama',
+      'saldo-plafon': t('fnb.balanceTypePlafon') || 'Saldo Plafon',
+    }),
+    [t]
+  );
 
   // Validate form
   const isFormValid = useMemo(() => {
@@ -205,7 +265,7 @@ export const FnBCheckoutScreen: React.FC = () => {
       return;
     }
 
-    if (hasInsufficientBalance) {
+    if (selectedPaymentMethod === 'balance' && hasInsufficientBalance) {
       Alert.alert(
         t('fnb.insufficientBalanceTitle') || 'Saldo tidak cukup',
         t('fnb.insufficientBalance') || 'Saldo Anda tidak mencukupi. Silakan top up atau kurangi item pesanan.'
@@ -217,64 +277,70 @@ export const FnBCheckoutScreen: React.FC = () => {
 
     const orderId = `ORD-FNB-${Date.now()}`;
     try {
-      const result = await paymentService.payWithBalance(total, orderId, {
-        storeId: storeId ?? store?.id,
-        storeName: store?.name,
-        entryPoint,
-        itemCount,
-      });
-
-      if (result.status === 'success') {
-        if (orderType === 'delivery' && phoneNumber.trim() && deliveryAddress.trim()) {
-          setLastDelivery({ phoneNumber: phoneNumber.trim(), deliveryAddress: deliveryAddress.trim() }).catch(() => {});
-        }
-        const orderItems: FnBOrderItem[] = cartItems.map(({ item, quantity, variant, addons, notes, subtotal: itemSubtotal }) => ({
-          item,
-          quantity,
-          variant,
-          addons,
-          notes,
-          subtotal: itemSubtotal,
-        }));
-        const order: FnBOrder = {
-          id: orderId,
-          storeId: storeId ?? store?.id ?? '',
+      if (selectedPaymentMethod === 'balance') {
+        const result = await paymentService.payWithBalance(total, orderId, {
+          storeId: storeId ?? store?.id,
           storeName: store?.name,
-          items: orderItems,
-          orderType: selectedOrderType,
           entryPoint,
-          customerName: customerName.trim(),
-          tableNumber: orderType === 'dine-in' ? tableNumber.trim() || undefined : undefined,
-          deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() || undefined : undefined,
-          phoneNumber: orderType === 'delivery' ? phoneNumber.trim() || undefined : undefined,
-          pickupTime: orderType === 'take-away' ? pickupTime.trim() || undefined : undefined,
-          subtotal,
-          deliveryFee: orderType === 'delivery' && store?.delivery ? store.delivery.fee : undefined,
-          serviceFee,
-          total,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-        };
-        await setActiveOrder(order);
-        clearCart();
-        Toast.show({
-          type: 'success',
-          text1: t('fnb.orderSuccess') || 'Pesanan Berhasil',
-          text2: t('fnb.orderSuccessMessage') || 'Pesanan Anda sedang diproses.',
+          itemCount,
+          balanceType: selectedBalanceType || undefined,
         });
-        navigation.dispatch(
-          StackActions.replace('FnBPaymentSuccess', {
-            orderId: order.id,
-            storeId: order.storeId,
-            storeName: order.storeName,
-            total: order.total,
-            tableNumber: order.tableNumber,
-            orderType: order.orderType,
-            pickupTime: order.pickupTime,
-            deliveryAddress: order.deliveryAddress,
-          })
-        );
+        if (result.status !== 'success') return;
       }
+
+      if (orderType === 'delivery' && phoneNumber.trim() && deliveryAddress.trim()) {
+        setLastDelivery({ phoneNumber: phoneNumber.trim(), deliveryAddress: deliveryAddress.trim() }).catch(() => {});
+      }
+      const orderItems: FnBOrderItem[] = cartItems.map(({ item, quantity, variant, addons, notes, subtotal: itemSubtotal }) => ({
+        item,
+        quantity,
+        variant,
+        addons,
+        notes,
+        subtotal: itemSubtotal,
+      }));
+      const order: FnBOrder = {
+        id: orderId,
+        storeId: storeId ?? store?.id ?? '',
+        storeName: store?.name,
+        items: orderItems,
+        orderType: selectedOrderType,
+        entryPoint,
+        customerName: customerName.trim(),
+        tableNumber: orderType === 'dine-in' ? tableNumber.trim() || undefined : undefined,
+        deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() || undefined : undefined,
+        phoneNumber: orderType === 'delivery' ? phoneNumber.trim() || undefined : undefined,
+        pickupTime: orderType === 'take-away' ? pickupTime.trim() || undefined : undefined,
+        subtotal,
+        deliveryFee: orderType === 'delivery' && store?.delivery ? store.delivery.fee : undefined,
+        serviceFee,
+        total,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        paymentMethod: selectedPaymentMethod,
+        balanceType: selectedPaymentMethod === 'balance' && selectedBalanceType ? selectedBalanceType : undefined,
+      };
+      await setActiveOrder(order);
+      clearCart();
+      Toast.show({
+        type: 'success',
+        text1: t('fnb.orderSuccess') || 'Pesanan Berhasil',
+        text2: t('fnb.orderSuccessMessage') || 'Pesanan Anda sedang diproses.',
+      });
+      navigation.dispatch(
+        StackActions.replace('FnBPaymentSuccess', {
+          orderId: order.id,
+          storeId: order.storeId,
+          storeName: order.storeName,
+          total: order.total,
+          tableNumber: order.tableNumber,
+          orderType: order.orderType,
+          pickupTime: order.pickupTime,
+          deliveryAddress: order.deliveryAddress,
+          paymentMethod: order.paymentMethod,
+          balanceType: order.balanceType,
+        })
+      );
     } catch (error) {
       const message =
         error instanceof Error && error.message.toLowerCase().includes('insufficient')
@@ -297,6 +363,8 @@ export const FnBCheckoutScreen: React.FC = () => {
     entryPoint,
     itemCount,
     hasInsufficientBalance,
+    selectedPaymentMethod,
+    selectedBalanceType,
     t,
     selectedOrderType,
     phoneNumber,
@@ -377,11 +445,33 @@ export const FnBCheckoutScreen: React.FC = () => {
                 </View>
                 <View style={styles.dineInTableText}>
                   <Text style={[styles.dineInTableLabel, { color: colors.textSecondary }]}>{t('fnb.tableNumber') || 'Table Number'}</Text>
-                  <Text style={[styles.dineInTableValue, { color: colors.text }]}>{tableNumber.trim() || '—'}</Text>
+                  {entryPoint === 'browse' ? (
+                    <View style={{ flexDirection: 'row', gap: scale(8), alignItems: 'center', marginTop: scale(4) }}>
+                      <TextInput
+                        style={[styles.input, { flex: 1, backgroundColor: colors.background, color: colors.text, borderColor: colors.border, paddingVertical: scale(8) }]}
+                        placeholder={t('fnb.tableNumberPlaceholder') || 'Contoh: 12'}
+                        placeholderTextColor={colors.textSecondary}
+                        value={tableNumber}
+                        onChangeText={setTableNumber}
+                        keyboardType="number-pad"
+                      />
+                      <TouchableOpacity
+                        style={[styles.scanTableButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+                        onPress={() => setScanTableModalVisible(true)}
+                      >
+                        <ScanBarcode size={scale(20)} color={colors.primary} variant="Bold" />
+                        <Text style={[styles.scanTableButtonText, { color: colors.primary }]} numberOfLines={1}>{t('fnb.scanTable') || 'Scan meja'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <Text style={[styles.dineInTableValue, { color: colors.text }]}>{tableNumber.trim() || '—'}</Text>
+                  )}
                 </View>
-                <TouchableOpacity onPress={() => {}}>
-                  <Text style={[styles.dineInTableChange, { color: colors.primary }]}>{t('common.edit') || 'Change'}</Text>
-                </TouchableOpacity>
+                {entryPoint === 'scan-qr' && (
+                  <TouchableOpacity onPress={() => setScanTableModalVisible(true)}>
+                    <Text style={[styles.dineInTableChange, { color: colors.primary }]}>{t('common.edit') || 'Change'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -431,6 +521,47 @@ export const FnBCheckoutScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Payment Method (dine-in) */}
+          {paymentMethodOptions.length > 0 && (
+            <View style={styles.dineInSection}>
+              <Text style={[styles.dineInSectionTitle, { color: colors.text }]}>{t('fnb.paymentMethod') || 'Metode Pembayaran'}</Text>
+              <View style={{ flexDirection: 'row', gap: scale(8), flexWrap: 'wrap' }}>
+                {paymentMethodOptions.map((opt) => {
+                  const isSelected = selectedPaymentMethod === opt.id;
+                  return (
+                    <TouchableOpacity
+                      key={opt.id}
+                      style={[
+                        styles.paymentMethodTab,
+                        { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border },
+                      ]}
+                      onPress={() => setSelectedPaymentMethod(opt.id)}
+                    >
+                      {opt.icon}
+                      <Text style={[styles.paymentMethodLabel, { color: isSelected ? colors.surface : colors.text }]} numberOfLines={1}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {selectedPaymentMethod === 'balance' && allowedBalanceTypes.length > 0 && (
+                <View style={[styles.balanceTypeRow, { marginTop: scale(12) }]}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>{t('fnb.balanceType') || 'Jenis Saldo'}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: scale(8) }}>
+                    {allowedBalanceTypes.map((bt) => (
+                      <TouchableOpacity
+                        key={bt}
+                        style={[styles.balanceTypeChip, { backgroundColor: selectedBalanceType === bt ? colors.primary : colors.surface, borderColor: colors.border }]}
+                        onPress={() => setSelectedBalanceType(bt)}
+                      >
+                        <Text style={[styles.balanceTypeChipText, { color: selectedBalanceType === bt ? colors.surface : colors.text }]}>{balanceTypeLabels[bt]}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Payment Summary */}
           <View style={[styles.dineInSummaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.dineInSummaryRow}>
@@ -460,11 +591,23 @@ export const FnBCheckoutScreen: React.FC = () => {
             disabled={!isFormValid || isSubmitting || hasInsufficientBalance}
           >
             <Text style={[styles.dineInConfirmButtonText, { color: '#102222' }]}>
-              {isSubmitting ? (t('fnb.processing') || 'Processing...') : (t('fnb.confirmAndPay') || 'Confirm & Pay')}
+              {isSubmitting
+                ? (t('fnb.processing') || 'Processing...')
+                : selectedPaymentMethod === 'balance'
+                  ? (t('fnb.confirmAndPay') || 'Confirm & Pay')
+                  : (t('fnb.confirmOrder') || 'Konfirmasi Pesanan')}
             </Text>
             <ArrowRight2 size={scale(22)} color="#102222" variant="Bold" />
           </TouchableOpacity>
         </View>
+        <FnBScanTableModal
+          visible={scanTableModalVisible}
+          onClose={() => setScanTableModalVisible(false)}
+          onTableScanned={(num) => {
+            setTableNumber(num);
+            setScanTableModalVisible(false);
+          }}
+        />
       </View>
     );
   }
@@ -561,21 +704,30 @@ export const FnBCheckoutScreen: React.FC = () => {
               <Text style={[styles.inputLabel, { color: colors.text }]}>
                 {t('fnb.tableNumber') || 'Nomor Meja'} *
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.surface,
-                    color: colors.text,
-                    borderColor: colors.border,
-                  },
-                ]}
-                placeholder={t('fnb.tableNumberPlaceholder') || 'Contoh: 12'}
-                placeholderTextColor={colors.textSecondary}
-                value={tableNumber}
-                onChangeText={setTableNumber}
-                keyboardType="number-pad"
-              />
+              <View style={{ flexDirection: 'row', gap: scale(8), alignItems: 'center' }}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { flex: 1, backgroundColor: colors.surface, color: colors.text, borderColor: colors.border },
+                  ]}
+                  placeholder={t('fnb.tableNumberPlaceholder') || 'Contoh: 12'}
+                  placeholderTextColor={colors.textSecondary}
+                  value={tableNumber}
+                  onChangeText={setTableNumber}
+                  keyboardType="number-pad"
+                />
+                {entryPoint === 'browse' && (
+                  <TouchableOpacity
+                    style={[styles.scanTableButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => setScanTableModalVisible(true)}
+                  >
+                    <ScanBarcode size={scale(22)} color={colors.primary} variant="Bold" />
+                    <Text style={[styles.scanTableButtonText, { color: colors.primary }]} numberOfLines={1}>
+                      {t('fnb.scanTable') || 'Scan meja'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </>
           )}
 
@@ -718,25 +870,28 @@ export const FnBCheckoutScreen: React.FC = () => {
               </View>
             )}
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                {t('fnb.availableBalance') || 'Saldo tersedia'}
-              </Text>
-              <Text
-                style={[
-                  styles.summaryValue,
-                  { color: hasInsufficientBalance ? colors.error : colors.text },
-                ]}
-              >
-                {formatPrice(availableBalance)}
-              </Text>
-            </View>
-            {hasInsufficientBalance && (
-              <Text style={[styles.insufficientHint, { color: colors.error }]}>
-                {t('fnb.insufficientBalance') || 'Saldo tidak mencukupi'}
-              </Text>
+            {selectedPaymentMethod === 'balance' && (
+              <>
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                    {t('fnb.availableBalance') || 'Saldo tersedia'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      { color: hasInsufficientBalance ? colors.error : colors.text },
+                    ]}
+                  >
+                    {formatPrice(availableBalance)}
+                  </Text>
+                </View>
+                {hasInsufficientBalance && (
+                  <Text style={[styles.insufficientHint, { color: colors.error }]}>
+                    {t('fnb.insufficientBalance') || 'Saldo tidak mencukupi'}
+                  </Text>
+                )}
+              </>
             )}
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -751,6 +906,72 @@ export const FnBCheckoutScreen: React.FC = () => {
             </View>
           </View>
         </View>
+
+        {/* Payment Method */}
+        {paymentMethodOptions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('fnb.paymentMethod') || 'Metode Pembayaran'}
+            </Text>
+            <View style={[styles.orderTypeTabContainer, { backgroundColor: colors.border + '40' }]}>
+              {paymentMethodOptions.map((opt) => {
+                const isSelected = selectedPaymentMethod === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={[
+                      styles.paymentMethodTab,
+                      { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border },
+                    ]}
+                    onPress={() => setSelectedPaymentMethod(opt.id)}
+                  >
+                    {opt.icon}
+                    <Text
+                      style={[
+                        styles.paymentMethodLabel,
+                        { color: isSelected ? colors.surface : colors.text },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {selectedPaymentMethod === 'balance' && allowedBalanceTypes.length > 0 && (
+              <View style={[styles.balanceTypeRow, { marginTop: scale(12) }]}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>
+                  {t('fnb.balanceType') || 'Jenis Saldo'}
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: scale(8) }}>
+                  {allowedBalanceTypes.map((bt) => (
+                    <TouchableOpacity
+                      key={bt}
+                      style={[
+                        styles.balanceTypeChip,
+                        {
+                          backgroundColor: selectedBalanceType === bt ? colors.primary : colors.surface,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      onPress={() => setSelectedBalanceType(bt)}
+                    >
+                      <Text
+                        style={[
+                          styles.balanceTypeChipText,
+                          { color: selectedBalanceType === bt ? colors.surface : colors.text },
+                        ]}
+                      >
+                        {balanceTypeLabels[bt]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Bottom Button */}
@@ -790,7 +1011,9 @@ export const FnBCheckoutScreen: React.FC = () => {
           >
             {isSubmitting
               ? t('fnb.processing') || 'Memproses...'
-              : `${t('fnb.payNow') || 'Bayar Sekarang'} - ${formatPrice(total)}`}
+              : selectedPaymentMethod === 'balance'
+                ? `${t('fnb.payNow') || 'Bayar Sekarang'} - ${formatPrice(total)}`
+                : (t('fnb.confirmOrder') || 'Konfirmasi Pesanan')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -814,6 +1037,14 @@ export const FnBCheckoutScreen: React.FC = () => {
           setDeliveryAddress(addr);
           setContextAddress(addr);
           setLocationPickerVisible(false);
+        }}
+      />
+      <FnBScanTableModal
+        visible={scanTableModalVisible}
+        onClose={() => setScanTableModalVisible(false)}
+        onTableScanned={(num) => {
+          setTableNumber(num);
+          setScanTableModalVisible(false);
         }}
       />
     </View>
@@ -855,6 +1086,45 @@ const styles = StyleSheet.create({
   },
   orderTypeTabLabel: {
     fontSize: scale(14),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  paymentMethodTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(8),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(10),
+    borderRadius: scale(10),
+    borderWidth: 1,
+  },
+  paymentMethodLabel: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.semiBold,
+  },
+  balanceTypeRow: {},
+  balanceTypeChip: {
+    paddingVertical: scale(8),
+    paddingHorizontal: scale(14),
+    borderRadius: scale(10),
+    borderWidth: 1,
+  },
+  balanceTypeChipText: {
+    fontSize: scale(13),
+    fontFamily: FontFamily.monasans.medium,
+  },
+  scanTableButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(12),
+    borderRadius: scale(10),
+    borderWidth: 1,
+  },
+  scanTableButtonText: {
+    fontSize: scale(13),
     fontFamily: FontFamily.monasans.semiBold,
   },
   inputLabel: {

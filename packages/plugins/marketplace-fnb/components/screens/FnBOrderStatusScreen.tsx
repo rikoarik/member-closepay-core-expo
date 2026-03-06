@@ -519,7 +519,16 @@ export const FnBOrderStatusScreen: React.FC = () => {
                   {t('fnb.paymentMethod')}
                 </Text>
                 <Text style={[styles.paymentValue, { color: colors.text }]}>
-                  QRIS
+                  {order.paymentMethod === 'pay_at_counter'
+                    ? (t('fnb.payAtCounter') || 'Bayar di kasir')
+                    : order.paymentMethod === 'pay_later'
+                      ? (t('fnb.payLater') || 'Bayar nanti')
+                      : order.paymentMethod === 'balance'
+                        ? (t('fnb.payWithBalance') || 'Bayar dengan Saldo') +
+                          (order.balanceType
+                            ? ` (${order.balanceType === 'saldo-makan' ? (t('fnb.balanceTypeMeal') || 'Saldo Makanan') : order.balanceType === 'saldo-utama' ? (t('fnb.balanceTypeMain') || 'Saldo Utama') : (t('fnb.balanceTypePlafon') || 'Saldo Plafon')})`
+                            : '')
+                        : '—'}
                 </Text>
               </View>
               <View style={styles.paymentRow}>

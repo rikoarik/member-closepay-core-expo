@@ -32,12 +32,14 @@ export interface FnBStore {
 }
 
 /**
- * QR Code data format (1 QR per store)
+ * QR Code data format (1 QR per store; optional table when QR is store+table)
  */
 export interface FnBQRData {
     type: 'fnb-store';
     storeId: string;
     storeName: string;
+    /** Set when QR encodes store + table (e.g. closepay://fnb/store-id/table/12) */
+    tableNumber?: string;
 }
 
 /**
@@ -58,18 +60,20 @@ export const isStoreOpen = (store: FnBStore): boolean => {
 };
 
 /**
- * Parse QR code string to FnBQRData
+ * Parse QR code string to FnBQRData (store or store+table)
  */
 export const parseFnBQRCode = (qrString: string): FnBQRData | null => {
     try {
-        // Try URL format: closepay://fnb/store-id
+        // Try URL format: closepay://fnb/store-id or closepay://fnb/store-id/table/12
         if (qrString.startsWith('closepay://fnb/')) {
-            const storeId = qrString.replace('closepay://fnb/', '').split('/')[0];
-            return {
-                type: 'fnb-store',
-                storeId,
-                storeName: '', // Will be fetched from API
-            };
+            const path = qrString.replace('closepay://fnb/', '');
+            const parts = path.split('/').filter(Boolean);
+            const storeId = parts[0] ?? '';
+            if (!storeId) return null;
+            let tableNumber: string | undefined;
+            const tableIdx = parts.indexOf('table');
+            if (tableIdx >= 0 && parts[tableIdx + 1]) tableNumber = parts[tableIdx + 1];
+            return { type: 'fnb-store', storeId, storeName: '', tableNumber };
         }
 
         // Try JSON format
@@ -78,6 +82,26 @@ export const parseFnBQRCode = (qrString: string): FnBQRData | null => {
             return data as FnBQRData;
         }
 
+        return null;
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * Parse QR that contains only table number (for "Scan meja" in checkout).
+ * Formats: closepay://fnb/table/12 or JSON { type: 'fnb-table', tableNumber: '12' }
+ */
+export const parseFnBTableQRCode = (qrString: string): string | null => {
+    try {
+        if (qrString.startsWith('closepay://fnb/table/')) {
+            const num = qrString.replace('closepay://fnb/table/', '').split('/')[0]?.trim();
+            return num || null;
+        }
+        const data = JSON.parse(qrString);
+        if (data.type === 'fnb-table' && data.tableNumber != null) {
+            return String(data.tableNumber).trim() || null;
+        }
         return null;
     } catch {
         return null;
